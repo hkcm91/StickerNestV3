@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #e91e63;
+            font-weight: 600;
+        }
+        .tracking-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2ecc71;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .canvas-area {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: #0d1117;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .cursor {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: all 0.1s ease-out;
+        }
+        .cursor.local {
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 16px solid #2ecc71;
+            background: none;
+        }
+        .cursor.remote {
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 12px solid #3498db;
+            background: none;
+            opacity: 0.8;
+        }
+        .cursor-label {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            background: rgba(0,0,0,0.7);
+            padding: 1px 4px;
+            border-radius: 2px;
+            white-space: nowrap;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #e91e63;
+        }
+        .stat-label {
+            font-size: 9px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .coords {
+            font-family: 'Consolas', monospace;
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .coords-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+        }
+        .coords-label { color: #888; }
+        .coords-value { color: #79c0ff; }
+        .remote-list {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .remote-list h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .remote-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+            font-size: 10px;
+        }
+        .remote-entry:last-child { border-bottom: none; }
+        .user-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .btn-toggle { background: #2ecc71; color: #000; }
+        .btn-toggle.off { background: #e74c3c; color: #fff; }
+        .btn-clear { background: #3498db; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🖱️ Cursor Tracker</h1>
+        <div class="tracking-indicator" id="trackingIndicator"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-toggle" id="toggleBtn">Tracking On</button>
+        <button class="btn-clear" id="clearBtn">Clear Remotes</button>
+    </div>
+
+    <div class="canvas-area" id="canvasArea">
+        <div class="cursor local" id="localCursor" style="display:none;">
+            <span class="cursor-label">You</span>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-value" id="updateCount">0</div>
+            <div class="stat-label">Updates Sent</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="remoteCount">0</div>
+            <div class="stat-label">Remote Cursors</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="updateRate">0</div>
+            <div class="stat-label">Updates/sec</div>
+        </div>
+    </div>
+
+    <div class="coords">
+        <div class="coords-row">
+            <span class="coords-label">Local X:</span>
+            <span class="coords-value" id="localX">-</span>
+        </div>
+        <div class="coords-row">
+            <span class="coords-label">Local Y:</span>
+            <span class="coords-value" id="localY">-</span>
+        </div>
+        <div class="coords-row">
+            <span class="coords-label">Canvas Bounds:</span>
+            <span class="coords-value" id="canvasBounds">-</span>
+        </div>
+    </div>
+
+    <div class="remote-list">
+        <h3>Remote Cursors</h3>
+        <div id="remoteListContent">No remote cursors</div>
+    </div>
+
+    <script>
+        // State
+        let tracking = true;
+        let updateCount = 0;
+        let remoteCursors = new Map();
+        let localX = 0, localY = 0;
+        let updateTimestamps = [];
+        const THROTTLE_MS = 50; // 20 updates per second max
+        let lastEmit = 0;
+
+        // Colors for remote users
+        const colors = ['#3498db', '#9b59b6', '#e74c3c', '#f39c12', '#1abc9c', '#e91e63'];
+        let colorIndex = 0;
+
+        // DOM elements
+        const canvasArea = document.getElementById('canvasArea');
+        const localCursor = document.getElementById('localCursor');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const updateCountEl = document.getElementById('updateCount');
+        const remoteCountEl = document.getElementById('remoteCount');
+        const updateRateEl = document.getElementById('updateRate');
+        const localXEl = document.getElementById('localX');
+        const localYEl = document.getElementById('localY');
+        const canvasBoundsEl = document.getElementById('canvasBounds');
+        const remoteListContent = document.getElementById('remoteListContent');
+        const trackingIndicator = document.getElementById('trackingIndicator');
+
+        function getNextColor() {
+            const color = colors[colorIndex % colors.length];
+            colorIndex++;
+            return color;
+        }
+
+        function updateCanvasBounds() {
+            const rect = canvasArea.getBoundingClientRect();
+            canvasBoundsEl.textContent = `${Math.round(rect.width)} x ${Math.round(rect.height)}`;
+        }
+
+        function handleMouseMove(e) {
+            if (!tracking) return;
+
+            const rect = canvasArea.getBoundingClientRect();
+            localX = e.clientX - rect.left;
+            localY = e.clientY - rect.top;
+
+            // Update local cursor display
+            localCursor.style.display = 'block';
+            localCursor.style.left = `${localX}px`;
+            localCursor.style.top = `${localY}px`;
+
+            localXEl.textContent = Math.round(localX);
+            localYEl.textContent = Math.round(localY);
+
+            // Throttle emissions
+            const now = Date.now();
+            if (now - lastEmit >= THROTTLE_MS) {
+                lastEmit = now;
+                emitCursorPosition();
+            }
+        }
+
+        function handleMouseLeave() {
+            localCursor.style.display = 'none';
+            localXEl.textContent = '-';
+            localYEl.textContent = '-';
+        }
+
+        function emitCursorPosition() {
+            if (!window.WidgetAPI) return;
+
+            const rect = canvasArea.getBoundingClientRect();
+            window.WidgetAPI.emitEvent('cursor-move', {
+                x: localX,
+                y: localY,
+                normalizedX: localX / rect.width,
+                normalizedY: localY / rect.height,
+                timestamp: Date.now()
+            });
+
+            updateCount++;
+            updateCountEl.textContent = updateCount;
+
+            // Track for rate calculation
+            updateTimestamps.push(Date.now());
+        }
+
+        function updateRemoteCursor(userId, data) {
+            let cursorEl = remoteCursors.get(userId)?.element;
+
+            if (!cursorEl) {
+                // Create new cursor element
+                cursorEl = document.createElement('div');
+                cursorEl.className = 'cursor remote';
+                const color = getNextColor();
+                cursorEl.style.borderBottomColor = color;
+
+                const label = document.createElement('span');
+                label.className = 'cursor-label';
+                label.textContent = userId.substring(0, 8);
+                cursorEl.appendChild(label);
+
+                canvasArea.appendChild(cursorEl);
+                remoteCursors.set(userId, { element: cursorEl, color, lastUpdate: Date.now() });
+            }
+
+            // Update position (use normalized coords if available)
+            const rect = canvasArea.getBoundingClientRect();
+            const x = data.normalizedX !== undefined ? data.normalizedX * rect.width : data.x;
+            const y = data.normalizedY !== undefined ? data.normalizedY * rect.height : data.y;
+
+            cursorEl.style.left = `${x}px`;
+            cursorEl.style.top = `${y}px`;
+
+            remoteCursors.get(userId).lastUpdate = Date.now();
+            remoteCursors.get(userId).x = x;
+            remoteCursors.get(userId).y = y;
+
+            updateRemoteList();
+        }
+
+        function updateRemoteList() {
+            if (remoteCursors.size === 0) {
+                remoteListContent.textContent = 'No remote cursors';
+                remoteCountEl.textContent = '0';
+                return;
+            }
+
+            remoteCountEl.textContent = remoteCursors.size;
+
+            const entries = [];
+            remoteCursors.forEach((data, id) => {
+                const age = Date.now() - data.lastUpdate;
+                const ageStr = age < 1000 ? `${age}ms` : `${(age/1000).toFixed(1)}s`;
+                entries.push(`
+                    <div class="remote-entry">
+                        <span><span class="user-color" style="background:${data.color}"></span>${id.substring(0, 8)}</span>
+                        <span>(${Math.round(data.x || 0)}, ${Math.round(data.y || 0)}) - ${ageStr}</span>
+                    </div>
+                `);
+            });
+
+            remoteListContent.innerHTML = entries.join('');
+        }
+
+        function cleanupStaleCursors() {
+            const now = Date.now();
+            const staleThreshold = 5000; // 5 seconds
+
+            remoteCursors.forEach((data, id) => {
+                if (now - data.lastUpdate > staleThreshold) {
+                    data.element.remove();
+                    remoteCursors.delete(id);
+                }
+            });
+
+            updateRemoteList();
+        }
+
+        function calculateUpdateRate() {
+            const now = Date.now();
+            const oneSecondAgo = now - 1000;
+            updateTimestamps = updateTimestamps.filter(t => t > oneSecondAgo);
+            updateRateEl.textContent = updateTimestamps.length;
+        }
+
+        function toggleTracking() {
+            tracking = !tracking;
+            toggleBtn.textContent = tracking ? 'Tracking On' : 'Tracking Off';
+            toggleBtn.className = tracking ? 'btn-toggle' : 'btn-toggle off';
+            trackingIndicator.style.background = tracking ? '#2ecc71' : '#e74c3c';
+
+            if (!tracking) {
+                localCursor.style.display = 'none';
+            }
+        }
+
+        function clearRemotes() {
+            remoteCursors.forEach((data) => {
+                data.element.remove();
+            });
+            remoteCursors.clear();
+            colorIndex = 0;
+            updateRemoteList();
+        }
+
+        // Event listeners
+        canvasArea.addEventListener('mousemove', handleMouseMove);
+        canvasArea.addEventListener('mouseleave', handleMouseLeave);
+        toggleBtn.addEventListener('click', toggleTracking);
+        document.getElementById('clearBtn').addEventListener('click', clearRemotes);
+
+        // Listen for remote cursor updates
+        if (window.WidgetAPI) {
+            window.WidgetAPI.onEvent('cursor-position', (payload) => {
+                if (payload.userId && (payload.x !== undefined || payload.normalizedX !== undefined)) {
+                    updateRemoteCursor(payload.userId, payload);
+                }
+            });
+        }
+
+        // Periodic cleanup and rate calculation
+        setInterval(cleanupStaleCursors, 1000);
+        setInterval(calculateUpdateRate, 500);
+
+        // Initial setup
+        updateCanvasBounds();
+        window.addEventListener('resize', updateCanvasBounds);
+    </script>
+</body>
+</html>

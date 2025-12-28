@@ -1,0 +1,32 @@
+{
+    "id": "canvas-bg-pattern",
+    "name": "Canvas Background Pattern",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "size": {
+        "width": 280,
+        "height": 420,
+        "minWidth": 220,
+        "minHeight": 320,
+        "scaleMode": "contain"
+    },
+    "events": {
+        "emits": ["canvas:set-background"],
+        "listens": []
+    },
+    "io": {
+        "inputs": [],
+        "outputs": [
+            {
+                "id": "canvas:set-background",
+                "type": "object",
+                "description": "Sets the canvas background pattern or image"
+            }
+        ]
+    }
+}

@@ -1,0 +1,21 @@
+Invalid environment variables:
+{
+  JWT_ACCESS_SECRET: [ 'Required' ],
+  JWT_REFRESH_SECRET: [ 'Required' ],
+  STORAGE_ENDPOINT: [ 'Required' ],
+  STORAGE_ACCESS_KEY_ID: [ 'Required' ],
+  STORAGE_SECRET_ACCESS_KEY: [ 'Required' ]
+}
+C:\Users\Kimber\StickerNest\server\config\env.ts:66
+    throw new Error('Environment validation failed');
+          ^
+
+
+Error: Environment validation failed
+    at validateEnv (C:\Users\Kimber\StickerNest\server\config\env.ts:66:11)
+    at <anonymous> (C:\Users\Kimber\StickerNest\server\config\env.ts:72:20)
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
+
+Node.js v20.18.0

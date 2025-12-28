@@ -1,0 +1,68 @@
+{
+  "id": "photobooth-widget",
+  "name": "Photobooth Strip",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Display images in a classic photobooth strip style (3 photos)",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "setImages": {
+      "type": "object",
+      "description": "Set all 3 images at once { images: [{ url, name? }] }"
+    },
+    "setImage1": {
+      "type": "object",
+      "description": "Set first image { url: string, name?: string }"
+    },
+    "setImage2": {
+      "type": "object",
+      "description": "Set second image { url: string, name?: string }"
+    },
+    "setImage3": {
+      "type": "object",
+      "description": "Set third image { url: string, name?: string }"
+    },
+    "imageSelected": {
+      "type": "object",
+      "description": "Receive image from Gallery - fills next empty slot { id, url, name }"
+    },
+    "galleryChanged": {
+      "type": "object",
+      "description": "Receive all images from Gallery { images: [] }"
+    },
+    "setTitle": {
+      "type": "string",
+      "description": "Set the title text at top of strip"
+    },
+    "clear": {
+      "type": "trigger",
+      "description": "Clear all images"
+    }
+  },
+  "outputs": {
+    "imagesSet": {
+      "type": "object",
+      "description": "Emitted when images are set { images: [], count: number }"
+    },
+    "slotClicked": {
+      "type": "object",
+      "description": "Emitted when a slot is clicked { slot: number, image: { url, name } }"
+    }
+  },
+  "events": {
+    "listens": ["gallery:image-selected", "gallery:changed"],
+    "emits": ["photobooth:slot-clicked"]
+  },
+  "size": {
+    "width": 180,
+    "height": 480,
+    "minWidth": 140,
+    "minHeight": 380,
+    "maxWidth": 280,
+    "maxHeight": 700
+  }
+}

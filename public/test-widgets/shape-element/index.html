@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shape Element</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .shape-element {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .shape-element.selected {
+      outline: 2px solid #8b5cf6;
+      outline-offset: 4px;
+    }
+
+    .shape-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .shape-container svg {
+      width: 100%;
+      height: 100%;
+      transition: filter 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="shape-element" id="shapeElement">
+    <div class="shape-container" id="shapeContainer">
+      <!-- SVG will be rendered here -->
+    </div>
+  </div>
+
+  <script>
+    // Widget state - matches all shape-generator properties
+    const state = {
+      instanceId: null,
+      isSelected: false,
+      shapeType: 'rect',
+      // Fill properties
+      fill: {
+        enabled: true,
+        color: '#8b5cf6',
+        useGradient: false,
+        gradient: null  // { type, angle, stops: [{offset, color}] }
+      },
+      // Stroke properties
+      stroke: {
+        enabled: false,
+        color: '#6d28d9',
+        width: 2,
+        style: 'solid' // solid, dashed, dotted
+      },
+      // Corner radius for rect shapes
+      cornerRadius: 8,
+      // Opacity
+      opacity: 1,
+      // Shadow properties
+      shadow: {
+        enabled: false,
+        x: 4,
+        y: 4,
+        blur: 4,
+        color: '#000000'
+      },
+      // Star-specific options
+      starPoints: 5,
+      starInner: 50, // percentage
+      // Polygon-specific options
+      polygonSides: 6
+    };
+
+    const shapeElement = document.getElementById('shapeElement');
+    const shapeContainer = document.getElementById('shapeContainer');
+
+    // Emit event to parent
+    function emit(eventType, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: {
+          type: eventType,
+          payload: payload
+        }
+      }, '*');
+    }
+
+    // Create polygon points
+    function createPolygonPoints(sides, radius, cx, cy) {
+      const points = [];
+      for (let i = 0; i < sides; i++) {
+        const angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        points.push(`${x},${y}`);
+      }
+      return points.join(' ');
+    }
+
+    // Create star points
+    function createStarPoints(numPoints, outerR, innerR, cx, cy) {
+      const pts = [];
+      for (let i = 0; i < numPoints * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (i * Math.PI / numPoints) - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        pts.push(`${x},${y}`);
+      }
+      return pts.join(' ');
+    }
+
+    // Shape path definitions - expanded to match shape-generator
+    const shapePaths = {
+      rect: (w, h, r) => {
+        r = Math.min(r || 0, Math.min(w, h) / 2);
+        return `<rect x="5" y="5" width="${w-10}" height="${h-10}" rx="${r}" ry="${r}"/>`;
+      },
+      roundedRect: (w, h, r) => {
+        const rad = Math.min(r || 20, (w-10)/2, (h-10)/2);
+        return `<rect x="5" y="5" width="${w-10}" height="${h-10}" rx="${rad}" ry="${rad}"/>`;
+      },
+      circle: (w, h) => {
+        const r = Math.min(w, h) / 2 - 5;
+        return `<circle cx="${w/2}" cy="${h/2}" r="${r}"/>`;
+      },
+      ellipse: (w, h) => {
+        return `<ellipse cx="${w/2}" cy="${h/2}" rx="${w/2-5}" ry="${h/2-5}"/>`;
+      },
+      triangle: (w, h) => {
+        const points = `${w/2},5 ${w-5},${h-5} 5,${h-5}`;
+        return `<polygon points="${points}"/>`;
+      },
+      pentagon: (w, h) => {
+        const cx = w / 2, cy = h / 2;
+        const r = Math.min(w, h) / 2 - 5;
+        return `<polygon points="${createPolygonPoints(5, r, cx, cy)}"/>`;
+      },
+      hexagon: (w, h) => {
+        const cx = w / 2, cy = h / 2;
+        const r = Math.min(w, h) / 2 - 5;
+        const sides = state.polygonSides || 6;
+        return `<polygon points="${createPolygonPoints(sides, r, cx, cy)}"/>`;
+      },
+      star: (w, h) => {
+        const cx = w / 2, cy = h / 2;
+        const outerR = Math.min(w, h) / 2 - 5;
+        const innerR = outerR * (state.starInner / 100);
+        const points = state.starPoints || 5;
+        return `<polygon points="${createStarPoints(points, outerR, innerR, cx, cy)}"/>`;
+      },
+      heart: (w, h) => {
+        const scale = Math.min(w, h) / 100;
+        return `<path transform="translate(${w/2-40*scale}, ${h/2-35*scale}) scale(${scale})" d="M40,20 C40,10 30,0 20,0 C10,0 0,10 0,25 C0,50 40,70 40,70 C40,70 80,50 80,25 C80,10 70,0 60,0 C50,0 40,10 40,20 Z"/>`;
+      },
+      diamond: (w, h) => {
+        const points = `${w/2},5 ${w-5},${h/2} ${w/2},${h-5} 5,${h/2}`;
+        return `<polygon points="${points}"/>`;
+      },
+      arrow: (w, h) => {
+        const points = `${w*0.6},5 ${w-5},${h/2} ${w*0.6},${h-5} ${w*0.6},${h*0.65} 5,${h*0.65} 5,${h*0.35} ${w*0.6},${h*0.35}`;
+        return `<polygon points="${points}"/>`;
+      },
+      bubble: (w, h) => {
+        const scale = Math.min(w, h) / 200;
+        const ox = (w - 200*scale) / 2;
+        const oy = (h - 200*scale) / 2;
+        return `<path transform="translate(${ox}, ${oy}) scale(${scale})" d="M30 30 L170 30 C180 30 180 40 180 40 L180 130 C180 140 170 140 170 140 L80 140 L50 170 L50 140 L30 140 C20 140 20 130 20 130 L20 40 C20 30 30 30 30 30 Z"/>`;
+      }
+    };
+
+    // Get stroke dasharray based on style
+    function getStrokeDasharray() {
+      switch (state.stroke.style) {
+        case 'dashed': return '10,5';
+        case 'dotted': return '2,3';
+        default: return 'none';
+      }
+    }
+
+    // Render the current shape
+    function renderShape() {
+      const rect = shapeContainer.getBoundingClientRect();
+      const w = rect.width || 150;
+      const h = rect.height || 150;
+
+      // Build gradient definition if needed
+      let gradientDef = '';
+      let fillAttr = 'none';
+
+      if (state.fill.enabled) {
+        if (state.fill.useGradient && state.fill.gradient) {
+          const grad = state.fill.gradient;
+          const gradId = 'shapeGrad';
+
+          if (grad.type === 'linear') {
+            const angle = grad.angle || 0;
+            const rad = angle * Math.PI / 180;
+            const x1 = 50 - 50 * Math.cos(rad);
+            const y1 = 50 - 50 * Math.sin(rad);
+            const x2 = 50 + 50 * Math.cos(rad);
+            const y2 = 50 + 50 * Math.sin(rad);
+
+            gradientDef = `
+              <defs>
+                <linearGradient id="${gradId}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">
+                  ${grad.stops.map(s => `<stop offset="${s.offset}%" stop-color="${s.color}"/>`).join('')}
+                </linearGradient>
+              </defs>
+            `;
+          } else if (grad.type === 'radial') {
+            gradientDef = `
+              <defs>
+                <radialGradient id="${gradId}">
+                  ${grad.stops.map(s => `<stop offset="${s.offset}%" stop-color="${s.color}"/>`).join('')}
+                </radialGradient>
+              </defs>
+            `;
+          } else if (grad.type === 'conic') {
+            // Conic gradients aren't directly supported in SVG, approximate with radial
+            gradientDef = `
+              <defs>
+                <radialGradient id="${gradId}">
+                  ${grad.stops.map(s => `<stop offset="${s.offset}%" stop-color="${s.color}"/>`).join('')}
+                </radialGradient>
+              </defs>
+            `;
+          }
+          fillAttr = `url(#${gradId})`;
+        } else {
+          fillAttr = state.fill.color;
+        }
+      }
+
+      // Build shadow filter if enabled
+      let shadowDef = '';
+      let filterAttr = 'none';
+
+      if (state.shadow.enabled) {
+        const shadowId = 'shapeShadow';
+        shadowDef = `
+          <filter id="${shadowId}" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="${state.shadow.x}" dy="${state.shadow.y}" stdDeviation="${state.shadow.blur}" flood-color="${state.shadow.color}" flood-opacity="0.5"/>
+          </filter>
+        `;
+        filterAttr = `url(#${shadowId})`;
+      }
+
+      // Combine defs
+      let defsContent = '';
+      if (gradientDef || shadowDef) {
+        defsContent = `<defs>${gradientDef.replace('<defs>', '').replace('</defs>', '')}${shadowDef.replace('<defs>', '').replace('</defs>', '')}</defs>`;
+      }
+
+      // Build stroke attributes
+      const strokeAttr = state.stroke.enabled ? state.stroke.color : 'none';
+      const strokeWidthAttr = state.stroke.enabled ? state.stroke.width : 0;
+      const dasharray = getStrokeDasharray();
+
+      // Get the shape path
+      const shapePath = shapePaths[state.shapeType] || shapePaths.rect;
+      const pathContent = shapePath(w, h, state.cornerRadius);
+
+      // Build the SVG
+      let strokeDashAttr = '';
+      if (dasharray !== 'none' && state.stroke.enabled) {
+        strokeDashAttr = `stroke-dasharray="${dasharray}"`;
+      }
+
+      shapeContainer.innerHTML = `
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+          ${defsContent}
+          <g fill="${fillAttr}"
+             stroke="${strokeAttr}"
+             stroke-width="${strokeWidthAttr}"
+             ${strokeDashAttr}
+             filter="${filterAttr}"
+             opacity="${state.opacity}">
+            ${pathContent}
+          </g>
+        </svg>
+      `;
+    }
+
+    // Get current properties for selection event
+    function getCurrentProperties() {
+      return {
+        elementId: state.instanceId,
+        elementType: 'shape-element',
+        shapeType: state.shapeType,
+        fill: { ...state.fill },
+        stroke: { ...state.stroke },
+        shadow: { ...state.shadow },
+        cornerRadius: state.cornerRadius,
+        opacity: state.opacity,
+        starPoints: state.starPoints,
+        starInner: state.starInner,
+        polygonSides: state.polygonSides
+      };
+    }
+
+    // Select this element
+    function selectElement() {
+      if (state.isSelected) return;
+
+      state.isSelected = true;
+      shapeElement.classList.add('selected');
+
+      emit('canvas:element-selected', getCurrentProperties());
+      emit('selected', getCurrentProperties());
+    }
+
+    // Deselect this element
+    function deselectElement() {
+      if (!state.isSelected) return;
+
+      state.isSelected = false;
+      shapeElement.classList.remove('selected');
+    }
+
+    // Click handler
+    shapeElement.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectElement();
+    });
+
+    // Handle style changes from shape-generator
+    function handleStyleChange(data) {
+      if (!data) return;
+
+      const style = data.style || data;
+
+      // Fill properties
+      if (style.fill !== undefined) {
+        if (typeof style.fill === 'object') {
+          Object.assign(state.fill, style.fill);
+        } else {
+          state.fill.color = style.fill;
+        }
+      }
+      if (style.fillEnabled !== undefined) state.fill.enabled = style.fillEnabled;
+      if (style.useGradient !== undefined) state.fill.useGradient = style.useGradient;
+
+      // Handle gradient from shape-generator format
+      if (style.gradient) {
+        state.fill.useGradient = true;
+        state.fill.gradient = style.gradient;
+      }
+
+      // Handle gradient start/end (shape-generator format)
+      if (style.gradientStart !== undefined || style.gradientEnd !== undefined) {
+        state.fill.useGradient = true;
+        state.fill.gradient = {
+          type: 'linear',
+          angle: style.gradientAngle || 45,
+          stops: [
+            { offset: 0, color: style.gradientStart || state.fill.gradient?.stops?.[0]?.color || '#8b5cf6' },
+            { offset: 100, color: style.gradientEnd || state.fill.gradient?.stops?.[1]?.color || '#ec4899' }
+          ]
+        };
+      }
+      if (style.gradientAngle !== undefined && state.fill.gradient) {
+        state.fill.gradient.angle = style.gradientAngle;
+      }
+
+      // Stroke properties
+      if (style.stroke !== undefined) {
+        if (typeof style.stroke === 'object') {
+          Object.assign(state.stroke, style.stroke);
+        } else {
+          state.stroke.color = style.stroke;
+        }
+      }
+      if (style.strokeEnabled !== undefined) state.stroke.enabled = style.strokeEnabled;
+      if (style.strokeWidth !== undefined) state.stroke.width = style.strokeWidth;
+      if (style.strokeStyle !== undefined) state.stroke.style = style.strokeStyle;
+      if (style.strokeColor !== undefined) state.stroke.color = style.strokeColor;
+
+      // Shadow properties
+      if (style.shadow !== undefined) {
+        if (typeof style.shadow === 'object') {
+          Object.assign(state.shadow, style.shadow);
+        }
+      }
+      if (style.shadowEnabled !== undefined) state.shadow.enabled = style.shadowEnabled;
+      if (style.shadowX !== undefined) state.shadow.x = style.shadowX;
+      if (style.shadowY !== undefined) state.shadow.y = style.shadowY;
+      if (style.shadowBlur !== undefined) state.shadow.blur = style.shadowBlur;
+      if (style.shadowColor !== undefined) state.shadow.color = style.shadowColor;
+
+      // Other properties
+      if (style.cornerRadius !== undefined) state.cornerRadius = style.cornerRadius;
+      if (style.opacity !== undefined) state.opacity = style.opacity;
+      if (style.starPoints !== undefined) state.starPoints = style.starPoints;
+      if (style.starInner !== undefined) state.starInner = style.starInner;
+      if (style.polygonSides !== undefined) state.polygonSides = style.polygonSides;
+
+      renderShape();
+      emit('changed', getCurrentProperties());
+    }
+
+    // Listen for messages
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+
+      // Handle EVENT messages (broadcasts)
+      if (data.type === 'EVENT' && data.payload) {
+        const eventType = data.payload.type;
+        const eventPayload = data.payload.payload;
+
+        // Another element was selected
+        if (eventType === 'canvas:element-selected') {
+          if (eventPayload?.elementId !== state.instanceId) {
+            deselectElement();
+          }
+        }
+
+        // Style change from editor
+        if (eventType === 'canvas:style-changed') {
+          if (state.isSelected || eventPayload?.targetElementId === state.instanceId) {
+            handleStyleChange(eventPayload);
+          }
+        }
+
+        // Shape type change
+        if (eventType === 'canvas:shape-set') {
+          if (state.isSelected || eventPayload?.targetElementId === state.instanceId) {
+            if (eventPayload?.shapeType && shapePaths[eventPayload.shapeType]) {
+              state.shapeType = eventPayload.shapeType;
+              renderShape();
+              emit('changed', getCurrentProperties());
+            }
+          }
+        }
+
+        // Gradient from gradient-maker
+        if (eventType === 'canvas:gradient-changed' || eventType === 'background:gradient-changed') {
+          if (state.isSelected || eventPayload?.targetElementId === state.instanceId) {
+            if (eventPayload?.gradient) {
+              state.fill.useGradient = true;
+              state.fill.gradient = eventPayload.gradient;
+              renderShape();
+              emit('changed', getCurrentProperties());
+            }
+          }
+        }
+      }
+
+      // Handle direct inputs
+      if (data.type === 'widget-input' || data.type === 'pipeline:input') {
+        const portName = data.portName;
+        const value = data.value;
+
+        if (portName === 'shape.set') {
+          if (shapePaths[value]) {
+            state.shapeType = value;
+            renderShape();
+            emit('changed', getCurrentProperties());
+          }
+        } else if (portName === 'style.apply') {
+          handleStyleChange(value);
+        } else if (portName === 'fill.set') {
+          handleStyleChange({ fill: value });
+        } else if (portName === 'stroke.set') {
+          handleStyleChange({ stroke: value });
+        } else if (portName === 'shadow.set') {
+          handleStyleChange({ shadow: value });
+        } else if (portName === 'select') {
+          selectElement();
+        } else if (portName === 'deselect') {
+          deselectElement();
+        }
+      }
+
+      // Handle INIT message
+      if (data.type === 'INIT' && data.instanceId) {
+        state.instanceId = data.instanceId;
+      }
+    });
+
+    // Handle resize
+    const resizeObserver = new ResizeObserver(() => {
+      renderShape();
+    });
+    resizeObserver.observe(shapeContainer);
+
+    // Initialize
+    renderShape();
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

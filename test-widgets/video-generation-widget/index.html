@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .header h1 .icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .settings-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-btn.active {
+      background: rgba(236, 72, 153, 0.3);
+      border-color: #ec4899;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      display: none;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .settings-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .api-key-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .api-key-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    .api-key-input:focus {
+      outline: none;
+      border-color: #ec4899;
+    }
+
+    .save-key-btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #ec4899;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .save-key-btn:hover {
+      background: #db2777;
+    }
+
+    .key-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .key-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .key-status .dot.valid { background: #10b981; }
+    .key-status .dot.invalid { background: #ef4444; }
+    .key-status .dot.unknown { background: #6b7280; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    .provider-select, .model-select {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .provider-select:focus, .model-select:focus {
+      outline: none;
+      border-color: #ec4899;
+    }
+
+    .sync-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .sync-badge.synced {
+      background: rgba(236, 72, 153, 0.2);
+      color: #ec4899;
+    }
+
+    .sync-badge.not-synced {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    /* Content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* Input Image Section */
+    .input-image-section {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .section-action {
+      font-size: 11px;
+      color: #ec4899;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .section-action:hover {
+      color: #f472b6;
+    }
+
+    .input-image-preview {
+      width: 100%;
+      aspect-ratio: 16/9;
+      border-radius: 8px;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .input-image-preview:hover {
+      border-color: #ec4899;
+    }
+
+    .input-image-preview.has-image {
+      border-style: solid;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .input-image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .input-image-preview .placeholder {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .input-image-preview .placeholder .icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .input-image-preview .placeholder p {
+      font-size: 12px;
+    }
+
+    .input-image-preview .remove-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .input-image-preview .remove-btn:hover {
+      background: #ef4444;
+    }
+
+    /* Video Settings */
+    .video-settings {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .setting-item label {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+    }
+
+    .setting-item input, .setting-item select {
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .setting-item input:focus, .setting-item select:focus {
+      outline: none;
+      border-color: #ec4899;
+    }
+
+    /* Prompt Preview */
+    .prompt-preview {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .prompt-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .prompt-preview-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .edit-btn {
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background: transparent;
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .edit-btn:hover {
+      border-color: #ec4899;
+      background: rgba(236, 72, 153, 0.1);
+    }
+
+    .prompt-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.9);
+      word-break: break-word;
+      max-height: 60px;
+      overflow: hidden;
+    }
+
+    .prompt-text.empty {
+      color: rgba(255, 255, 255, 0.4);
+      font-style: italic;
+    }
+
+    /* Generation Status */
+    .generation-status {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: none;
+    }
+
+    .generation-status.active {
+      display: block;
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .status-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #ec4899;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .cancel-btn {
+      padding: 6px 12px;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 6px;
+      background: transparent;
+      color: #ef4444;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .status-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 8px;
+    }
+
+    .eta {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 4px;
+    }
+
+    /* Generated Videos Grid */
+    .videos-section {
+      flex: 1;
+    }
+
+    .videos-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .videos-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .videos-count {
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .videos-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .video-card {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .video-card:hover {
+      transform: scale(1.01);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .video-card video {
+      width: 100%;
+      display: block;
+    }
+
+    .video-card .thumbnail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.2s;
+    }
+
+    .video-card:hover .thumbnail {
+      opacity: 0;
+    }
+
+    .video-card .play-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      transition: all 0.2s;
+    }
+
+    .video-card .play-indicator::after {
+      content: '';
+      width: 0;
+      height: 0;
+      border-left: 16px solid white;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      margin-left: 4px;
+    }
+
+    .video-card:hover .play-indicator {
+      opacity: 0;
+    }
+
+    .video-card .video-meta {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .video-card .meta-tag {
+      padding: 3px 8px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 4px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .video-card .meta-tag.model {
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    }
+
+    .video-card .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+
+    .video-card:hover .overlay {
+      opacity: 1;
+    }
+
+    .video-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .video-action-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .video-action-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .video-action-btn.primary {
+      background: rgba(236, 72, 153, 0.8);
+    }
+
+    .video-action-btn.primary:hover {
+      background: #ec4899;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .generate-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .num-control {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .num-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .num-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .num-display {
+      width: 30px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 300;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Hidden inputs */
+    .hidden-input {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span class="icon">V</span>
+      Video Generator
+    </h1>
+    <button class="settings-btn" id="settingsBtn" title="Settings">S</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-title">API Configuration</div>
+    <div class="api-key-row">
+      <input type="password" class="api-key-input" id="apiKeyInput" placeholder="Enter Replicate API key...">
+      <button class="save-key-btn" id="saveKeyBtn">Save</button>
+    </div>
+    <div class="key-status">
+      <span class="dot" id="keyStatusDot"></span>
+      <span id="keyStatusText">No API key configured</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <select class="provider-select" id="providerSelect">
+      <option value="replicate">Replicate</option>
+    </select>
+    <select class="model-select" id="modelSelect">
+      <optgroup label="Premium Models">
+        <option value="kling">Kling v1.6 Pro</option>
+        <option value="minimax">MiniMax Video-01</option>
+        <option value="luma-ray2">Luma Ray 2 Flash</option>
+        <option value="wan-i2v-720p">Wan 2.1 I2V 720p</option>
+        <option value="hunyuan">Hunyuan Video</option>
+      </optgroup>
+      <optgroup label="Standard Models">
+        <option value="wan-i2v">Wan 2.1 I2V 480p</option>
+        <option value="ltx-video">LTX Video</option>
+        <option value="cogvideox">CogVideoX 5B</option>
+        <option value="svd">Stable Video Diffusion</option>
+        <option value="animate-diff">AnimateDiff</option>
+      </optgroup>
+    </select>
+    <span class="sync-badge not-synced" id="syncBadge">
+      <span id="syncIcon">!</span>
+      <span id="syncText">Not synced</span>
+    </span>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Input Image -->
+    <div class="input-image-section">
+      <div class="section-header">
+        <span class="section-title">Input Image (for Image-to-Video)</span>
+        <span class="section-action" id="clearImageBtn">Clear</span>
+      </div>
+      <div class="input-image-preview" id="inputImagePreview">
+        <div class="placeholder">
+          <div class="icon">+</div>
+          <p>Click to add image or drop from Gallery</p>
+        </div>
+      </div>
+      <div class="video-settings">
+        <div class="setting-item">
+          <label>Duration</label>
+          <select id="durationSelect">
+            <option value="2">2s</option>
+            <option value="4" selected>4s</option>
+            <option value="6">6s</option>
+            <option value="8">8s</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>FPS</label>
+          <select id="fpsSelect">
+            <option value="8">8</option>
+            <option value="12">12</option>
+            <option value="24" selected>24</option>
+            <option value="30">30</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Motion</label>
+          <select id="motionSelect">
+            <option value="64">Low</option>
+            <option value="127" selected>Medium</option>
+            <option value="200">High</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt Preview -->
+    <div class="prompt-preview">
+      <div class="prompt-preview-header">
+        <span class="prompt-preview-title">Prompt (optional for I2V)</span>
+        <button class="edit-btn" id="editPromptBtn">Edit</button>
+      </div>
+      <div class="prompt-text empty" id="promptText">No prompt set. Some models support text prompts.</div>
+    </div>
+
+    <!-- Generation Status -->
+    <div class="generation-status" id="generationStatus">
+      <div class="status-header">
+        <div class="status-title">
+          <div class="status-spinner"></div>
+          <span id="statusTitle">Generating Video...</span>
+        </div>
+        <button class="cancel-btn" id="cancelBtn">Cancel</button>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="status-text" id="statusText">Starting generation...</div>
+      <div class="eta" id="etaText">Video generation can take 2-10 minutes</div>
+    </div>
+
+    <!-- Generated Videos -->
+    <div class="videos-section">
+      <div class="videos-header">
+        <span class="videos-title">Generated Videos</span>
+        <span class="videos-count" id="videosCount">0 videos</span>
+      </div>
+      <div class="videos-grid" id="videosGrid">
+        <div class="empty-state" id="emptyState">
+          <div class="icon">V</div>
+          <h3>No Videos Yet</h3>
+          <p>Add an input image and click Generate</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <button class="generate-btn" id="generateBtn">
+      <span>Generate Video</span>
+    </button>
+    <div class="num-control">
+      <button class="num-btn" id="numDecBtn">-</button>
+      <span class="num-display" id="numDisplay">1</span>
+      <button class="num-btn" id="numIncBtn">+</button>
+    </div>
+  </div>
+
+  <!-- Hidden inputs -->
+  <input type="file" class="hidden-input" id="imageFileInput" accept="image/*">
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==========================================
+    // Model Registry
+    // ==========================================
+    const MODEL_REGISTRY = {
+      replicate: {
+        'kling': { id: 'kwaivgi/kling-v1.6-pro', name: 'Kling v1.6 Pro', supportsText: true, category: 'premium' },
+        'minimax': { id: 'minimax/video-01', name: 'MiniMax Video-01', supportsText: true, category: 'premium' },
+        'luma-ray2': { id: 'luma/ray-2-flash', name: 'Luma Ray 2 Flash', supportsText: true, category: 'premium' },
+        'wan-i2v': { id: 'wavespeed/wan-2.1-i2v-480p', name: 'Wan 2.1 I2V 480p', supportsText: true, category: 'standard' },
+        'wan-i2v-720p': { id: 'wavespeed/wan-2.1-i2v-720p', name: 'Wan 2.1 I2V 720p', supportsText: true, category: 'premium' },
+        'hunyuan': { id: 'tencent/hunyuan-video', name: 'Hunyuan Video', supportsText: true, category: 'premium' },
+        'svd': { id: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438', name: 'Stable Video Diffusion', supportsText: false, category: 'standard' },
+        'animate-diff': { id: 'lucataco/animate-diff:beecf59c4aee8d81bf04f0381033dfa10dc16e845b4ae00d281e2fa377e48c9f', name: 'AnimateDiff', supportsText: true, category: 'standard' },
+        'ltx-video': { id: 'lightricks/ltx-video', name: 'LTX Video', supportsText: true, category: 'standard' },
+        'cogvideox': { id: 'fofr/cogvideox-5b', name: 'CogVideoX 5B', supportsText: true, category: 'standard' },
+      },
+    };
+
+    // ==========================================
+    // State
+    // ==========================================
+    const state = {
+      apiKeys: {},
+      provider: 'replicate',
+      model: 'kling',
+      numOutputs: 1,
+      inputImage: null,
+      promptConfig: null,
+      duration: 4,
+      fps: 24,
+      motionBucket: 127,
+      isGenerating: false,
+      generatedVideos: [],
+    };
+
+    // ==========================================
+    // DOM Elements
+    // ==========================================
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const saveKeyBtn = document.getElementById('saveKeyBtn');
+    const keyStatusDot = document.getElementById('keyStatusDot');
+    const keyStatusText = document.getElementById('keyStatusText');
+    const providerSelect = document.getElementById('providerSelect');
+    const modelSelect = document.getElementById('modelSelect');
+    const syncBadge = document.getElementById('syncBadge');
+    const syncIcon = document.getElementById('syncIcon');
+    const syncText = document.getElementById('syncText');
+    const inputImagePreview = document.getElementById('inputImagePreview');
+    const promptText = document.getElementById('promptText');
+    const generationStatus = document.getElementById('generationStatus');
+    const statusTitle = document.getElementById('statusTitle');
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('statusText');
+    const etaText = document.getElementById('etaText');
+    const videosGrid = document.getElementById('videosGrid');
+    const videosCount = document.getElementById('videosCount');
+    const emptyState = document.getElementById('emptyState');
+    const generateBtn = document.getElementById('generateBtn');
+    const numDisplay = document.getElementById('numDisplay');
+    const imageFileInput = document.getElementById('imageFileInput');
+    const toast = document.getElementById('toast');
+
+    // ==========================================
+    // Utilities
+    // ==========================================
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload }
+      }, '*');
+    }
+
+    function updateSyncBadge(synced) {
+      syncBadge.className = synced ? 'sync-badge synced' : 'sync-badge not-synced';
+      syncIcon.textContent = synced ? '~' : '!';
+      syncText.textContent = synced ? 'Synced' : 'Not synced';
+    }
+
+    function updateKeyStatus() {
+      const hasKey = state.apiKeys[state.provider];
+      keyStatusDot.className = hasKey ? 'dot valid' : 'dot unknown';
+      keyStatusText.textContent = hasKey ? 'API key configured' : 'No API key configured';
+      apiKeyInput.value = hasKey ? '********' : '';
+    }
+
+    function updateInputImagePreview() {
+      if (state.inputImage) {
+        inputImagePreview.innerHTML = `
+          <img src="${state.inputImage.url}" alt="Input image">
+          <button class="remove-btn" onclick="clearInputImage()">&times;</button>
+        `;
+        inputImagePreview.classList.add('has-image');
+      } else {
+        inputImagePreview.innerHTML = `
+          <div class="placeholder">
+            <div class="icon">+</div>
+            <p>Click to add image or drop from Gallery</p>
+          </div>
+        `;
+        inputImagePreview.classList.remove('has-image');
+      }
+    }
+
+    function updatePromptPreview() {
+      if (state.promptConfig && state.promptConfig.prompt) {
+        promptText.textContent = state.promptConfig.prompt;
+        promptText.classList.remove('empty');
+        updateSyncBadge(true);
+      } else {
+        promptText.textContent = 'No prompt set. Some models support text prompts.';
+        promptText.classList.add('empty');
+        updateSyncBadge(false);
+      }
+    }
+
+    function updateVideosUI() {
+      const count = state.generatedVideos.length;
+      videosCount.textContent = `${count} video${count !== 1 ? 's' : ''}`;
+      emptyState.style.display = count === 0 ? 'block' : 'none';
+
+      videosGrid.querySelectorAll('.video-card').forEach(el => el.remove());
+
+      state.generatedVideos.forEach((vid, index) => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        const modelName = MODEL_REGISTRY.replicate[vid.model]?.name || vid.model || 'Unknown';
+        const duration = vid.settings?.duration || 4;
+        card.innerHTML = `
+          <video src="${vid.url}" muted loop playsinline poster="${vid.inputImage || ''}"></video>
+          ${vid.inputImage ? `<img class="thumbnail" src="${vid.inputImage}" alt="Thumbnail">` : ''}
+          <div class="play-indicator"></div>
+          <div class="video-meta">
+            <span class="meta-tag model">${modelName.split(' ')[0]}</span>
+            <span class="meta-tag">${duration}s</span>
+          </div>
+          <div class="overlay">
+            <div class="video-actions">
+              <button class="video-action-btn" onclick="downloadVideo(${index})">Download</button>
+              <button class="video-action-btn primary" onclick="sendToGallery(${index})">Gallery</button>
+            </div>
+          </div>
+        `;
+
+        const video = card.querySelector('video');
+        const thumbnail = card.querySelector('.thumbnail');
+        const playIndicator = card.querySelector('.play-indicator');
+
+        card.addEventListener('mouseenter', () => {
+          video.play();
+          if (thumbnail) thumbnail.style.opacity = '0';
+          if (playIndicator) playIndicator.style.opacity = '0';
+        });
+        card.addEventListener('mouseleave', () => {
+          video.pause();
+          video.currentTime = 0;
+          if (thumbnail) thumbnail.style.opacity = '1';
+          if (playIndicator) playIndicator.style.opacity = '1';
+        });
+
+        videosGrid.insertBefore(card, emptyState);
+      });
+    }
+
+    // ==========================================
+    // Input Image Functions
+    // ==========================================
+    function setInputImage(imageData) {
+      state.inputImage = imageData;
+      updateInputImagePreview();
+    }
+
+    function clearInputImage() {
+      state.inputImage = null;
+      updateInputImagePreview();
+    }
+
+    window.clearInputImage = clearInputImage;
+
+    // ==========================================
+    // API Functions
+    // ==========================================
+    async function generateVideo() {
+      const apiKey = state.apiKeys[state.provider];
+      if (!apiKey) {
+        showToast('Please configure API key first');
+        settingsPanel.classList.add('active');
+        settingsBtn.classList.add('active');
+        return;
+      }
+
+      const modelInfo = MODEL_REGISTRY[state.provider][state.model];
+
+      // Most video models need an input image
+      if (!state.inputImage && !modelInfo.supportsText) {
+        showToast('Please add an input image');
+        return;
+      }
+
+      if (!state.inputImage && !state.promptConfig?.prompt) {
+        showToast('Please add an input image or set a prompt');
+        return;
+      }
+
+      state.isGenerating = true;
+      generateBtn.disabled = true;
+      generationStatus.classList.add('active');
+      progressFill.style.width = '0%';
+      statusText.textContent = 'Starting video generation...';
+      etaText.textContent = 'Video generation can take 2-10 minutes';
+
+      emitOutput('generationStarted', { model: state.model });
+      emitEvent('video:generation-started', { model: state.model });
+
+      try {
+        const modelId = modelInfo.id;
+        const result = await generateVideoReplicate(apiKey, modelId);
+
+        // Add generated video
+        const vid = {
+          id: 'vid_' + Date.now(),
+          url: result,
+          prompt: state.promptConfig?.prompt,
+          inputImage: state.inputImage?.url,
+          model: state.model,
+          settings: { duration: state.duration, fps: state.fps, motionBucket: state.motionBucket },
+          timestamp: Date.now(),
+        };
+
+        state.generatedVideos.unshift(vid);
+        emitOutput('videoGenerated', vid);
+        emitEvent('video:generated', vid);
+        updateVideosUI();
+        showToast('Video generated successfully');
+      } catch (error) {
+        console.error('Generation failed:', error);
+        emitOutput('generationFailed', { error: error.message });
+        emitEvent('video:generation-failed', { error: error.message });
+        showToast('Generation failed: ' + error.message);
+      } finally {
+        state.isGenerating = false;
+        generateBtn.disabled = false;
+        generationStatus.classList.remove('active');
+      }
+    }
+
+    async function generateVideoReplicate(apiKey, modelId) {
+      const input = {};
+
+      if (state.inputImage?.url) {
+        input.image = state.inputImage.url;
+      }
+
+      if (state.promptConfig?.prompt) {
+        input.prompt = state.promptConfig.prompt;
+      }
+
+      if (state.promptConfig?.negativePrompt) {
+        input.negative_prompt = state.promptConfig.negativePrompt;
+      }
+
+      input.num_frames = Math.round(state.duration * state.fps);
+      input.fps = state.fps;
+      input.motion_bucket_id = state.motionBucket;
+
+      if (state.promptConfig?.seed) {
+        input.seed = state.promptConfig.seed;
+      }
+
+      const isVersioned = modelId.includes(':');
+      const endpoint = isVersioned
+        ? 'https://api.replicate.com/v1/predictions'
+        : `https://api.replicate.com/v1/models/${modelId}/predictions`;
+
+      const body = isVersioned
+        ? { version: modelId.split(':')[1], input }
+        : { input };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Replicate API error: ${response.status}`);
+      }
+
+      let result = await response.json();
+
+      // Poll for video generation (takes longer)
+      let progress = 5;
+      const startTime = Date.now();
+
+      while (result.status === 'starting' || result.status === 'processing') {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        progress = Math.min(progress + 2, 95);
+        progressFill.style.width = `${progress}%`;
+        statusText.textContent = `Processing... (${result.status})`;
+        etaText.textContent = `Elapsed: ${elapsed}s - Video generation can take several minutes`;
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+        result = await pollResponse.json();
+      }
+
+      progressFill.style.width = '100%';
+
+      if (result.status === 'failed') {
+        throw new Error(result.error || 'Video generation failed');
+      }
+
+      return Array.isArray(result.output) ? result.output[0] : result.output;
+    }
+
+    // ==========================================
+    // Video Actions
+    // ==========================================
+    function downloadVideo(index) {
+      const vid = state.generatedVideos[index];
+      const a = document.createElement('a');
+      a.href = vid.url;
+      a.download = `video_${Date.now()}.mp4`;
+      a.click();
+      showToast('Download started');
+    }
+
+    function sendToGallery(index) {
+      const vid = state.generatedVideos[index];
+      emitOutput('sendToGallery', { url: vid.url, name: `Video ${new Date().toLocaleTimeString()}`, type: 'video' });
+      showToast('Sent to Gallery');
+    }
+
+    window.downloadVideo = downloadVideo;
+    window.sendToGallery = sendToGallery;
+
+    // ==========================================
+    // Event Listeners
+    // ==========================================
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.toggle('active');
+      settingsBtn.classList.toggle('active');
+    });
+
+    saveKeyBtn.addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      if (key && key !== '********') {
+        state.apiKeys[state.provider] = key;
+        localStorage.setItem('videoGenApiKeys', JSON.stringify(state.apiKeys));
+        updateKeyStatus();
+        showToast('API key saved');
+      }
+    });
+
+    providerSelect.addEventListener('change', (e) => {
+      state.provider = e.target.value;
+      updateKeyStatus();
+    });
+
+    modelSelect.addEventListener('change', (e) => {
+      state.model = e.target.value;
+    });
+
+    inputImagePreview.addEventListener('click', () => {
+      if (!state.inputImage) {
+        imageFileInput.click();
+      }
+    });
+
+    imageFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          setInputImage({ url: ev.target.result, name: file.name });
+        };
+        reader.readAsDataURL(file);
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('durationSelect').addEventListener('change', (e) => {
+      state.duration = parseInt(e.target.value);
+    });
+
+    document.getElementById('fpsSelect').addEventListener('change', (e) => {
+      state.fps = parseInt(e.target.value);
+    });
+
+    document.getElementById('motionSelect').addEventListener('change', (e) => {
+      state.motionBucket = parseInt(e.target.value);
+    });
+
+    document.getElementById('editPromptBtn').addEventListener('click', () => {
+      emitEvent('prompt:edit-requested', {});
+      showToast('Edit request sent to Prompt Options');
+    });
+
+    document.getElementById('numDecBtn').addEventListener('click', () => {
+      if (state.numOutputs > 1) {
+        state.numOutputs--;
+        numDisplay.textContent = state.numOutputs;
+      }
+    });
+
+    document.getElementById('numIncBtn').addEventListener('click', () => {
+      if (state.numOutputs < 4) {
+        state.numOutputs++;
+        numDisplay.textContent = state.numOutputs;
+      }
+    });
+
+    generateBtn.addEventListener('click', generateVideo);
+
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      showToast('Generation canceled');
+      state.isGenerating = false;
+      generateBtn.disabled = false;
+      generationStatus.classList.remove('active');
+    });
+
+    document.getElementById('clearImageBtn').addEventListener('click', clearInputImage);
+
+    // ==========================================
+    // Message Handling
+    // ==========================================
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'generate':
+            if (value) {
+              state.promptConfig = value;
+              updatePromptPreview();
+              generateVideo();
+            }
+            break;
+          case 'setApiKey':
+            if (value?.provider && value?.apiKey) {
+              state.apiKeys[value.provider] = value.apiKey;
+              localStorage.setItem('videoGenApiKeys', JSON.stringify(state.apiKeys));
+              if (value.provider === state.provider) updateKeyStatus();
+            }
+            break;
+          case 'setModel':
+            if (value && MODEL_REGISTRY[state.provider]?.[value]) {
+              state.model = value;
+              modelSelect.value = value;
+            }
+            break;
+          case 'syncPrompt':
+            if (value) {
+              state.promptConfig = value;
+              updatePromptPreview();
+            }
+            break;
+          case 'setInputImage':
+            if (value?.url) {
+              setInputImage(value);
+            }
+            break;
+          case 'cancel':
+            if (state.isGenerating) {
+              state.isGenerating = false;
+              generateBtn.disabled = false;
+              generationStatus.classList.remove('active');
+            }
+            break;
+        }
+        return;
+      }
+
+      // Handle canvas events
+      if (data.type === 'widget:event') {
+        const eventType = data.payload?.type;
+        const payload = data.payload?.payload;
+
+        switch (eventType) {
+          case 'prompt:changed':
+            if (payload) {
+              state.promptConfig = payload;
+              updatePromptPreview();
+            }
+            break;
+          case 'prompt:generate-requested':
+            if (payload?.type === 'video' && payload?.config) {
+              state.promptConfig = payload.config;
+              updatePromptPreview();
+              generateVideo();
+            }
+            break;
+          case 'gallery:image-selected':
+            if (payload?.url) {
+              setInputImage(payload);
+              showToast('Image set as input');
+            }
+            break;
+        }
+      }
+    });
+
+    // ==========================================
+    // Initialization
+    // ==========================================
+    function init() {
+      try {
+        const saved = localStorage.getItem('videoGenApiKeys');
+        if (saved) {
+          state.apiKeys = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('Failed to load API keys:', e);
+      }
+
+      updateKeyStatus();
+      updatePromptPreview();
+      updateInputImagePreview();
+      updateVideosUI();
+    }
+
+    window.parent.postMessage({ type: 'READY' }, '*');
+    init();
+  </script>
+</body>
+</html>

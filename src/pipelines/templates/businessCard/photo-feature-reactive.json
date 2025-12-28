@@ -1,0 +1,228 @@
+{
+  "id": "photo-feature-reactive",
+  "name": "Photo Feature (Reactive)",
+  "category": "business-card",
+  "description": "Portrait-centric design with reactive text zones. Perfect for personal branding, real estate agents, and consultants.",
+
+  "dimensions": {
+    "width": 1050,
+    "height": 600,
+    "dpi": 300,
+    "bleed": 0
+  },
+
+  "zones": [
+    {
+      "id": "photo",
+      "type": "image",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 45,
+        "height": 100,
+        "unit": "percent"
+      },
+      "zIndex": 5,
+      "maskValue": 0,
+      "maskPadding": 0,
+      "imageConfig": {
+        "fieldMapping": "photo",
+        "fit": "cover"
+      }
+    },
+    {
+      "id": "name",
+      "type": "text",
+      "bounds": {
+        "x": 50,
+        "y": 18,
+        "width": 45,
+        "height": 14,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 10,
+      "textConfig": {
+        "fieldMapping": "fullName",
+        "fontSize": 36,
+        "fontWeight": "bold",
+        "alignment": "left",
+        "color": "primary",
+        "lineHeight": 1.1
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 35,
+        "maxWidth": 48,
+        "growDirection": "right",
+        "contentPadding": 10
+      }
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "bounds": {
+        "x": 50,
+        "y": 35,
+        "width": 45,
+        "height": 9,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "jobTitle",
+        "fontSize": 20,
+        "fontWeight": "medium",
+        "alignment": "left",
+        "color": "accent",
+        "lineHeight": 1.2
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 30,
+        "maxWidth": 48,
+        "growDirection": "right",
+        "contentPadding": 8
+      }
+    },
+    {
+      "id": "company",
+      "type": "text",
+      "bounds": {
+        "x": 50,
+        "y": 46,
+        "width": 45,
+        "height": 7,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "businessName",
+        "fontSize": 16,
+        "fontWeight": "normal",
+        "alignment": "left",
+        "color": "secondary",
+        "lineHeight": 1.3
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 25,
+        "maxWidth": 48,
+        "growDirection": "right",
+        "contentPadding": 6
+      }
+    },
+    {
+      "id": "tagline",
+      "type": "text",
+      "bounds": {
+        "x": 50,
+        "y": 56,
+        "width": 45,
+        "height": 8,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "tagline",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fontStyle": "italic",
+        "alignment": "left",
+        "color": "text",
+        "lineHeight": 1.4
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 30,
+        "maxWidth": 48,
+        "growDirection": "right",
+        "contentPadding": 6
+      }
+    },
+    {
+      "id": "contact-block",
+      "type": "text",
+      "bounds": {
+        "x": 50,
+        "y": 70,
+        "width": 45,
+        "height": 24,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 10,
+      "textConfig": {
+        "fieldMapping": "contactInfo",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "alignment": "left",
+        "color": "text",
+        "lineHeight": 1.6
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 35,
+        "maxWidth": 48,
+        "minHeight": 18,
+        "maxHeight": 28,
+        "growDirection": "both",
+        "contentPadding": 8
+      }
+    },
+    {
+      "id": "logo",
+      "type": "logo",
+      "bounds": {
+        "x": 82,
+        "y": 5,
+        "width": 14,
+        "height": 12,
+        "unit": "percent"
+      },
+      "zIndex": 25,
+      "maskValue": 0,
+      "maskPadding": 8,
+      "imageConfig": {
+        "fieldMapping": "logo",
+        "fit": "contain"
+      }
+    }
+  ],
+
+  "promptTemplate": "professional business card right panel background, elegant gradient from {{primaryColor}} to {{secondaryColor}}, subtle abstract pattern, modern geometric accents, clean professional look perfect for photo card layout, {{stylePrompt}}, soft shadows, print quality 300 DPI",
+
+  "negativePromptBase": "text, words, letters, numbers, watermark, signature, human, face, portrait, photo, harsh colors, neon, childish, low quality, blurry",
+
+  "compositorPrompt": "This is a PHOTO FEATURE business card mask. The LEFT side (large black area) is reserved for a professional headshot/portrait photo. The RIGHT side (black areas) contains text: name, title, company, tagline, and contact info. Generate design ONLY for subtle background patterns and accents around the text areas on the right side. Do NOT generate anything for the photo area.",
+
+  "styleHints": [
+    "portrait",
+    "personal branding",
+    "photo-centric",
+    "professional headshot",
+    "modern",
+    "clean",
+    "elegant"
+  ],
+
+  "defaultColors": {
+    "primary": "#0ea5e9",
+    "secondary": "#6366f1",
+    "accent": "#f97316",
+    "background": "#ffffff",
+    "text": "#374151"
+  },
+
+  "author": "StickerNest",
+  "version": "2.0.0",
+  "tags": ["photo", "portrait", "personal-branding", "headshot", "professional", "reactive"]
+}

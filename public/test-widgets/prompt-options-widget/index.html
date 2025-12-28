@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Options</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .header h1 .icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .preset-badge {
+      background: rgba(168, 85, 247, 0.3);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-badge:hover {
+      background: rgba(168, 85, 247, 0.5);
+    }
+
+    /* Scrollable Content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* Sections */
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .section-action {
+      font-size: 11px;
+      color: #a855f7;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .section-action:hover {
+      color: #c084fc;
+    }
+
+    /* Textarea */
+    .prompt-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .prompt-textarea:focus {
+      outline: none;
+      border-color: #a855f7;
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+    }
+
+    .prompt-textarea::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .negative-prompt {
+      min-height: 50px;
+    }
+
+    .char-count {
+      text-align: right;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 4px;
+    }
+
+    /* Sliders */
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .slider-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: #a855f7;
+      background: rgba(168, 85, 247, 0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      min-width: 45px;
+      text-align: center;
+    }
+
+    .slider-track {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .slider-track input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .slider-track input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, #a855f7 0%, #6366f1 100%);
+    }
+
+    .slider-track input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      margin-top: -5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      cursor: grab;
+    }
+
+    .slider-track input[type="range"]::-webkit-slider-thumb:active {
+      cursor: grabbing;
+    }
+
+    /* Dimension Inputs */
+    .dimension-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .dimension-input {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dimension-input label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .dimension-input input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .dimension-input input:focus {
+      outline: none;
+      border-color: #a855f7;
+    }
+
+    .aspect-ratio-presets {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .aspect-btn {
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.2);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .aspect-btn:hover, .aspect-btn.active {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.2);
+      color: #fff;
+    }
+
+    /* Reference Images */
+    .reference-images {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .reference-item {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .reference-item:hover {
+      border-color: #a855f7;
+    }
+
+    .reference-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .reference-item .remove-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.9);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .reference-item:hover .remove-btn {
+      opacity: 1;
+    }
+
+    .reference-item .strength-badge {
+      position: absolute;
+      bottom: 2px;
+      left: 2px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 9px;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+
+    .add-reference-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      background: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: all 0.2s;
+    }
+
+    .add-reference-btn:hover {
+      border-color: #a855f7;
+      color: #a855f7;
+    }
+
+    /* LoRA Section */
+    .lora-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .lora-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .lora-info {
+      flex: 1;
+    }
+
+    .lora-name {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .lora-scale {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .lora-remove {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .lora-remove:hover {
+      background: rgba(239, 68, 68, 0.4);
+    }
+
+    .no-lora {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      text-align: center;
+      padding: 16px;
+    }
+
+    /* Select Input */
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      appearance: none;
+    }
+
+    .select-wrapper select:focus {
+      outline: none;
+      border-color: #a855f7;
+    }
+
+    .select-wrapper::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+    }
+
+    /* Number Input */
+    .num-outputs-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .num-outputs-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .num-outputs-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .num-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .num-btn:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.2);
+    }
+
+    .num-display {
+      font-size: 16px;
+      font-weight: 600;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    /* Footer Actions */
+    .footer {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .generate-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .generate-btn.image {
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      color: #fff;
+    }
+
+    .generate-btn.video {
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+      color: #fff;
+    }
+
+    .generate-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+    }
+
+    .save-preset-btn {
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: transparent;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .save-preset-btn:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 4px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: rgba(168, 85, 247, 0.3);
+      color: #fff;
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    /* Checkbox */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #a855f7;
+      cursor: pointer;
+    }
+
+    .checkbox-row label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+    }
+
+    /* Seed Input */
+    .seed-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .seed-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .seed-input:focus {
+      outline: none;
+      border-color: #a855f7;
+    }
+
+    .seed-random-btn {
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seed-random-btn:hover {
+      border-color: #a855f7;
+    }
+
+    /* Presets Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 12px;
+      padding: 20px;
+      width: 90%;
+      max-width: 300px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal h3 {
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .modal input:focus {
+      outline: none;
+      border-color: #a855f7;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .modal-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-btn.cancel {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .modal-btn.save {
+      background: #a855f7;
+      border: none;
+      color: #fff;
+    }
+
+    .modal-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    /* Preset List */
+    .preset-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .preset-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .preset-list-item:hover {
+      background: rgba(168, 85, 247, 0.2);
+    }
+
+    .preset-list-item .name {
+      font-size: 13px;
+    }
+
+    .preset-list-item .delete-btn {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    /* Hidden file input */
+    .hidden-input {
+      display: none;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Style Presets */
+    .style-presets {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .style-chip {
+      padding: 6px 12px;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .style-chip:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.15);
+    }
+
+    .style-chip.active {
+      background: rgba(168, 85, 247, 0.3);
+      border-color: #a855f7;
+      color: #fff;
+    }
+
+    .style-chip .remove {
+      margin-left: 6px;
+      opacity: 0.6;
+    }
+
+    .style-chip .remove:hover {
+      opacity: 1;
+    }
+
+    /* Prompt Templates */
+    .template-btn {
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      display: block;
+      width: 100%;
+      margin-bottom: 6px;
+    }
+
+    .template-btn:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .template-btn .title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .template-btn .preview {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Scheduler Select */
+    .scheduler-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .scheduler-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      min-width: 70px;
+    }
+
+    .scheduler-select {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .scheduler-select:focus {
+      outline: none;
+      border-color: #a855f7;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .quick-action-btn {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .quick-action-btn:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.1);
+      color: #fff;
+    }
+
+    /* Prompt Suggestions */
+    .suggestions {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .suggestion-chip {
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(168, 85, 247, 0.15);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .suggestion-chip:hover {
+      background: rgba(168, 85, 247, 0.3);
+      color: #fff;
+    }
+
+    /* Collapsible Section */
+    .section.collapsible .section-header {
+      cursor: pointer;
+    }
+
+    .section.collapsible .section-content {
+      max-height: 500px;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .section.collapsible.collapsed .section-content {
+      max-height: 0;
+    }
+
+    .section.collapsible .collapse-icon {
+      transition: transform 0.2s;
+    }
+
+    .section.collapsible.collapsed .collapse-icon {
+      transform: rotate(-90deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span class="icon">P</span>
+      Prompt Options
+    </h1>
+    <span class="preset-badge" id="presetBtn">Presets</span>
+  </div>
+
+  <div class="content">
+    <!-- Style Presets -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Style Presets</span>
+        <span class="section-action" id="clearStylesBtn">Clear</span>
+      </div>
+      <div class="style-presets" id="stylePresets">
+        <button class="style-chip" data-style="cinematic">Cinematic</button>
+        <button class="style-chip" data-style="anime">Anime</button>
+        <button class="style-chip" data-style="photorealistic">Photorealistic</button>
+        <button class="style-chip" data-style="oil-painting">Oil Painting</button>
+        <button class="style-chip" data-style="watercolor">Watercolor</button>
+        <button class="style-chip" data-style="3d-render">3D Render</button>
+        <button class="style-chip" data-style="pixel-art">Pixel Art</button>
+        <button class="style-chip" data-style="comic">Comic Book</button>
+        <button class="style-chip" data-style="concept-art">Concept Art</button>
+        <button class="style-chip" data-style="studio-photo">Studio Photo</button>
+      </div>
+    </div>
+
+    <!-- Templates -->
+    <div class="section collapsible" id="templatesSection">
+      <div class="section-header" onclick="toggleSection('templatesSection')">
+        <span class="section-title">Prompt Templates</span>
+        <span class="collapse-icon">v</span>
+      </div>
+      <div class="section-content">
+        <button class="template-btn" onclick="applyTemplate('portrait')">
+          <div class="title">Portrait</div>
+          <div class="preview">A [adjective] portrait of a [subject], [lighting], [style]</div>
+        </button>
+        <button class="template-btn" onclick="applyTemplate('landscape')">
+          <div class="title">Landscape</div>
+          <div class="preview">A breathtaking [time of day] view of [location], [weather]...</div>
+        </button>
+        <button class="template-btn" onclick="applyTemplate('product')">
+          <div class="title">Product Shot</div>
+          <div class="preview">[Product] on a [surface], professional product photography...</div>
+        </button>
+        <button class="template-btn" onclick="applyTemplate('character')">
+          <div class="title">Character Design</div>
+          <div class="preview">[Character type], full body, [pose], detailed costume design...</div>
+        </button>
+        <button class="template-btn" onclick="applyTemplate('architecture')">
+          <div class="title">Architecture</div>
+          <div class="preview">[Building type] with [architectural style], exterior view...</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Prompt -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Prompt</span>
+        <span class="section-action" id="enhancePromptBtn">Enhance</span>
+      </div>
+      <textarea class="prompt-textarea" id="promptInput" placeholder="Describe what you want to generate..."></textarea>
+      <div class="char-count"><span id="promptCount">0</span> characters</div>
+      <div class="suggestions" id="promptSuggestions"></div>
+      <div class="quick-actions">
+        <button class="quick-action-btn" onclick="addToPrompt('highly detailed')">+ Detail</button>
+        <button class="quick-action-btn" onclick="addToPrompt('8k resolution')">+ 8K</button>
+        <button class="quick-action-btn" onclick="addToPrompt('sharp focus')">+ Sharp</button>
+        <button class="quick-action-btn" onclick="addToPrompt('dramatic lighting')">+ Lighting</button>
+      </div>
+    </div>
+
+    <!-- Negative Prompt -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Negative Prompt</span>
+        <span class="section-action" id="clearNegativeBtn">Clear</span>
+      </div>
+      <textarea class="prompt-textarea negative-prompt" id="negativePromptInput" placeholder="What to avoid in generation..."></textarea>
+    </div>
+
+    <!-- Generation Settings -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Generation Settings</span>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-item">
+          <div class="slider-header">
+            <span class="slider-label">Guidance Scale</span>
+            <span class="slider-value" id="guidanceValue">7.5</span>
+          </div>
+          <div class="slider-track">
+            <input type="range" id="guidanceSlider" min="1" max="20" step="0.5" value="7.5">
+          </div>
+        </div>
+
+        <div class="slider-item">
+          <div class="slider-header">
+            <span class="slider-label">Inference Steps</span>
+            <span class="slider-value" id="stepsValue">30</span>
+          </div>
+          <div class="slider-track">
+            <input type="range" id="stepsSlider" min="1" max="100" step="1" value="30">
+          </div>
+        </div>
+      </div>
+
+      <div class="scheduler-row">
+        <span class="scheduler-label">Scheduler</span>
+        <select class="scheduler-select" id="schedulerSelect">
+          <option value="default">Default</option>
+          <option value="ddim">DDIM</option>
+          <option value="dpm++">DPM++ 2M</option>
+          <option value="dpm++_sde">DPM++ SDE</option>
+          <option value="euler">Euler</option>
+          <option value="euler_a">Euler Ancestral</option>
+          <option value="heun">Heun</option>
+          <option value="lms">LMS</option>
+          <option value="pndm">PNDM</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Dimensions -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Dimensions</span>
+      </div>
+
+      <div class="dimension-row">
+        <div class="dimension-input">
+          <label>Width</label>
+          <input type="number" id="widthInput" value="1024" min="256" max="2048" step="64">
+        </div>
+        <span style="color: rgba(255,255,255,0.4);">x</span>
+        <div class="dimension-input">
+          <label>Height</label>
+          <input type="number" id="heightInput" value="1024" min="256" max="2048" step="64">
+        </div>
+      </div>
+
+      <div class="aspect-ratio-presets">
+        <button class="aspect-btn active" data-ratio="1:1">1:1</button>
+        <button class="aspect-btn" data-ratio="16:9">16:9</button>
+        <button class="aspect-btn" data-ratio="9:16">9:16</button>
+        <button class="aspect-btn" data-ratio="4:3">4:3</button>
+        <button class="aspect-btn" data-ratio="3:4">3:4</button>
+        <button class="aspect-btn" data-ratio="21:9">21:9</button>
+      </div>
+    </div>
+
+    <!-- Output Options -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Output Options</span>
+      </div>
+
+      <div class="num-outputs-row">
+        <span class="num-outputs-label">Number of Outputs</span>
+        <div class="num-outputs-controls">
+          <button class="num-btn" id="numDecBtn">-</button>
+          <span class="num-display" id="numOutputsDisplay">1</span>
+          <button class="num-btn" id="numIncBtn">+</button>
+        </div>
+      </div>
+
+      <div class="seed-row" style="margin-top: 12px;">
+        <input type="number" class="seed-input" id="seedInput" placeholder="Seed (random if empty)">
+        <button class="seed-random-btn" id="randomSeedBtn">Random</button>
+      </div>
+    </div>
+
+    <!-- Reference Images -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Reference Images</span>
+        <span class="section-action" id="clearReferencesBtn">Clear All</span>
+      </div>
+
+      <div class="reference-images" id="referenceImagesContainer">
+        <button class="add-reference-btn" id="addReferenceBtn">+</button>
+      </div>
+
+      <div class="slider-item" id="refStrengthContainer" style="margin-top: 12px; display: none;">
+        <div class="slider-header">
+          <span class="slider-label">Reference Strength</span>
+          <span class="slider-value" id="refStrengthValue">0.75</span>
+        </div>
+        <div class="slider-track">
+          <input type="range" id="refStrengthSlider" min="0" max="1" step="0.05" value="0.75">
+        </div>
+      </div>
+    </div>
+
+    <!-- LoRA -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">LoRA</span>
+        <span class="section-action" id="addLoraBtn">+ Add</span>
+      </div>
+
+      <div id="loraContainer">
+        <div class="no-lora">No LoRA selected</div>
+      </div>
+
+      <div class="slider-item" id="loraScaleContainer" style="margin-top: 12px; display: none;">
+        <div class="slider-header">
+          <span class="slider-label">LoRA Scale</span>
+          <span class="slider-value" id="loraScaleValue">1.0</span>
+        </div>
+        <div class="slider-track">
+          <input type="range" id="loraScaleSlider" min="0" max="2" step="0.1" value="1.0">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <button class="generate-btn image" id="generateImageBtn">Generate Image</button>
+    <button class="generate-btn video" id="generateVideoBtn">Video</button>
+  </div>
+
+  <!-- Presets Modal -->
+  <div class="modal-overlay" id="presetsModal">
+    <div class="modal">
+      <h3 id="modalTitle">Presets</h3>
+      <div class="preset-list" id="presetList"></div>
+      <input type="text" id="presetNameInput" placeholder="New preset name..." style="display: none;">
+      <div class="modal-actions">
+        <button class="modal-btn cancel" id="modalCancelBtn">Cancel</button>
+        <button class="modal-btn save" id="modalSaveBtn">Save New</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Inputs -->
+  <input type="file" class="hidden-input" id="referenceFileInput" accept="image/*" multiple>
+  <input type="file" class="hidden-input" id="loraFileInput" accept=".safetensors,.pt,.bin">
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==========================================
+    // Style Presets Data
+    // ==========================================
+    const STYLE_PRESETS = {
+      'cinematic': {
+        suffix: 'cinematic lighting, movie still, film grain, dramatic atmosphere, depth of field',
+        negative: 'amateur, low quality'
+      },
+      'anime': {
+        suffix: 'anime style, anime art, vibrant colors, clean lines, studio ghibli inspired',
+        negative: 'realistic, photograph, 3d render'
+      },
+      'photorealistic': {
+        suffix: 'photorealistic, hyperrealistic, 8k uhd, high detail, professional photography',
+        negative: 'cartoon, illustration, painting, drawing'
+      },
+      'oil-painting': {
+        suffix: 'oil painting, classical art, brush strokes visible, rich colors, masterpiece',
+        negative: 'photograph, digital art, 3d'
+      },
+      'watercolor': {
+        suffix: 'watercolor painting, soft edges, flowing colors, artistic, delicate',
+        negative: 'photograph, sharp edges, digital'
+      },
+      '3d-render': {
+        suffix: '3d render, octane render, unreal engine 5, ray tracing, volumetric lighting',
+        negative: 'photograph, 2d, flat'
+      },
+      'pixel-art': {
+        suffix: 'pixel art, 16-bit, retro gaming style, crisp pixels, nostalgic',
+        negative: 'realistic, photograph, smooth'
+      },
+      'comic': {
+        suffix: 'comic book style, bold outlines, halftone dots, dynamic composition, marvel dc style',
+        negative: 'realistic, photograph'
+      },
+      'concept-art': {
+        suffix: 'concept art, digital painting, artstation trending, matte painting, detailed environment',
+        negative: 'photograph, amateur'
+      },
+      'studio-photo': {
+        suffix: 'studio photography, professional lighting, white background, product shot, commercial quality',
+        negative: 'outdoor, natural light, amateur'
+      }
+    };
+
+    const PROMPT_TEMPLATES = {
+      'portrait': 'A [beautiful/handsome/elegant] portrait of a [subject description], [soft/dramatic/natural] lighting, [style: cinematic/painterly/photographic], detailed facial features, [background description]',
+      'landscape': 'A breathtaking [golden hour/sunset/sunrise/night] view of [location: mountains/ocean/forest/city], [weather: clear skies/foggy/stormy], epic scale, dramatic atmosphere, 8k resolution',
+      'product': '[Product name/type] on a [marble/wooden/minimalist] surface, professional product photography, studio lighting, clean background, commercial quality, sharp focus',
+      'character': '[Character type: warrior/wizard/knight/etc], full body shot, [dynamic/relaxed/action] pose, detailed costume design, [fantasy/sci-fi/historical] setting, concept art style',
+      'architecture': '[Building type: castle/skyscraper/cottage/temple] with [gothic/modern/traditional/futuristic] architectural style, [exterior/interior] view, dramatic lighting, detailed textures, architectural visualization'
+    };
+
+    const NEGATIVE_PRESETS = {
+      'quality': 'low quality, blurry, pixelated, jpeg artifacts, watermark, signature, text, logo',
+      'anatomy': 'bad anatomy, bad hands, extra fingers, missing fingers, extra limbs, deformed, disfigured',
+      'style': 'ugly, amateur, poorly drawn, bad proportions, gross proportions'
+    };
+
+    // ==========================================
+    // State
+    // ==========================================
+    const state = {
+      prompt: '',
+      negativePrompt: '',
+      guidanceScale: 7.5,
+      numInferenceSteps: 30,
+      width: 1024,
+      height: 1024,
+      numOutputs: 1,
+      seed: null,
+      referenceImages: [],
+      referenceStrength: 0.75,
+      lora: null,
+      loraScale: 1.0,
+      scheduler: 'default',
+      activeStyles: [],
+    };
+
+    let presets = [];
+    let modalMode = 'list'; // 'list' or 'save'
+
+    // ==========================================
+    // DOM Elements
+    // ==========================================
+    const promptInput = document.getElementById('promptInput');
+    const promptCount = document.getElementById('promptCount');
+    const negativePromptInput = document.getElementById('negativePromptInput');
+    const guidanceSlider = document.getElementById('guidanceSlider');
+    const guidanceValue = document.getElementById('guidanceValue');
+    const stepsSlider = document.getElementById('stepsSlider');
+    const stepsValue = document.getElementById('stepsValue');
+    const widthInput = document.getElementById('widthInput');
+    const heightInput = document.getElementById('heightInput');
+    const numOutputsDisplay = document.getElementById('numOutputsDisplay');
+    const seedInput = document.getElementById('seedInput');
+    const referenceImagesContainer = document.getElementById('referenceImagesContainer');
+    const refStrengthContainer = document.getElementById('refStrengthContainer');
+    const refStrengthSlider = document.getElementById('refStrengthSlider');
+    const refStrengthValue = document.getElementById('refStrengthValue');
+    const loraContainer = document.getElementById('loraContainer');
+    const loraScaleContainer = document.getElementById('loraScaleContainer');
+    const loraScaleSlider = document.getElementById('loraScaleSlider');
+    const loraScaleValue = document.getElementById('loraScaleValue');
+    const presetsModal = document.getElementById('presetsModal');
+    const presetList = document.getElementById('presetList');
+    const presetNameInput = document.getElementById('presetNameInput');
+    const referenceFileInput = document.getElementById('referenceFileInput');
+    const loraFileInput = document.getElementById('loraFileInput');
+    const toast = document.getElementById('toast');
+
+    // ==========================================
+    // Utilities
+    // ==========================================
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload }
+      }, '*');
+    }
+
+    function getConfig() {
+      return {
+        prompt: state.prompt,
+        negativePrompt: state.negativePrompt,
+        guidanceScale: state.guidanceScale,
+        numInferenceSteps: state.numInferenceSteps,
+        width: state.width,
+        height: state.height,
+        numOutputs: state.numOutputs,
+        seed: state.seed,
+        referenceImages: state.referenceImages,
+        referenceStrength: state.referenceStrength,
+        lora: state.lora,
+        loraScale: state.loraScale,
+        scheduler: state.scheduler,
+        activeStyles: state.activeStyles,
+      };
+    }
+
+    // Build the final prompt with style suffixes
+    function getFinalPrompt() {
+      let finalPrompt = state.prompt;
+
+      // Add style suffixes
+      state.activeStyles.forEach(styleId => {
+        const style = STYLE_PRESETS[styleId];
+        if (style && style.suffix) {
+          finalPrompt = finalPrompt ? `${finalPrompt}, ${style.suffix}` : style.suffix;
+        }
+      });
+
+      return finalPrompt;
+    }
+
+    // Build the final negative prompt with style negatives
+    function getFinalNegativePrompt() {
+      let finalNegative = state.negativePrompt;
+
+      // Add style negatives
+      state.activeStyles.forEach(styleId => {
+        const style = STYLE_PRESETS[styleId];
+        if (style && style.negative) {
+          finalNegative = finalNegative ? `${finalNegative}, ${style.negative}` : style.negative;
+        }
+      });
+
+      return finalNegative;
+    }
+
+    function notifyChange() {
+      const config = getConfig();
+      // Include final prompts with style suffixes
+      config.finalPrompt = getFinalPrompt();
+      config.finalNegativePrompt = getFinalNegativePrompt();
+
+      emitOutput('promptChanged', config);
+      emitOutput('currentConfig', config);
+      emitEvent('prompt:changed', config);
+    }
+
+    // ==========================================
+    // Style Presets Functions
+    // ==========================================
+    function toggleStyle(styleId) {
+      const index = state.activeStyles.indexOf(styleId);
+      if (index === -1) {
+        state.activeStyles.push(styleId);
+      } else {
+        state.activeStyles.splice(index, 1);
+      }
+      updateStyleChips();
+      notifyChange();
+    }
+
+    function updateStyleChips() {
+      document.querySelectorAll('.style-chip').forEach(chip => {
+        const styleId = chip.dataset.style;
+        chip.classList.toggle('active', state.activeStyles.includes(styleId));
+      });
+    }
+
+    function clearStyles() {
+      state.activeStyles = [];
+      updateStyleChips();
+      notifyChange();
+      showToast('Styles cleared');
+    }
+
+    // ==========================================
+    // Template Functions
+    // ==========================================
+    function applyTemplate(templateId) {
+      const template = PROMPT_TEMPLATES[templateId];
+      if (template) {
+        state.prompt = template;
+        promptInput.value = template;
+        promptCount.textContent = template.length;
+        notifyChange();
+        showToast(`Template "${templateId}" applied`);
+      }
+    }
+
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      section.classList.toggle('collapsed');
+    }
+
+    // ==========================================
+    // Quick Action Functions
+    // ==========================================
+    function addToPrompt(text) {
+      if (state.prompt) {
+        state.prompt = `${state.prompt}, ${text}`;
+      } else {
+        state.prompt = text;
+      }
+      promptInput.value = state.prompt;
+      promptCount.textContent = state.prompt.length;
+      notifyChange();
+    }
+
+    // Make functions available globally
+    window.applyTemplate = applyTemplate;
+    window.toggleSection = toggleSection;
+    window.addToPrompt = addToPrompt;
+
+    // ==========================================
+    // Event Handlers
+    // ==========================================
+
+    // Prompt
+    promptInput.addEventListener('input', (e) => {
+      state.prompt = e.target.value;
+      promptCount.textContent = state.prompt.length;
+      notifyChange();
+    });
+
+    negativePromptInput.addEventListener('input', (e) => {
+      state.negativePrompt = e.target.value;
+      notifyChange();
+    });
+
+    document.getElementById('clearNegativeBtn').addEventListener('click', () => {
+      negativePromptInput.value = '';
+      state.negativePrompt = '';
+      notifyChange();
+    });
+
+    // Sliders
+    guidanceSlider.addEventListener('input', (e) => {
+      state.guidanceScale = parseFloat(e.target.value);
+      guidanceValue.textContent = state.guidanceScale.toFixed(1);
+      notifyChange();
+    });
+
+    stepsSlider.addEventListener('input', (e) => {
+      state.numInferenceSteps = parseInt(e.target.value);
+      stepsValue.textContent = state.numInferenceSteps;
+      notifyChange();
+    });
+
+    // Dimensions
+    widthInput.addEventListener('change', (e) => {
+      state.width = Math.max(256, Math.min(2048, parseInt(e.target.value) || 1024));
+      e.target.value = state.width;
+      updateAspectButtons();
+      notifyChange();
+    });
+
+    heightInput.addEventListener('change', (e) => {
+      state.height = Math.max(256, Math.min(2048, parseInt(e.target.value) || 1024));
+      e.target.value = state.height;
+      updateAspectButtons();
+      notifyChange();
+    });
+
+    // Aspect Ratio Buttons
+    document.querySelectorAll('.aspect-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ratio = btn.dataset.ratio;
+        const [w, h] = ratio.split(':').map(Number);
+        const baseSize = 1024;
+
+        if (w > h) {
+          state.width = baseSize;
+          state.height = Math.round(baseSize * (h / w));
+        } else if (h > w) {
+          state.height = baseSize;
+          state.width = Math.round(baseSize * (w / h));
+        } else {
+          state.width = baseSize;
+          state.height = baseSize;
+        }
+
+        widthInput.value = state.width;
+        heightInput.value = state.height;
+        updateAspectButtons();
+        notifyChange();
+      });
+    });
+
+    function updateAspectButtons() {
+      const ratio = state.width / state.height;
+      document.querySelectorAll('.aspect-btn').forEach(btn => {
+        const [w, h] = btn.dataset.ratio.split(':').map(Number);
+        const btnRatio = w / h;
+        btn.classList.toggle('active', Math.abs(ratio - btnRatio) < 0.05);
+      });
+    }
+
+    // Number of Outputs
+    document.getElementById('numDecBtn').addEventListener('click', () => {
+      if (state.numOutputs > 1) {
+        state.numOutputs--;
+        numOutputsDisplay.textContent = state.numOutputs;
+        notifyChange();
+      }
+    });
+
+    document.getElementById('numIncBtn').addEventListener('click', () => {
+      if (state.numOutputs < 10) {
+        state.numOutputs++;
+        numOutputsDisplay.textContent = state.numOutputs;
+        notifyChange();
+      }
+    });
+
+    // Seed
+    seedInput.addEventListener('change', (e) => {
+      state.seed = e.target.value ? parseInt(e.target.value) : null;
+      notifyChange();
+    });
+
+    document.getElementById('randomSeedBtn').addEventListener('click', () => {
+      state.seed = Math.floor(Math.random() * 2147483647);
+      seedInput.value = state.seed;
+      notifyChange();
+    });
+
+    // Reference Images
+    document.getElementById('addReferenceBtn').addEventListener('click', () => {
+      referenceFileInput.click();
+    });
+
+    referenceFileInput.addEventListener('change', (e) => {
+      Array.from(e.target.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            addReferenceImage({ url: ev.target.result, name: file.name });
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      e.target.value = '';
+    });
+
+    function addReferenceImage(imgData) {
+      const id = 'ref_' + Date.now();
+      state.referenceImages.push({ id, url: imgData.url, name: imgData.name, strength: state.referenceStrength });
+      renderReferenceImages();
+      emitOutput('referenceImageAdded', imgData);
+      notifyChange();
+    }
+
+    function removeReferenceImage(id) {
+      state.referenceImages = state.referenceImages.filter(img => img.id !== id);
+      renderReferenceImages();
+      notifyChange();
+    }
+
+    function renderReferenceImages() {
+      const container = referenceImagesContainer;
+      container.querySelectorAll('.reference-item').forEach(el => el.remove());
+
+      const addBtn = document.getElementById('addReferenceBtn');
+
+      state.referenceImages.forEach(img => {
+        const item = document.createElement('div');
+        item.className = 'reference-item';
+        item.innerHTML = `
+          <img src="${img.url}" alt="${img.name}">
+          <button class="remove-btn" onclick="removeReferenceImage('${img.id}')">&times;</button>
+          <span class="strength-badge">${(img.strength * 100).toFixed(0)}%</span>
+        `;
+        container.insertBefore(item, addBtn);
+      });
+
+      refStrengthContainer.style.display = state.referenceImages.length > 0 ? 'block' : 'none';
+    }
+
+    // Make function available globally
+    window.removeReferenceImage = removeReferenceImage;
+
+    document.getElementById('clearReferencesBtn').addEventListener('click', () => {
+      state.referenceImages = [];
+      renderReferenceImages();
+      notifyChange();
+    });
+
+    refStrengthSlider.addEventListener('input', (e) => {
+      state.referenceStrength = parseFloat(e.target.value);
+      refStrengthValue.textContent = state.referenceStrength.toFixed(2);
+      state.referenceImages.forEach(img => img.strength = state.referenceStrength);
+      renderReferenceImages();
+      notifyChange();
+    });
+
+    // LoRA
+    document.getElementById('addLoraBtn').addEventListener('click', () => {
+      loraFileInput.click();
+    });
+
+    loraFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // For uploaded files, create a local URL
+        const url = URL.createObjectURL(file);
+        setLora({ url, name: file.name, scale: state.loraScale });
+      }
+      e.target.value = '';
+    });
+
+    function setLora(loraData) {
+      state.lora = loraData;
+      renderLora();
+      notifyChange();
+    }
+
+    function removeLora() {
+      state.lora = null;
+      renderLora();
+      notifyChange();
+    }
+
+    window.removeLora = removeLora;
+
+    function renderLora() {
+      if (state.lora) {
+        loraContainer.innerHTML = `
+          <div class="lora-item">
+            <div class="lora-icon">L</div>
+            <div class="lora-info">
+              <div class="lora-name">${state.lora.name}</div>
+              <div class="lora-scale">Scale: ${state.loraScale.toFixed(1)}</div>
+            </div>
+            <button class="lora-remove" onclick="removeLora()">Remove</button>
+          </div>
+        `;
+        loraScaleContainer.style.display = 'block';
+      } else {
+        loraContainer.innerHTML = '<div class="no-lora">No LoRA selected</div>';
+        loraScaleContainer.style.display = 'none';
+      }
+    }
+
+    loraScaleSlider.addEventListener('input', (e) => {
+      state.loraScale = parseFloat(e.target.value);
+      loraScaleValue.textContent = state.loraScale.toFixed(1);
+      if (state.lora) {
+        state.lora.scale = state.loraScale;
+        renderLora();
+      }
+      notifyChange();
+    });
+
+    // Generate Buttons
+    document.getElementById('generateImageBtn').addEventListener('click', () => {
+      const config = getConfig();
+      emitOutput('generateRequested', { type: 'image', config });
+      emitEvent('prompt:generate-requested', { type: 'image', config });
+      showToast('Image generation requested');
+    });
+
+    document.getElementById('generateVideoBtn').addEventListener('click', () => {
+      const config = getConfig();
+      emitOutput('generateRequested', { type: 'video', config });
+      emitEvent('prompt:generate-requested', { type: 'video', config });
+      showToast('Video generation requested');
+    });
+
+    // Presets
+    document.getElementById('presetBtn').addEventListener('click', () => {
+      modalMode = 'list';
+      presetNameInput.style.display = 'none';
+      document.getElementById('modalTitle').textContent = 'Presets';
+      document.getElementById('modalSaveBtn').textContent = 'Save New';
+      renderPresetList();
+      presetsModal.classList.add('active');
+    });
+
+    document.getElementById('modalCancelBtn').addEventListener('click', () => {
+      presetsModal.classList.remove('active');
+    });
+
+    document.getElementById('modalSaveBtn').addEventListener('click', () => {
+      if (modalMode === 'list') {
+        modalMode = 'save';
+        presetNameInput.style.display = 'block';
+        presetNameInput.value = '';
+        presetNameInput.focus();
+        document.getElementById('modalSaveBtn').textContent = 'Save';
+      } else {
+        const name = presetNameInput.value.trim();
+        if (name) {
+          savePreset(name);
+          presetsModal.classList.remove('active');
+        }
+      }
+    });
+
+    function savePreset(name) {
+      const preset = { name, config: getConfig(), createdAt: Date.now() };
+      presets.push(preset);
+      localStorage.setItem('promptPresets', JSON.stringify(presets));
+      emitOutput('presetSaved', preset);
+      showToast(`Preset "${name}" saved`);
+    }
+
+    function loadPreset(name) {
+      const preset = presets.find(p => p.name === name);
+      if (preset) {
+        applyConfig(preset.config);
+        presetsModal.classList.remove('active');
+        showToast(`Preset "${name}" loaded`);
+      }
+    }
+
+    function deletePreset(name) {
+      presets = presets.filter(p => p.name !== name);
+      localStorage.setItem('promptPresets', JSON.stringify(presets));
+      renderPresetList();
+    }
+
+    window.loadPreset = loadPreset;
+    window.deletePreset = deletePreset;
+
+    function renderPresetList() {
+      if (presets.length === 0) {
+        presetList.innerHTML = '<div class="no-lora">No presets saved</div>';
+        return;
+      }
+
+      presetList.innerHTML = presets.map(p => `
+        <div class="preset-list-item" onclick="loadPreset('${p.name}')">
+          <span class="name">${p.name}</span>
+          <button class="delete-btn" onclick="event.stopPropagation(); deletePreset('${p.name}')">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    function applyConfig(config) {
+      state.prompt = config.prompt || '';
+      state.negativePrompt = config.negativePrompt || '';
+      state.guidanceScale = config.guidanceScale || 7.5;
+      state.numInferenceSteps = config.numInferenceSteps || 30;
+      state.width = config.width || 1024;
+      state.height = config.height || 1024;
+      state.numOutputs = config.numOutputs || 1;
+      state.seed = config.seed || null;
+      state.referenceImages = config.referenceImages || [];
+      state.referenceStrength = config.referenceStrength || 0.75;
+      state.lora = config.lora || null;
+      state.loraScale = config.loraScale || 1.0;
+
+      // Update UI
+      promptInput.value = state.prompt;
+      promptCount.textContent = state.prompt.length;
+      negativePromptInput.value = state.negativePrompt;
+      guidanceSlider.value = state.guidanceScale;
+      guidanceValue.textContent = state.guidanceScale.toFixed(1);
+      stepsSlider.value = state.numInferenceSteps;
+      stepsValue.textContent = state.numInferenceSteps;
+      widthInput.value = state.width;
+      heightInput.value = state.height;
+      numOutputsDisplay.textContent = state.numOutputs;
+      seedInput.value = state.seed || '';
+      refStrengthSlider.value = state.referenceStrength;
+      refStrengthValue.textContent = state.referenceStrength.toFixed(2);
+      loraScaleSlider.value = state.loraScale;
+      loraScaleValue.textContent = state.loraScale.toFixed(1);
+
+      updateAspectButtons();
+      renderReferenceImages();
+      renderLora();
+      notifyChange();
+    }
+
+    // ==========================================
+    // Message Handling
+    // ==========================================
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'setPrompt':
+            state.prompt = value;
+            promptInput.value = value;
+            promptCount.textContent = value.length;
+            notifyChange();
+            break;
+          case 'setNegativePrompt':
+            state.negativePrompt = value;
+            negativePromptInput.value = value;
+            notifyChange();
+            break;
+          case 'setSettings':
+            if (value && typeof value === 'object') {
+              applyConfig({ ...getConfig(), ...value });
+            }
+            break;
+          case 'addReferenceImage':
+            if (value && value.url) {
+              addReferenceImage(value);
+            }
+            break;
+          case 'clearReferenceImages':
+            state.referenceImages = [];
+            renderReferenceImages();
+            notifyChange();
+            break;
+          case 'setLora':
+            if (value && value.url) {
+              setLora(value);
+            }
+            break;
+          case 'loadPreset':
+            loadPreset(value);
+            break;
+        }
+        return;
+      }
+
+      // Handle canvas events
+      if (data.type === 'widget:event') {
+        const eventType = data.payload?.type;
+        const payload = data.payload?.payload;
+
+        switch (eventType) {
+          case 'gallery:image-selected':
+            // When image is selected from gallery, add as reference
+            if (payload && payload.url) {
+              addReferenceImage(payload);
+            }
+            break;
+          case 'lora:selected':
+            // When LoRA is selected from LoRA widget
+            if (payload && payload.url) {
+              setLora(payload);
+            }
+            break;
+        }
+      }
+    });
+
+    // ==========================================
+    // Style & Scheduler Event Listeners
+    // ==========================================
+    document.querySelectorAll('.style-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        toggleStyle(chip.dataset.style);
+      });
+    });
+
+    document.getElementById('clearStylesBtn').addEventListener('click', clearStyles);
+
+    document.getElementById('schedulerSelect').addEventListener('change', (e) => {
+      state.scheduler = e.target.value;
+      notifyChange();
+    });
+
+    // Enhance prompt button - adds quality modifiers
+    document.getElementById('enhancePromptBtn').addEventListener('click', () => {
+      const enhancements = [
+        'highly detailed',
+        'professional quality',
+        'sharp focus',
+        'beautiful composition'
+      ];
+      const enhancement = enhancements.join(', ');
+      if (state.prompt && !state.prompt.includes('highly detailed')) {
+        state.prompt = `${state.prompt}, ${enhancement}`;
+        promptInput.value = state.prompt;
+        promptCount.textContent = state.prompt.length;
+        notifyChange();
+        showToast('Prompt enhanced');
+      } else if (!state.prompt) {
+        showToast('Enter a prompt first');
+      } else {
+        showToast('Prompt already enhanced');
+      }
+    });
+
+    // ==========================================
+    // Initialization
+    // ==========================================
+    function init() {
+      // Load presets from localStorage
+      try {
+        const saved = localStorage.getItem('promptPresets');
+        if (saved) {
+          presets = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('Failed to load presets:', e);
+      }
+
+      // Collapse templates section by default
+      document.getElementById('templatesSection').classList.add('collapsed');
+
+      // Send initial config
+      setTimeout(() => notifyChange(), 100);
+    }
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+    init();
+  </script>
+</body>
+</html>

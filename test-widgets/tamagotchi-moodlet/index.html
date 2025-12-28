@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tamagotchi Moodlet</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #25253a;
+      --bg-tertiary: #2f2f4a;
+      --accent: #00d4aa;
+      --accent-positive: #4ade80;
+      --accent-negative: #f87171;
+      --accent-neutral: #fbbf24;
+      --text-primary: #eee;
+      --text-secondary: #999;
+      --border: #3a3a5a;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .overall-mood {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .mood-face {
+      font-size: 18px;
+    }
+
+    .mood-label {
+      color: var(--text-secondary);
+    }
+
+    .mood-value {
+      font-weight: 600;
+    }
+
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    /* Moodlet Card */
+    .moodlet-card {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--accent-neutral);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .moodlet-card:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .moodlet-card.positive {
+      border-left-color: var(--accent-positive);
+    }
+
+    .moodlet-card.negative {
+      border-left-color: var(--accent-negative);
+    }
+
+    .moodlet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .moodlet-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .moodlet-icon {
+      font-size: 24px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+    }
+
+    .moodlet-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .moodlet-status {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .moodlet-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .action-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--accent);
+    }
+
+    .action-btn.positive:hover {
+      background: var(--accent-positive);
+    }
+
+    .action-btn.negative:hover {
+      background: var(--accent-negative);
+    }
+
+    /* Moodlet Bar */
+    .moodlet-bar {
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .moodlet-fill {
+      position: absolute;
+      height: 100%;
+      border-radius: 4px;
+      transition: all 0.5s ease;
+    }
+
+    .moodlet-fill.positive {
+      background: linear-gradient(90deg, var(--accent-neutral), var(--accent-positive));
+      left: 50%;
+    }
+
+    .moodlet-fill.negative {
+      background: linear-gradient(90deg, var(--accent-negative), var(--accent-neutral));
+      right: 50%;
+    }
+
+    .moodlet-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+      transform: translateX(-50%);
+    }
+
+    /* Moodlet reason */
+    .moodlet-reason {
+      margin-top: 8px;
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: none;
+    }
+
+    .moodlet-reason.show {
+      display: block;
+    }
+
+    .moodlet-reason .reason-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .moodlet-reason .time {
+      margin-left: auto;
+      opacity: 0.7;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .quick-actions-title {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .quick-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .quick-btn {
+      padding: 10px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .quick-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .quick-btn .icon {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .quick-btn .label {
+      font-size: 10px;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-btn {
+      flex: 1;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .footer-btn:hover {
+      background: var(--accent);
+    }
+
+    .footer-btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Animations */
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .pop {
+      animation: pop 0.3s ease;
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 5px var(--accent-positive); }
+      50% { box-shadow: 0 0 15px var(--accent-positive); }
+    }
+
+    .glow-positive {
+      animation: glow 1s ease;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .tooltip.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-title">
+      <span>Moodlets</span>
+    </div>
+    <div class="overall-mood">
+      <span class="mood-face" id="overallFace">&#x1F60A;</span>
+      <span class="mood-label">Mood:</span>
+      <span class="mood-value" id="overallValue">Good</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <div class="quick-actions-title">Quick Log</div>
+      <div class="quick-buttons">
+        <button class="quick-btn" data-category="hygiene" data-action="positive">
+          <span class="icon">&#x1F6BF;</span>
+          <span class="label">Showered</span>
+        </button>
+        <button class="quick-btn" data-category="nutrition" data-action="positive">
+          <span class="icon">&#x1F957;</span>
+          <span class="label">Ate Healthy</span>
+        </button>
+        <button class="quick-btn" data-category="hydration" data-action="positive">
+          <span class="icon">&#x1F4A7;</span>
+          <span class="label">Drank Water</span>
+        </button>
+        <button class="quick-btn" data-category="productivity" data-action="positive">
+          <span class="icon">&#x2705;</span>
+          <span class="label">Did Task</span>
+        </button>
+        <button class="quick-btn" data-category="health" data-action="positive">
+          <span class="icon">&#x1F3C3;</span>
+          <span class="label">Exercised</span>
+        </button>
+        <button class="quick-btn" data-category="financial" data-action="positive">
+          <span class="icon">&#x1F4B0;</span>
+          <span class="label">Saved $</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Moodlet Cards -->
+    <div id="moodletContainer"></div>
+  </div>
+
+  <div class="footer">
+    <button class="footer-btn" id="btnReset">Reset All</button>
+    <button class="footer-btn" id="btnExport">Export</button>
+    <button class="footer-btn primary" id="btnSync">Sync to Pet</button>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    // ===== MOODLET DEFINITIONS =====
+    const moodletDefs = {
+      hygiene: {
+        icon: '&#x1F6BF;',
+        title: 'Hygiene',
+        positiveStatus: 'Fresh & Clean',
+        negativeStatus: 'Needs Shower',
+        neutralStatus: 'Okay',
+        positiveReasons: ['Took a shower', 'Brushed teeth', 'Washed face', 'Clean clothes'],
+        negativeReasons: ['Skipped shower', 'Feeling grimy', 'Need to freshen up']
+      },
+      nutrition: {
+        icon: '&#x1F957;',
+        title: 'Nutrition',
+        positiveStatus: 'Well Fed',
+        negativeStatus: 'Hungry',
+        neutralStatus: 'Okay',
+        positiveReasons: ['Ate a healthy meal', 'Had vegetables', 'Balanced diet', 'Good breakfast'],
+        negativeReasons: ['Skipped meal', 'Ate junk food', 'Hungry', 'Poor diet today']
+      },
+      hydration: {
+        icon: '&#x1F4A7;',
+        title: 'Hydration',
+        positiveStatus: 'Well Hydrated',
+        negativeStatus: 'Thirsty',
+        neutralStatus: 'Okay',
+        positiveReasons: ['Drank 8 glasses', 'Staying hydrated', 'Water break', 'Healthy drinks'],
+        negativeReasons: ['Dehydrated', 'Need water', 'Too much caffeine', 'Forgot to drink']
+      },
+      productivity: {
+        icon: '&#x2705;',
+        title: 'Productivity',
+        positiveStatus: 'Accomplished',
+        negativeStatus: 'Procrastinating',
+        neutralStatus: 'Okay',
+        positiveReasons: ['Completed tasks', 'Made progress', 'Did something important', 'Stopped putting it off'],
+        negativeReasons: ['Procrastinated', 'Avoided tasks', 'Distracted', 'Unproductive day']
+      },
+      health: {
+        icon: '&#x1F3E5;',
+        title: 'Health',
+        positiveStatus: 'Healthy',
+        negativeStatus: 'Needs Attention',
+        neutralStatus: 'Okay',
+        positiveReasons: ['Exercised', 'Made appointment', 'Took vitamins', 'Good sleep'],
+        negativeReasons: ['Skipped exercise', 'Ignoring symptoms', 'Poor sleep', 'Missed appointment']
+      },
+      financial: {
+        icon: '&#x1F4B0;',
+        title: 'Financial',
+        positiveStatus: 'Saving Well',
+        negativeStatus: 'Overspending',
+        neutralStatus: 'Okay',
+        positiveReasons: ['Saved money', 'Stayed on budget', 'Smart purchase', 'Paid bills on time'],
+        negativeReasons: ['Overspent', 'Impulse buy', 'Missed payment', 'Budget exceeded']
+      }
+    };
+
+    // ===== STATE =====
+    const state = {
+      moodlets: {
+        hygiene: { value: 0, reason: '', timestamp: null },
+        nutrition: { value: 0, reason: '', timestamp: null },
+        hydration: { value: 0, reason: '', timestamp: null },
+        productivity: { value: 0, reason: '', timestamp: null },
+        health: { value: 0, reason: '', timestamp: null },
+        financial: { value: 0, reason: '', timestamp: null }
+      },
+      overallMood: 'neutral',
+      overallScore: 0
+    };
+
+    // ===== RENDER MOODLETS =====
+    function renderMoodlets() {
+      const container = document.getElementById('moodletContainer');
+      container.innerHTML = '';
+
+      for (const [category, def] of Object.entries(moodletDefs)) {
+        const moodlet = state.moodlets[category];
+        const value = moodlet.value;
+        const isPositive = value > 0;
+        const isNegative = value < 0;
+
+        const status = isPositive ? def.positiveStatus :
+                       isNegative ? def.negativeStatus : def.neutralStatus;
+
+        const card = document.createElement('div');
+        card.className = `moodlet-card ${isPositive ? 'positive' : isNegative ? 'negative' : ''}`;
+        card.dataset.category = category;
+
+        card.innerHTML = `
+          <div class="moodlet-header">
+            <div class="moodlet-info">
+              <div class="moodlet-icon">${def.icon}</div>
+              <div>
+                <div class="moodlet-title">${def.title}</div>
+                <div class="moodlet-status">${status}</div>
+              </div>
+            </div>
+            <div class="moodlet-actions">
+              <button class="action-btn negative" data-action="decrease" title="Decrease">-</button>
+              <button class="action-btn positive" data-action="increase" title="Increase">+</button>
+            </div>
+          </div>
+          <div class="moodlet-bar">
+            <div class="moodlet-center"></div>
+            <div class="moodlet-fill ${isPositive ? 'positive' : 'negative'}"
+                 style="width: ${Math.abs(value) * 50}%"></div>
+          </div>
+          <div class="moodlet-reason ${moodlet.reason ? 'show' : ''}">
+            <div class="reason-text">
+              <span>${isPositive ? '&#x2714;' : isNegative ? '&#x2718;' : '&#x25CF;'}</span>
+              <span>${moodlet.reason || 'No recent activity'}</span>
+              <span class="time">${moodlet.timestamp ? formatTime(moodlet.timestamp) : ''}</span>
+            </div>
+          </div>
+        `;
+
+        // Event handlers
+        card.querySelectorAll('.action-btn').forEach(btn => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            if (action === 'increase') {
+              increaseMoodlet(category);
+            } else {
+              decreaseMoodlet(category);
+            }
+          };
+        });
+
+        card.onclick = () => toggleReason(card);
+
+        container.appendChild(card);
+      }
+    }
+
+    function toggleReason(card) {
+      const reason = card.querySelector('.moodlet-reason');
+      reason.classList.toggle('show');
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+      return date.toLocaleDateString();
+    }
+
+    // ===== MOODLET UPDATES =====
+    function updateMoodlet(category, value, reason) {
+      const moodlet = state.moodlets[category];
+      const def = moodletDefs[category];
+
+      // Clamp value between -1 and 1
+      moodlet.value = Math.max(-1, Math.min(1, value));
+      moodlet.reason = reason || (value > 0 ?
+        def.positiveReasons[Math.floor(Math.random() * def.positiveReasons.length)] :
+        value < 0 ?
+        def.negativeReasons[Math.floor(Math.random() * def.negativeReasons.length)] :
+        '');
+      moodlet.timestamp = Date.now();
+
+      renderMoodlets();
+      calculateOverallMood();
+      emitMoodletUpdated(category);
+
+      // Animate the card
+      const card = document.querySelector(`[data-category="${category}"]`);
+      if (card) {
+        card.classList.add('pop');
+        if (value > 0) card.classList.add('glow-positive');
+        setTimeout(() => {
+          card.classList.remove('pop', 'glow-positive');
+        }, 1000);
+      }
+    }
+
+    function increaseMoodlet(category, reason) {
+      const current = state.moodlets[category].value;
+      updateMoodlet(category, Math.min(1, current + 0.5), reason);
+    }
+
+    function decreaseMoodlet(category, reason) {
+      const current = state.moodlets[category].value;
+      updateMoodlet(category, Math.max(-1, current - 0.5), reason);
+    }
+
+    function resetMoodlet(category) {
+      updateMoodlet(category, 0, 'Reset');
+    }
+
+    function resetAll() {
+      for (const category of Object.keys(state.moodlets)) {
+        state.moodlets[category] = { value: 0, reason: '', timestamp: null };
+      }
+      renderMoodlets();
+      calculateOverallMood();
+    }
+
+    // ===== OVERALL MOOD =====
+    function calculateOverallMood() {
+      const values = Object.values(state.moodlets).map(m => m.value);
+      const sum = values.reduce((a, b) => a + b, 0);
+      const avg = sum / values.length;
+
+      state.overallScore = avg;
+
+      // Determine mood category
+      if (avg > 0.5) {
+        state.overallMood = 'happy';
+      } else if (avg > 0.2) {
+        state.overallMood = 'good';
+      } else if (avg > -0.2) {
+        state.overallMood = 'neutral';
+      } else if (avg > -0.5) {
+        state.overallMood = 'sad';
+      } else {
+        state.overallMood = 'stressed';
+      }
+
+      updateOverallDisplay();
+      emitMoodChanged();
+    }
+
+    function updateOverallDisplay() {
+      const faces = {
+        happy: '&#x1F604;',
+        good: '&#x1F60A;',
+        neutral: '&#x1F610;',
+        sad: '&#x1F614;',
+        stressed: '&#x1F625;'
+      };
+
+      const labels = {
+        happy: 'Great!',
+        good: 'Good',
+        neutral: 'Okay',
+        sad: 'Meh',
+        stressed: 'Stressed'
+      };
+
+      document.getElementById('overallFace').innerHTML = faces[state.overallMood];
+      document.getElementById('overallValue').textContent = labels[state.overallMood];
+    }
+
+    // ===== TASK HANDLING =====
+    function handleTaskCompleted(data) {
+      const { category, task, impact = 0.3 } = data;
+
+      if (state.moodlets[category]) {
+        const current = state.moodlets[category].value;
+        updateMoodlet(category, Math.min(1, current + impact), `Completed: ${task}`);
+      }
+
+      // Also boost productivity
+      if (category !== 'productivity') {
+        const prodCurrent = state.moodlets.productivity.value;
+        updateMoodlet('productivity', Math.min(1, prodCurrent + 0.2), `Made progress on ${category}`);
+      }
+
+      emit('taskCategoryUpdated', { category, impact });
+    }
+
+    // ===== EMIT FUNCTIONS =====
+    function emit(type, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type, payload }
+      }, '*');
+    }
+
+    function emitMoodChanged() {
+      emit('moodChanged', {
+        mood: state.overallMood,
+        intensity: state.overallScore,
+        moodlets: { ...state.moodlets }
+      });
+    }
+
+    function emitMoodletUpdated(category) {
+      emit('moodletUpdated', {
+        category,
+        value: state.moodlets[category].value,
+        reason: state.moodlets[category].reason
+      });
+    }
+
+    function exportState() {
+      emit('stateExport', {
+        moodlets: state.moodlets,
+        overallMood: state.overallMood,
+        overallScore: state.overallScore,
+        exportedAt: Date.now()
+      });
+    }
+
+    // ===== EVENT HANDLERS =====
+    // Quick action buttons
+    document.querySelectorAll('.quick-btn').forEach(btn => {
+      btn.onclick = () => {
+        const category = btn.dataset.category;
+        const action = btn.dataset.action;
+
+        if (action === 'positive') {
+          increaseMoodlet(category);
+        } else {
+          decreaseMoodlet(category);
+        }
+
+        btn.classList.add('pop');
+        setTimeout(() => btn.classList.remove('pop'), 300);
+      };
+    });
+
+    // Footer buttons
+    document.getElementById('btnReset').onclick = () => {
+      if (confirm('Reset all moodlets to neutral?')) {
+        resetAll();
+      }
+    };
+
+    document.getElementById('btnExport').onclick = exportState;
+
+    document.getElementById('btnSync').onclick = () => {
+      emitMoodChanged();
+
+      // Visual feedback
+      const btn = document.getElementById('btnSync');
+      btn.textContent = 'Synced!';
+      setTimeout(() => btn.textContent = 'Sync to Pet', 1500);
+    };
+
+    // ===== MESSAGE HANDLING =====
+    window.addEventListener('message', (event) => {
+      const { type, portName, value } = event.data;
+
+      if (type === 'pipeline:input') {
+        switch (portName) {
+          case 'setMoodlet':
+            if (value.category && state.moodlets[value.category]) {
+              updateMoodlet(value.category, value.value, value.reason);
+            }
+            break;
+
+          case 'taskCompleted':
+            handleTaskCompleted(value);
+            break;
+
+          case 'resetMoodlet':
+            if (state.moodlets[value]) {
+              resetMoodlet(value);
+            }
+            break;
+
+          case 'resetAll':
+            resetAll();
+            break;
+
+          case 'importState':
+            if (value.moodlets) {
+              state.moodlets = { ...state.moodlets, ...value.moodlets };
+              renderMoodlets();
+              calculateOverallMood();
+            }
+            break;
+        }
+      }
+    });
+
+    // ===== PASSIVE DECAY =====
+    setInterval(() => {
+      // Moodlets slowly decay towards neutral over time
+      let changed = false;
+      for (const [category, moodlet] of Object.entries(state.moodlets)) {
+        if (Math.abs(moodlet.value) > 0.1) {
+          moodlet.value *= 0.95; // Decay by 5%
+          if (Math.abs(moodlet.value) < 0.1) {
+            moodlet.value = 0;
+          }
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        renderMoodlets();
+        calculateOverallMood();
+      }
+    }, 60000); // Every minute
+
+    // ===== INIT =====
+    renderMoodlets();
+    calculateOverallMood();
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

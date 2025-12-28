@@ -1,0 +1,75 @@
+{
+  "id": "button-element",
+  "name": "Button Element",
+  "version": "1.0.0",
+  "description": "Clickable button/link element for canvas - perfect for link-in-bio and CTAs",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "element",
+  "tags": ["button", "link", "cta", "element", "canvas", "linkinbio"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false,
+    "canEdit": ["text", "link"],
+    "canNest": false,
+    "canBeNested": true
+  },
+  "inputs": {
+    "text.set": {
+      "type": "string",
+      "description": "Set button text"
+    },
+    "link.set": {
+      "type": "string",
+      "description": "Set button URL"
+    },
+    "style.apply": {
+      "type": "object",
+      "description": "Apply style properties from editor"
+    },
+    "preset.apply": {
+      "type": "string",
+      "description": "Apply social media preset"
+    },
+    "select": {
+      "type": "event",
+      "description": "Select this element"
+    },
+    "deselect": {
+      "type": "event",
+      "description": "Deselect this element"
+    }
+  },
+  "outputs": {
+    "selected": {
+      "type": "object",
+      "description": "Emitted when element is selected"
+    },
+    "changed": {
+      "type": "object",
+      "description": "Emitted when element changes"
+    },
+    "clicked": {
+      "type": "object",
+      "description": "Emitted when button is clicked with URL"
+    }
+  },
+  "events": {
+    "emits": ["canvas:element-selected", "canvas:element-changed", "button:clicked"],
+    "listens": ["canvas:style-changed", "canvas:element-selected", "canvas:button-preset"]
+  },
+  "config": {
+    "defaultText": "Click Me",
+    "defaultStyle": "solid"
+  },
+  "size": {
+    "width": 200,
+    "height": 50,
+    "minWidth": 80,
+    "minHeight": 36,
+    "maxWidth": 400,
+    "maxHeight": 100
+  }
+}

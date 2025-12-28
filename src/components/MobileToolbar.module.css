@@ -1,0 +1,209 @@
+/**
+ * StickerNest v2 - Mobile Toolbar Styles
+ * Touch-optimized toolbar for mobile devices
+ */
+
+.toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--sn-glass-bg, rgba(15, 15, 25, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+  box-shadow:
+    0 -4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  z-index: 1000;
+  /* Prevent flickering */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.toolbarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  max-width: 100%;
+  gap: 8px;
+}
+
+.section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sectionCenter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  max-width: 400px;
+}
+
+/* Button Base */
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid transparent;
+  color: var(--sn-text-primary, #e2e8f0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Prevent flickering */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.button:active {
+  transform: scale(0.95) translateZ(0);
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.button:disabled:active {
+  transform: scale(1) translateZ(0);
+}
+
+/* Button Variants */
+.buttonPrimary {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: white;
+}
+
+.buttonPrimary:active {
+  background: var(--sn-accent-secondary, #a78bfa);
+  transform: scale(0.95) translateZ(0);
+}
+
+.buttonDanger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--sn-error, #ef4444);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.buttonDanger:active {
+  background: rgba(239, 68, 68, 0.25);
+  transform: scale(0.95) translateZ(0);
+}
+
+.buttonActive {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: white;
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+/* Hover states for hybrid devices */
+@media (hover: hover) and (pointer: fine) {
+  .button:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+
+  .buttonPrimary:hover:not(:disabled) {
+    background: var(--sn-accent-secondary, #a78bfa);
+  }
+
+  .buttonDanger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* Icon sizing */
+.button svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 375px) {
+  /* Smaller phones */
+  .button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .toolbarInner {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .section {
+    gap: 4px;
+  }
+
+  .sectionCenter {
+    gap: 6px;
+  }
+}
+
+@media (min-width: 768px) {
+  /* Hide on tablet and up */
+  .toolbar {
+    display: none;
+  }
+}
+
+/* Animation for toolbar appearance */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%) translateZ(0);
+  }
+  to {
+    transform: translateY(0) translateZ(0);
+  }
+}
+
+.toolbar {
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Prevent double-tap zoom on buttons */
+.button,
+.toolbar {
+  touch-action: manipulation;
+}
+
+/* Badge/indicator for active state */
+.button::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.buttonActive::after {
+  opacity: 1;
+}

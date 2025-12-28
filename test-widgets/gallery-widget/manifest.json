@@ -1,0 +1,64 @@
+{
+  "id": "gallery-widget",
+  "name": "Gallery",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Upload and manage images to share with other widgets",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "addImage": {
+      "type": "object",
+      "description": "Add image { url: string, name?: string }"
+    },
+    "removeImage": {
+      "type": "string",
+      "description": "Remove image by ID"
+    },
+    "clearAll": {
+      "type": "trigger",
+      "description": "Clear all images"
+    },
+    "selectImage": {
+      "type": "string",
+      "description": "Select image by ID"
+    }
+  },
+  "outputs": {
+    "imageAdded": {
+      "type": "object",
+      "description": "Emitted when image added { id, url, name, thumbnail }"
+    },
+    "imageSelected": {
+      "type": "object",
+      "description": "Emitted when image selected { id, url, name }"
+    },
+    "imageRemoved": {
+      "type": "string",
+      "description": "Emitted when image removed (image ID)"
+    },
+    "galleryChanged": {
+      "type": "object",
+      "description": "Emitted when gallery changes { images: [], count: number }"
+    },
+    "allImages": {
+      "type": "object",
+      "description": "Outputs all images array { images: [] }"
+    }
+  },
+  "events": {
+    "listens": [],
+    "emits": ["gallery:image-added", "gallery:image-selected", "gallery:changed"]
+  },
+  "size": {
+    "width": 400,
+    "height": 350,
+    "minWidth": 280,
+    "minHeight": 250,
+    "maxWidth": 800,
+    "maxHeight": 600
+  }
+}

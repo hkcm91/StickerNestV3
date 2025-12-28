@@ -1,0 +1,82 @@
+{
+  "id": "text-effects",
+  "name": "Text Effects",
+  "version": "1.0.0",
+  "description": "Visual text effects widget with shadows, outlines, gradients, glow, and 3D extrusion for eye-catching typography",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "typography",
+  "tags": ["text", "effects", "shadow", "glow", "gradient", "outline", "3d", "flyer", "design"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["text"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "text.set": {
+      "type": "string",
+      "description": "Set the text content"
+    },
+    "effect.apply": {
+      "type": "object",
+      "description": "Apply effect settings (shadow, outline, glow, gradient, extrusion)"
+    },
+    "effect.preset": {
+      "type": "string",
+      "description": "Apply a preset effect (neon, retro, shadow, outline, gradient, 3d)"
+    },
+    "effect.reset": {
+      "type": "event",
+      "description": "Reset all effects to defaults"
+    },
+    "effect.export": {
+      "type": "event",
+      "description": "Export current effects as CSS"
+    }
+  },
+  "outputs": {
+    "text.changed": {
+      "type": "object",
+      "description": "Emitted when text content changes"
+    },
+    "effect.changed": {
+      "type": "object",
+      "description": "Emitted when any effect property changes"
+    },
+    "effect.exported": {
+      "type": "object",
+      "description": "Emitted with CSS string of current effects"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["brand:color-changed", "typography:style-changed"],
+    "emits": ["typography:effect-changed"]
+  },
+  "config": {
+    "defaultText": "EFFECT",
+    "defaultFontSize": 64,
+    "showPreview": true,
+    "animatePreview": false
+  },
+  "size": {
+    "width": 420,
+    "height": 580,
+    "minWidth": 350,
+    "minHeight": 450,
+    "maxWidth": 800,
+    "maxHeight": 1000
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" },
+    { "name": "previewBg", "type": "color", "variable": "--preview-bg" }
+  ]
+}

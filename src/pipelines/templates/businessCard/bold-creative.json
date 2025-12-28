@@ -1,0 +1,193 @@
+{
+  "id": "bold-creative",
+  "name": "Bold Creative",
+  "category": "business-card",
+  "description": "Eye-catching diagonal split design with bold typography. Ideal for artists, designers, and creative professionals.",
+
+  "dimensions": {
+    "width": 1050,
+    "height": 600,
+    "dpi": 300,
+    "bleed": 0
+  },
+
+  "zones": [
+    {
+      "id": "name",
+      "type": "text",
+      "bounds": {
+        "x": 5,
+        "y": 15,
+        "width": 55,
+        "height": 18,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 12,
+      "textConfig": {
+        "fieldMapping": "fullName",
+        "fontSize": 52,
+        "fontWeight": "bold",
+        "alignment": "left",
+        "color": "#ffffff",
+        "lineHeight": 1.0,
+        "letterSpacing": -1
+      }
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "bounds": {
+        "x": 5,
+        "y": 35,
+        "width": 45,
+        "height": 10,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "jobTitle",
+        "fontSize": 24,
+        "fontWeight": "medium",
+        "alignment": "left",
+        "color": "accent",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "company",
+      "type": "text",
+      "bounds": {
+        "x": 5,
+        "y": 48,
+        "width": 45,
+        "height": 8,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 4,
+      "textConfig": {
+        "fieldMapping": "businessName",
+        "fontSize": 18,
+        "fontWeight": "semibold",
+        "alignment": "left",
+        "color": "#ffffff",
+        "lineHeight": 1.3
+      }
+    },
+    {
+      "id": "contact-block",
+      "type": "text",
+      "bounds": {
+        "x": 5,
+        "y": 70,
+        "width": 40,
+        "height": 22,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "email",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "alignment": "left",
+        "color": "#e2e8f0",
+        "lineHeight": 1.8
+      }
+    },
+    {
+      "id": "phone",
+      "type": "text",
+      "bounds": {
+        "x": 5,
+        "y": 78,
+        "width": 40,
+        "height": 6,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 4,
+      "textConfig": {
+        "fieldMapping": "phone",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "alignment": "left",
+        "color": "#e2e8f0",
+        "lineHeight": 1.6
+      }
+    },
+    {
+      "id": "website",
+      "type": "text",
+      "bounds": {
+        "x": 5,
+        "y": 86,
+        "width": 40,
+        "height": 6,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 4,
+      "textConfig": {
+        "fieldMapping": "website",
+        "fontSize": 14,
+        "fontWeight": "medium",
+        "alignment": "left",
+        "color": "accent",
+        "lineHeight": 1.6
+      }
+    },
+    {
+      "id": "logo",
+      "type": "logo",
+      "bounds": {
+        "x": 65,
+        "y": 60,
+        "width": 28,
+        "height": 32,
+        "unit": "percent"
+      },
+      "zIndex": 10,
+      "maskValue": 0,
+      "maskPadding": 15,
+      "imageConfig": {
+        "fieldMapping": "logo",
+        "fit": "contain"
+      }
+    }
+  ],
+
+  "promptTemplate": "bold creative business card background, dramatic diagonal split design, abstract artistic shapes, vibrant {{primaryColor}} and {{secondaryColor}} color splash, dynamic brush strokes, paint splatter effect, {{stylePrompt}}, energetic composition, high contrast, artistic professional design",
+
+  "negativePromptBase": "text, words, letters, numbers, watermark, signature, face, portrait, realistic photo, boring, plain, corporate, dull colors",
+
+  "styleHints": [
+    "bold",
+    "creative",
+    "artistic",
+    "dynamic",
+    "vibrant",
+    "diagonal",
+    "abstract"
+  ],
+
+  "defaultColors": {
+    "primary": "#ec4899",
+    "secondary": "#8b5cf6",
+    "accent": "#f59e0b",
+    "background": "#0f172a",
+    "text": "#ffffff"
+  },
+
+  "author": "StickerNest",
+  "version": "1.0.0",
+  "tags": ["bold", "creative", "artistic", "colorful", "dynamic"]
+}

@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Patrick Hand', 'Caveat', cursive, sans-serif;
+            background:
+                linear-gradient(90deg, rgba(200,200,200,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(200,200,200,0.03) 1px, transparent 1px),
+                linear-gradient(135deg, #3d4f5f 0%, #2c3e50 100%);
+            background-size: 20px 20px, 20px 20px, 100% 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Cork board texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Tab bar styled as paper clips or pins */
+        .tab-bar {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px 6px;
+            gap: 6px;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            min-height: 48px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            position: relative;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .tab-bar::-webkit-scrollbar { display: none; }
+
+        .tab {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 15px;
+            font-weight: 400;
+            color: rgba(0,0,0,0.75);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 70px;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            box-shadow:
+                1px 2px 4px rgba(0,0,0,0.2),
+                inset 0 -1px 0 rgba(0,0,0,0.05);
+            transform: rotate(-1deg);
+        }
+        .tab:nth-child(even) { transform: rotate(1deg); }
+        .tab:nth-child(3n) { transform: rotate(-0.5deg); }
+
+        .tab:hover {
+            transform: rotate(0deg) translateY(-2px);
+            box-shadow: 2px 4px 8px rgba(0,0,0,0.25);
+        }
+        .tab.active {
+            transform: rotate(0deg) translateY(-3px) scale(1.05);
+            box-shadow:
+                3px 5px 12px rgba(0,0,0,0.3),
+                inset 0 -1px 0 rgba(0,0,0,0.05);
+            z-index: 5;
+        }
+
+        .tab-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tab-close {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.15);
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 16px;
+            text-align: center;
+            color: rgba(0,0,0,0.4);
+            flex-shrink: 0;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+        .tab:hover .tab-close { opacity: 1; }
+        .tab-close:hover {
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .add-tab {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.1);
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 50%;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .add-tab:hover {
+            background: rgba(104, 211, 145, 0.3);
+            border-color: #68d391;
+            color: #68d391;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        /* Main container */
+        .note-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* The actual sticky note */
+        .sticky-note {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 100%;
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+            transform: rotate(-0.3deg);
+            transition: transform 0.3s, box-shadow 0.3s;
+
+            /* Paper shadow */
+            box-shadow:
+                0 1px 1px rgba(0,0,0,0.12),
+                0 2px 2px rgba(0,0,0,0.12),
+                0 4px 4px rgba(0,0,0,0.12),
+                0 8px 8px rgba(0,0,0,0.12),
+                0 16px 16px rgba(0,0,0,0.12);
+        }
+
+        .sticky-note:hover {
+            transform: rotate(0deg);
+            box-shadow:
+                0 2px 2px rgba(0,0,0,0.1),
+                0 4px 4px rgba(0,0,0,0.1),
+                0 8px 8px rgba(0,0,0,0.1),
+                0 16px 16px rgba(0,0,0,0.1),
+                0 32px 32px rgba(0,0,0,0.1);
+        }
+
+        /* Tape effect at top */
+        .tape {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-2deg);
+            width: 80px;
+            height: 28px;
+            background: linear-gradient(180deg,
+                rgba(255,255,255,0.6) 0%,
+                rgba(255,255,255,0.4) 50%,
+                rgba(255,255,255,0.5) 100%);
+            border-radius: 2px;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            opacity: 0.85;
+        }
+        .tape::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 4px,
+                rgba(0,0,0,0.03) 4px,
+                rgba(0,0,0,0.03) 8px
+            );
+        }
+
+        /* Paper texture */
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 3%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Folded corner */
+        .corner-fold {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 0 35px 35px;
+            border-color: transparent transparent rgba(0,0,0,0.08) transparent;
+            z-index: 5;
+        }
+        .corner-fold::before {
+            content: '';
+            position: absolute;
+            top: 7px;
+            left: -35px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 28px 28px 0 0;
+            border-color: #3d4f5f transparent transparent transparent;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px 10px;
+            gap: 10px;
+            position: relative;
+            z-index: 5;
+            border-bottom: 1px dashed rgba(0,0,0,0.1);
+        }
+
+        .note-title-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-family: 'Caveat', cursive;
+            font-size: 22px;
+            font-weight: 600;
+            color: rgba(0,0,0,0.8);
+            outline: none;
+            padding: 4px 0;
+            min-width: 0;
+        }
+        .note-title-input::placeholder {
+            color: rgba(0,0,0,0.3);
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 5px;
+            padding: 4px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 20px;
+        }
+
+        .color-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.8);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .color-btn:hover {
+            transform: scale(1.2);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+        }
+        .color-btn.active {
+            border-color: rgba(0,0,0,0.4);
+            transform: scale(1.15);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.8), 0 3px 8px rgba(0,0,0,0.25);
+        }
+
+        /* Text area - looks like lined paper */
+        .note-content {
+            flex: 1;
+            position: relative;
+            z-index: 2;
+        }
+
+        .note-textarea {
+            width: 100%;
+            height: 100%;
+            padding: 16px 20px;
+            border: none;
+            background: transparent;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 18px;
+            line-height: 32px;
+            color: rgba(0,0,0,0.75);
+            resize: none;
+            outline: none;
+            background-image: repeating-linear-gradient(
+                transparent,
+                transparent 31px,
+                rgba(0,0,0,0.05) 31px,
+                rgba(0,0,0,0.05) 32px
+            );
+            background-position: 0 15px;
+        }
+        .note-textarea::placeholder {
+            color: rgba(0,0,0,0.25);
+            font-style: italic;
+        }
+
+        /* Footer */
+        .note-footer {
+            padding: 8px 16px;
+            font-size: 11px;
+            color: rgba(0,0,0,0.35);
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            z-index: 2;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        /* Empty state */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-notes {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 24px;
+        }
+        .empty-note {
+            width: 80px;
+            height: 80px;
+            border-radius: 2px;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        .empty-note:nth-child(1) { background: #fef3c7; transform: rotate(-8deg); }
+        .empty-note:nth-child(2) { background: #fce7f3; transform: rotate(5deg) translateY(-10px); }
+        .empty-note:nth-child(3) { background: #dbeafe; transform: rotate(-3deg); }
+
+        .empty-text {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 20px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 20px;
+        }
+        .empty-subtext {
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 24px;
+        }
+
+        .create-btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: rgba(0,0,0,0.7);
+            border: none;
+            border-radius: 4px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow:
+                0 4px 6px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.5);
+            transform: rotate(-1deg);
+        }
+        .create-btn:hover {
+            transform: rotate(0deg) translateY(-3px);
+            box-shadow:
+                0 8px 15px rgba(0,0,0,0.25),
+                inset 0 1px 0 rgba(255,255,255,0.5);
+        }
+
+        /* Color presets - softer, more paper-like */
+        .color-yellow { background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 50%, #fde68a 100%); }
+        .color-pink { background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%); }
+        .color-blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%); }
+        .color-green { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%); }
+        .color-purple { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #ddd6fe 100%); }
+        .color-orange { background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fdba74 100%); }
+        .color-coral { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 50%, #fecdd3 100%); }
+        .color-mint { background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 50%, #99f6e4 100%); }
+
+        /* Animations */
+        @keyframes noteAppear {
+            from {
+                opacity: 0;
+                transform: rotate(-5deg) scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: rotate(-0.3deg) scale(1) translateY(0);
+            }
+        }
+        .sticky-note {
+            animation: noteAppear 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="tab-bar" id="tabBar">
+        <button class="add-tab" onclick="createNote()" title="Add new note">+</button>
+    </div>
+
+    <div class="note-container" id="noteContainer">
+        <!-- Notes render here -->
+    </div>
+
+    <script>
+        // Available colors
+        const COLORS = [
+            { id: 'yellow', hex: '#fef3c7', class: 'color-yellow', name: 'Sunny' },
+            { id: 'pink', hex: '#fce7f3', class: 'color-pink', name: 'Bubblegum' },
+            { id: 'blue', hex: '#dbeafe', class: 'color-blue', name: 'Sky' },
+            { id: 'green', hex: '#d1fae5', class: 'color-green', name: 'Mint' },
+            { id: 'purple', hex: '#ede9fe', class: 'color-purple', name: 'Lavender' },
+            { id: 'orange', hex: '#fed7aa', class: 'color-orange', name: 'Peach' },
+            { id: 'coral', hex: '#ffe4e6', class: 'color-coral', name: 'Rose' },
+            { id: 'mint', hex: '#ccfbf1', class: 'color-mint', name: 'Aqua' }
+        ];
+
+        // State
+        let state = {
+            notes: [],
+            activeNoteId: null
+        };
+
+        // Emit event to parent
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+            console.log('[StickyNotes]', msg);
+        }
+
+        function generateId() {
+            return 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Create a new note
+        function createNote(text = '', color = 'yellow', title = '') {
+            const note = {
+                id: generateId(),
+                title: title || '',
+                text: text,
+                color: color,
+                createdAt: Date.now(),
+                modifiedAt: Date.now()
+            };
+
+            state.notes.push(note);
+            state.activeNoteId = note.id;
+
+            renderTabs();
+            renderNote();
+            saveState();
+
+            emit('noteAdded', { id: note.id, text: note.text, color: note.color, timestamp: note.createdAt });
+            log('Created note');
+
+            return note;
+        }
+
+        // Delete a note
+        function deleteNote(id, e) {
+            if (e) e.stopPropagation();
+
+            const noteIndex = state.notes.findIndex(n => n.id === id);
+            if (noteIndex === -1) return;
+
+            state.notes.splice(noteIndex, 1);
+
+            if (state.activeNoteId === id) {
+                if (state.notes.length > 0) {
+                    const newIndex = Math.max(0, noteIndex - 1);
+                    state.activeNoteId = state.notes[newIndex].id;
+                } else {
+                    state.activeNoteId = null;
+                }
+            }
+
+            renderTabs();
+            renderNote();
+            saveState();
+
+            emit('noteDeleted', id);
+            log('Deleted note');
+        }
+
+        // Update current note
+        function updateNote(updates) {
+            const note = state.notes.find(n => n.id === state.activeNoteId);
+            if (!note) return;
+
+            Object.assign(note, updates, { modifiedAt: Date.now() });
+
+            if (updates.color) {
+                renderTabs();
+                renderNote();
+            } else if (updates.title) {
+                renderTabs();
+            }
+
+            saveState();
+            emit('noteUpdated', { id: note.id, ...updates });
+        }
+
+        // Select a note
+        function selectNote(id) {
+            state.activeNoteId = id;
+            renderTabs();
+            renderNote();
+        }
+
+        // Save state
+        function saveState() {
+            emit('stateChanged', { notes: state.notes, activeNoteId: state.activeNoteId });
+            if (window.WidgetAPI && window.WidgetAPI.setState) {
+                window.WidgetAPI.setState({ notes: state.notes, activeNoteId: state.activeNoteId });
+            }
+        }
+
+        // Load state
+        function loadState(savedState) {
+            if (savedState && savedState.notes) {
+                state.notes = savedState.notes;
+                state.activeNoteId = savedState.activeNoteId || (state.notes.length > 0 ? state.notes[0].id : null);
+                renderTabs();
+                renderNote();
+                log('Loaded ' + state.notes.length + ' notes');
+            }
+        }
+
+        // Render tabs
+        function renderTabs() {
+            const tabBar = document.getElementById('tabBar');
+            const addBtn = tabBar.querySelector('.add-tab');
+
+            Array.from(tabBar.children).forEach(child => {
+                if (!child.classList.contains('add-tab')) {
+                    child.remove();
+                }
+            });
+
+            state.notes.forEach((note, index) => {
+                const colorObj = COLORS.find(c => c.id === note.color) || COLORS[0];
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (note.id === state.activeNoteId ? ' active' : '') + ' ' + colorObj.class;
+                tab.onclick = () => selectNote(note.id);
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'tab-title';
+                titleSpan.textContent = note.title || 'Note ' + (index + 1);
+                tab.appendChild(titleSpan);
+
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'tab-close';
+                closeBtn.innerHTML = '&times;';
+                closeBtn.onclick = (e) => deleteNote(note.id, e);
+                tab.appendChild(closeBtn);
+
+                tabBar.insertBefore(tab, addBtn);
+            });
+        }
+
+        // Render active note
+        function renderNote() {
+            const container = document.getElementById('noteContainer');
+            const note = state.notes.find(n => n.id === state.activeNoteId);
+
+            if (!note) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-notes">
+                            <div class="empty-note">📝</div>
+                            <div class="empty-note">✨</div>
+                            <div class="empty-note">💡</div>
+                        </div>
+                        <div class="empty-text">Your ideas deserve a home!</div>
+                        <div class="empty-subtext">Create sticky notes to capture thoughts, reminders, and inspiration</div>
+                        <button class="create-btn" onclick="createNote()">+ Create a Note</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const colorObj = COLORS.find(c => c.id === note.color) || COLORS[0];
+            const noteIndex = state.notes.findIndex(n => n.id === note.id);
+
+            container.innerHTML = `
+                <div class="sticky-note ${colorObj.class}">
+                    <div class="tape"></div>
+                    <div class="corner-fold"></div>
+
+                    <div class="toolbar">
+                        <input
+                            type="text"
+                            class="note-title-input"
+                            value="${escapeAttr(note.title)}"
+                            placeholder="Note ${noteIndex + 1}..."
+                            oninput="updateNote({ title: this.value })"
+                        />
+                        <div class="color-picker">
+                            ${COLORS.map(c => `
+                                <button
+                                    class="color-btn ${c.id === note.color ? 'active' : ''}"
+                                    style="background: ${c.hex};"
+                                    onclick="updateNote({ color: '${c.id}' })"
+                                    title="${c.name}"
+                                ></button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="note-content">
+                        <textarea
+                            class="note-textarea"
+                            placeholder="Write something amazing..."
+                            oninput="updateNote({ text: this.value })"
+                        >${escapeHtml(note.text)}</textarea>
+                    </div>
+
+                    <div class="note-footer">
+                        <span>${formatDate(note.createdAt)}</span>
+                        <span>${note.modifiedAt !== note.createdAt ? 'Edited ' + formatDate(note.modifiedAt) : ''}</span>
+                    </div>
+                </div>
+            `;
+
+            // Focus textarea for new empty notes
+            if (!note.text && !note.title) {
+                setTimeout(() => {
+                    const titleInput = container.querySelector('.note-title-input');
+                    if (titleInput) titleInput.focus();
+                }, 100);
+            }
+        }
+
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+            return date.toLocaleDateString();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeAttr(text) {
+            if (!text) return '';
+            return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // Handle incoming messages
+        function handleMessage(event) {
+            const data = event.data;
+            if (!data || !data.type) return;
+
+            if (data.type === 'widget:input') {
+                handleInput(data.payload);
+            } else if (data.type === 'widget:state' && data.payload) {
+                loadState(data.payload);
+            }
+        }
+
+        function handleInput(input) {
+            if (!input) return;
+
+            switch (input.port) {
+                case 'addNote':
+                    createNote(input.value?.text || '', input.value?.color || 'yellow', input.value?.title || '');
+                    break;
+                case 'deleteNote':
+                    deleteNote(input.value);
+                    break;
+                case 'updateNote':
+                    if (input.value?.id) {
+                        const note = state.notes.find(n => n.id === input.value.id);
+                        if (note) {
+                            state.activeNoteId = note.id;
+                            updateNote(input.value);
+                        }
+                    }
+                    break;
+                case 'loadState':
+                    loadState(input.value);
+                    break;
+            }
+        }
+
+        // Initialize
+        function init() {
+            log('Sticky Notes initializing...');
+
+            window.addEventListener('message', handleMessage);
+
+            if (window.WidgetAPI) {
+                log('WidgetAPI available');
+
+                if (window.WidgetAPI.getState) {
+                    const savedState = window.WidgetAPI.getState();
+                    if (savedState) loadState(savedState);
+                }
+
+                window.WidgetAPI.onEvent('*', (event) => {
+                    if (event.type === 'sticky:add') {
+                        createNote(event.payload?.text, event.payload?.color, event.payload?.title);
+                    } else if (event.type === 'sticky:delete') {
+                        deleteNote(event.payload);
+                    } else if (event.type === 'sticky:update' && event.payload?.id) {
+                        const note = state.notes.find(n => n.id === event.payload.id);
+                        if (note) {
+                            state.activeNoteId = note.id;
+                            updateNote(event.payload);
+                        }
+                    } else if (event.type === 'sticky:load') {
+                        loadState(event.payload);
+                    }
+                });
+            } else {
+                setTimeout(() => { if (window.WidgetAPI) init(); }, 100);
+            }
+
+            window.parent.postMessage({ type: 'READY' }, '*');
+
+            if (state.notes.length === 0) {
+                renderTabs();
+                renderNote();
+            }
+
+            log('Sticky Notes ready!');
+        }
+
+        init();
+    </script>
+</body>
+</html>

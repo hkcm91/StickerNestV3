@@ -1,0 +1,26 @@
+{
+  "id": "vector-style-panel",
+  "name": "Style Panel",
+  "version": "1.0.0",
+  "kind": "2d",
+  "description": "Control stroke width, opacity, and other style properties",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "icon": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><line x1='4' y1='6' x2='20' y2='6' stroke='%23333' stroke-width='1'/><line x1='4' y1='12' x2='20' y2='12' stroke='%23333' stroke-width='3'/><line x1='4' y1='18' x2='20' y2='18' stroke='%23333' stroke-width='5'/></svg>",
+  "category": "vector-graphics",
+  "size": {
+    "defaultWidth": 200,
+    "defaultHeight": 280,
+    "minWidth": 160,
+    "minHeight": 240
+  },
+  "permissions": [],
+  "events": {
+    "emits": ["vector:set-stroke-width", "vector:set-opacity"],
+    "listens": ["vector:selection-changed"]
+  }
+}

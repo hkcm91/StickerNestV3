@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #252538 100%);
+            color: #e2e8f0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            color: #8b5cf6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section {
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .pattern-btn {
+            aspect-ratio: 1;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .pattern-btn:hover {
+            transform: scale(1.05);
+            border-color: #8b5cf6;
+        }
+        .pattern-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            background: rgba(139, 92, 246, 0.2);
+            transition: opacity 0.15s ease;
+        }
+        .pattern-btn:hover::after {
+            opacity: 1;
+        }
+        .url-section {
+            margin-top: 12px;
+        }
+        .url-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .url-input::placeholder {
+            color: #64748b;
+        }
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+        .apply-btn {
+            flex: 1;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .apply-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .reset-btn {
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .size-select {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* Pattern backgrounds */
+        .dots {
+            background-image: radial-gradient(circle, #64748b 1px, transparent 1px);
+            background-size: 10px 10px;
+            background-color: #1e293b;
+        }
+        .grid-lines {
+            background-image: linear-gradient(#334155 1px, transparent 1px),
+                              linear-gradient(90deg, #334155 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: #0f172a;
+        }
+        .diagonal {
+            background: repeating-linear-gradient(
+                45deg,
+                #1e293b,
+                #1e293b 10px,
+                #334155 10px,
+                #334155 20px
+            );
+        }
+        .checkerboard {
+            background-image: linear-gradient(45deg, #334155 25%, transparent 25%),
+                              linear-gradient(-45deg, #334155 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #334155 75%),
+                              linear-gradient(-45deg, transparent 75%, #334155 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+            background-color: #1e293b;
+        }
+        .honeycomb {
+            background-color: #1e293b;
+            background-image: radial-gradient(circle farthest-side at 0% 50%, #334155 23.5%, transparent 0),
+                              radial-gradient(circle farthest-side at 0% 50%, #475569 24%, transparent 0),
+                              linear-gradient(#334155 14%, transparent 0, transparent 85%, #334155 0),
+                              linear-gradient(150deg, #334155 24%, #1e293b 0, #1e293b 26%, transparent 0, transparent 74%, #1e293b 0, #1e293b 76%, #334155 0),
+                              linear-gradient(30deg, #334155 24%, #1e293b 0, #1e293b 26%, transparent 0, transparent 74%, #1e293b 0, #1e293b 76%, #334155 0),
+                              linear-gradient(90deg, #1e293b 2%, #334155 0, #334155 98%, #1e293b 0);
+            background-size: 40px 23px;
+        }
+        .waves {
+            background: linear-gradient(135deg, #667eea 25%, transparent 25%) -20px 0,
+                        linear-gradient(225deg, #667eea 25%, transparent 25%) -20px 0,
+                        linear-gradient(315deg, #667eea 25%, transparent 25%),
+                        linear-gradient(45deg, #667eea 25%, transparent 25%);
+            background-size: 40px 40px;
+            background-color: #764ba2;
+        }
+        .carbon {
+            background:
+                linear-gradient(27deg, #151515 5px, transparent 5px) 0 5px,
+                linear-gradient(207deg, #151515 5px, transparent 5px) 10px 0,
+                linear-gradient(27deg, #222 5px, transparent 5px) 0 10px,
+                linear-gradient(207deg, #222 5px, transparent 5px) 10px 5px,
+                linear-gradient(90deg, #1b1b1b 10px, transparent 10px),
+                linear-gradient(#1d1d1d 25%, #1a1a1a 25%, #1a1a1a 50%, transparent 50%, transparent 75%, #242424 75%, #242424);
+            background-color: #131313;
+            background-size: 20px 20px;
+        }
+        .blueprint {
+            background-color: #1e3a5f;
+            background-image:
+                linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px),
+                linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+            background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+        }
+        .noise {
+            background-color: #1a1a2e;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body>
+    <h3>🔲 Background Patterns</h3>
+
+    <div class="section">
+        <div class="section-title">CSS Patterns</div>
+        <div class="pattern-grid">
+            <button class="pattern-btn dots" onclick="setPattern('dots')"></button>
+            <button class="pattern-btn grid-lines" onclick="setPattern('grid-lines')"></button>
+            <button class="pattern-btn diagonal" onclick="setPattern('diagonal')"></button>
+            <button class="pattern-btn checkerboard" onclick="setPattern('checkerboard')"></button>
+            <button class="pattern-btn honeycomb" onclick="setPattern('honeycomb')"></button>
+            <button class="pattern-btn waves" onclick="setPattern('waves')"></button>
+            <button class="pattern-btn carbon" onclick="setPattern('carbon')"></button>
+            <button class="pattern-btn blueprint" onclick="setPattern('blueprint')"></button>
+            <button class="pattern-btn noise" onclick="setPattern('noise')"></button>
+        </div>
+    </div>
+
+    <div class="section url-section">
+        <div class="section-title">Image URL</div>
+        <input type="text" id="imageUrl" class="url-input" placeholder="https://example.com/image.jpg">
+        <select id="sizeSelect" class="size-select">
+            <option value="cover">Cover (fill)</option>
+            <option value="contain">Contain (fit)</option>
+            <option value="repeat">Tile/Repeat</option>
+            <option value="100% 100%">Stretch</option>
+        </select>
+        <div class="btn-row" style="margin-top: 8px;">
+            <button class="apply-btn" onclick="applyImage()">Apply Image</button>
+            <button class="reset-btn" onclick="reset()">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const PATTERNS = {
+            'dots': {
+                type: 'pattern',
+                gradient: `radial-gradient(circle, #64748b 1px, transparent 1px)`,
+                color: '#1e293b',
+                size: '10px 10px'
+            },
+            'grid-lines': {
+                type: 'pattern',
+                gradient: `linear-gradient(#334155 1px, transparent 1px), linear-gradient(90deg, #334155 1px, transparent 1px)`,
+                color: '#0f172a',
+                size: '20px 20px'
+            },
+            'diagonal': {
+                type: 'gradient',
+                gradient: `repeating-linear-gradient(45deg, #1e293b, #1e293b 10px, #334155 10px, #334155 20px)`
+            },
+            'checkerboard': {
+                type: 'pattern',
+                gradient: `linear-gradient(45deg, #334155 25%, transparent 25%), linear-gradient(-45deg, #334155 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #334155 75%), linear-gradient(-45deg, transparent 75%, #334155 75%)`,
+                color: '#1e293b',
+                size: '20px 20px',
+                position: '0 0, 0 10px, 10px -10px, -10px 0'
+            },
+            'honeycomb': {
+                type: 'pattern',
+                gradient: `radial-gradient(circle farthest-side at 0% 50%, #334155 23.5%, transparent 0), radial-gradient(circle farthest-side at 0% 50%, #475569 24%, transparent 0), linear-gradient(#334155 14%, transparent 0, transparent 85%, #334155 0), linear-gradient(150deg, #334155 24%, #1e293b 0, #1e293b 26%, transparent 0, transparent 74%, #1e293b 0, #1e293b 76%, #334155 0), linear-gradient(30deg, #334155 24%, #1e293b 0, #1e293b 26%, transparent 0, transparent 74%, #1e293b 0, #1e293b 76%, #334155 0), linear-gradient(90deg, #1e293b 2%, #334155 0, #334155 98%, #1e293b 0)`,
+                color: '#1e293b',
+                size: '40px 23px'
+            },
+            'waves': {
+                type: 'pattern',
+                gradient: `linear-gradient(135deg, #667eea 25%, transparent 25%) -20px 0, linear-gradient(225deg, #667eea 25%, transparent 25%) -20px 0, linear-gradient(315deg, #667eea 25%, transparent 25%), linear-gradient(45deg, #667eea 25%, transparent 25%)`,
+                color: '#764ba2',
+                size: '40px 40px'
+            },
+            'carbon': {
+                type: 'pattern',
+                gradient: `linear-gradient(27deg, #151515 5px, transparent 5px) 0 5px, linear-gradient(207deg, #151515 5px, transparent 5px) 10px 0, linear-gradient(27deg, #222 5px, transparent 5px) 0 10px, linear-gradient(207deg, #222 5px, transparent 5px) 10px 5px, linear-gradient(90deg, #1b1b1b 10px, transparent 10px), linear-gradient(#1d1d1d 25%, #1a1a1a 25%, #1a1a1a 50%, transparent 50%, transparent 75%, #242424 75%, #242424)`,
+                color: '#131313',
+                size: '20px 20px'
+            },
+            'blueprint': {
+                type: 'pattern',
+                gradient: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)`,
+                color: '#1e3a5f',
+                size: '100px 100px, 100px 100px, 20px 20px, 20px 20px'
+            },
+            'noise': {
+                type: 'image',
+                imageUrl: "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E",
+                color: '#1a1a2e'
+            }
+        };
+
+        function emit(eventType, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type: eventType, payload }
+            }, '*');
+        }
+
+        function broadcast(eventType, payload) {
+            window.parent.postMessage({
+                type: 'widget:broadcast',
+                payload: { type: eventType, payload }
+            }, '*');
+        }
+
+        function setPattern(patternId) {
+            const pattern = PATTERNS[patternId];
+            if (!pattern) return;
+
+            const payload = {
+                type: pattern.type,
+                gradient: pattern.gradient,
+                color: pattern.color,
+                imageUrl: pattern.imageUrl,
+                size: pattern.size,
+                position: pattern.position,
+                repeat: 'repeat'
+            };
+
+            emit('canvas:set-background', payload);
+            broadcast('canvas:set-background', payload);
+        }
+
+        function applyImage() {
+            const url = document.getElementById('imageUrl').value.trim();
+            if (!url) return;
+
+            const size = document.getElementById('sizeSelect').value;
+            const isRepeat = size === 'repeat';
+
+            const payload = {
+                type: isRepeat ? 'pattern' : 'image',
+                imageUrl: url,
+                size: isRepeat ? 'auto' : size,
+                repeat: isRepeat ? 'repeat' : 'no-repeat',
+                position: 'center'
+            };
+
+            emit('canvas:set-background', payload);
+            broadcast('canvas:set-background', payload);
+        }
+
+        function reset() {
+            const payload = { type: 'color', color: '#f0f0f0' };
+            emit('canvas:set-background', payload);
+            broadcast('canvas:set-background', payload);
+        }
+
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

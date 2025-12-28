@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-text-muted: #64748b;
+      --sn-accent-primary: #8b5cf6;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-border-hover: rgba(139, 92, 246, 0.4);
+      --sn-radius-sm: 4px;
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+
+      --widget-bg: var(--sn-bg-primary);
+      --controls-bg: var(--sn-bg-secondary);
+      --accent-color: var(--sn-accent-primary);
+      --canvas-bg: #0a0a12;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--widget-bg);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Preview Canvas */
+    .preview-canvas {
+      flex: 0 0 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--canvas-bg);
+      border-bottom: 1px solid var(--sn-border-primary);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-canvas.empty {
+      border: 2px dashed var(--sn-border-primary);
+      margin: 10px;
+      border-radius: 8px;
+    }
+
+    .preview-canvas.empty::after {
+      content: 'Drop image or click Load';
+      position: absolute;
+      color: var(--sn-text-secondary);
+      font-size: 13px;
+    }
+
+    .image-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .masked-image {
+      max-width: 180px;
+      max-height: 180px;
+      object-fit: cover;
+      transition: all var(--sn-transition-fast);
+    }
+
+    /* Mask shapes via clip-path */
+    .masked-image.rect { clip-path: inset(0); border-radius: 0; }
+    .masked-image.rounded { clip-path: inset(0); border-radius: 12px; }
+    .masked-image.circle { clip-path: circle(50% at 50% 50%); }
+    .masked-image.ellipse { clip-path: ellipse(50% 40% at 50% 50%); }
+    .masked-image.triangle { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .masked-image.diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    .masked-image.pentagon { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
+    .masked-image.hexagon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+    .masked-image.octagon { clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%); }
+    .masked-image.star { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+    .masked-image.heart { clip-path: path('M 0.5,0.15 C 0.3,-0.05 0,0.1 0,0.35 C 0,0.55 0.2,0.75 0.5,1 C 0.8,0.75 1,0.55 1,0.35 C 1,0.1 0.7,-0.05 0.5,0.15 Z'); }
+    .masked-image.blob { clip-path: polygon(30% 0%, 70% 10%, 100% 35%, 90% 70%, 60% 100%, 20% 90%, 0% 60%, 10% 30%); }
+    .masked-image.cross { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+    .masked-image.shield { clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%); }
+    .masked-image.arch { clip-path: polygon(0% 100%, 0% 40%, 10% 15%, 25% 5%, 50% 0%, 75% 5%, 90% 15%, 100% 40%, 100% 100%); }
+
+    /* Frame overlay */
+    .frame-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      border: 3px solid transparent;
+      border-radius: inherit;
+    }
+
+    .frame-overlay.visible {
+      border-color: white;
+    }
+
+    .preview-actions {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      background: var(--sn-bg-secondary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .action-btn:hover {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--controls-bg);
+      padding: 12px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sn-text-secondary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .control-value {
+      color: var(--accent-color);
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    /* Mask Picker */
+    .mask-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .mask-btn {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--sn-bg-primary);
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      padding: 6px;
+    }
+
+    .mask-btn:hover {
+      border-color: var(--sn-border-hover);
+      transform: scale(1.05);
+    }
+
+    .mask-btn.active {
+      border-color: var(--accent-color);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .mask-btn .preview {
+      width: 100%;
+      height: 100%;
+      background: var(--accent-color);
+    }
+
+    .mask-btn[data-mask="rect"] .preview { clip-path: inset(0); }
+    .mask-btn[data-mask="rounded"] .preview { clip-path: inset(0); border-radius: 4px; }
+    .mask-btn[data-mask="circle"] .preview { clip-path: circle(50% at 50% 50%); }
+    .mask-btn[data-mask="ellipse"] .preview { clip-path: ellipse(50% 40% at 50% 50%); }
+    .mask-btn[data-mask="triangle"] .preview { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .mask-btn[data-mask="diamond"] .preview { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    .mask-btn[data-mask="pentagon"] .preview { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
+    .mask-btn[data-mask="hexagon"] .preview { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+    .mask-btn[data-mask="star"] .preview { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+    .mask-btn[data-mask="heart"] .preview { clip-path: url(#heartClip); }
+    .mask-btn[data-mask="blob"] .preview { clip-path: polygon(30% 0%, 70% 10%, 100% 35%, 90% 70%, 60% 100%, 20% 90%, 0% 60%, 10% 30%); }
+    .mask-btn[data-mask="shield"] .preview { clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%); }
+    .mask-btn[data-mask="arch"] .preview { clip-path: polygon(0% 100%, 0% 40%, 10% 15%, 25% 5%, 50% 0%, 75% 5%, 90% 15%, 100% 40%, 100% 100%); }
+    .mask-btn[data-mask="cross"] .preview { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+    .mask-btn[data-mask="octagon"] .preview { clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%); }
+
+    /* Aspect Ratio Buttons */
+    .aspect-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .aspect-btn {
+      padding: 8px 4px;
+      background: var(--sn-bg-primary);
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      text-align: center;
+      font-size: 10px;
+      color: var(--sn-text-secondary);
+    }
+
+    .aspect-btn:hover {
+      border-color: var(--sn-border-hover);
+    }
+
+    .aspect-btn.active {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .aspect-btn .ratio {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .aspect-btn .name {
+      font-size: 8px;
+      opacity: 0.7;
+    }
+
+    /* Inputs */
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--sn-bg-primary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="color"] {
+      width: 36px;
+      height: 32px;
+      padding: 0;
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px;
+      background: var(--sn-bg-primary);
+      border-radius: var(--sn-radius-sm);
+      margin-bottom: 8px;
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: var(--sn-bg-tertiary);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toggle-switch.active { background: var(--accent-color); }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toggle-switch.active::after { left: 18px; }
+
+    /* Load Button */
+    .load-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--sn-bg-primary);
+      border: 2px dashed var(--sn-border-primary);
+      border-radius: var(--sn-radius-md);
+      color: var(--sn-text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    .load-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    /* Export Button */
+    .export-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent-color);
+      border: none;
+      border-radius: var(--sn-radius-md);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .export-btn:hover { opacity: 0.9; }
+
+    /* Hidden */
+    #fileInput { display: none; }
+
+    /* SVG Defs */
+    .svg-defs { position: absolute; width: 0; height: 0; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--sn-bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--sn-bg-tertiary); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <!-- SVG Definitions for complex clip paths -->
+  <svg class="svg-defs">
+    <defs>
+      <clipPath id="heartClip" clipPathUnits="objectBoundingBox">
+        <path d="M 0.5,0.2 C 0.3,-0.05 0,0.1 0,0.35 C 0,0.55 0.2,0.75 0.5,1 C 0.8,0.75 1,0.55 1,0.35 C 1,0.1 0.7,-0.05 0.5,0.2 Z"/>
+      </clipPath>
+    </defs>
+  </svg>
+
+  <!-- Preview Canvas -->
+  <div class="preview-canvas empty" id="previewCanvas">
+    <div class="image-container" id="imageContainer" style="display: none;">
+      <img class="masked-image rect" id="maskedImage" src="" alt="Preview">
+      <div class="frame-overlay" id="frameOverlay"></div>
+    </div>
+    <div class="preview-actions">
+      <button class="action-btn" id="loadBtn">Load</button>
+      <button class="action-btn" id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <!-- Load Image -->
+    <button class="load-btn" id="loadImageBtn">Click to Load Image or Drop Here</button>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <!-- Mask Shape -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Mask Shape</span>
+      </div>
+      <div class="mask-grid">
+        <button class="mask-btn active" data-mask="rect" title="Rectangle">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="rounded" title="Rounded">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="circle" title="Circle">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="ellipse" title="Ellipse">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="triangle" title="Triangle">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="diamond" title="Diamond">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="pentagon" title="Pentagon">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="hexagon" title="Hexagon">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="octagon" title="Octagon">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="star" title="Star">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="heart" title="Heart">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="blob" title="Blob">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="shield" title="Shield">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="arch" title="Arch">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="cross" title="Cross">
+          <div class="preview"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Aspect Ratio -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Aspect Ratio</span>
+      </div>
+      <div class="aspect-grid">
+        <button class="aspect-btn active" data-aspect="1:1">
+          <span class="ratio">1:1</span>
+          <span class="name">Square</span>
+        </button>
+        <button class="aspect-btn" data-aspect="4:3">
+          <span class="ratio">4:3</span>
+          <span class="name">Photo</span>
+        </button>
+        <button class="aspect-btn" data-aspect="16:9">
+          <span class="ratio">16:9</span>
+          <span class="name">Wide</span>
+        </button>
+        <button class="aspect-btn" data-aspect="9:16">
+          <span class="ratio">9:16</span>
+          <span class="name">Story</span>
+        </button>
+        <button class="aspect-btn" data-aspect="4:5">
+          <span class="ratio">4:5</span>
+          <span class="name">Portrait</span>
+        </button>
+        <button class="aspect-btn" data-aspect="3:2">
+          <span class="ratio">3:2</span>
+          <span class="name">Classic</span>
+        </button>
+        <button class="aspect-btn" data-aspect="2:3">
+          <span class="ratio">2:3</span>
+          <span class="name">Poster</span>
+        </button>
+        <button class="aspect-btn" data-aspect="free">
+          <span class="ratio">Free</span>
+          <span class="name">Custom</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Image Adjustments -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Image Adjustments</span>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Scale</span>
+            <span class="control-value" id="scaleValue">100%</span>
+          </div>
+          <input type="range" id="scale" min="50" max="200" value="100">
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Rotation</span>
+            <span class="control-value" id="rotationValue">0°</span>
+          </div>
+          <input type="range" id="rotation" min="-180" max="180" value="0">
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Position X</span>
+            <span class="control-value" id="posXValue">0%</span>
+          </div>
+          <input type="range" id="posX" min="-50" max="50" value="0">
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Position Y</span>
+            <span class="control-value" id="posYValue">0%</span>
+          </div>
+          <input type="range" id="posY" min="-50" max="50" value="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame Options -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Frame</span>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">Show Frame Border</span>
+        <div class="toggle-switch" id="toggleFrame"></div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Border Width</span>
+            <span class="control-value" id="borderWidthValue">3px</span>
+          </div>
+          <input type="range" id="borderWidth" min="1" max="20" value="3">
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label"><span>Border Color</span></div>
+          <div class="color-row">
+            <input type="color" id="borderColor" value="#ffffff">
+          </div>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Corner Radius (Rounded Only)</span>
+            <span class="control-value" id="radiusValue">12px</span>
+          </div>
+          <input type="range" id="cornerRadius" min="0" max="50" value="12">
+        </div>
+      </div>
+    </div>
+
+    <!-- Shadow -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Shadow</span>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">Enable Shadow</span>
+        <div class="toggle-switch" id="toggleShadow"></div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Shadow Blur</span>
+            <span class="control-value" id="shadowBlurValue">10px</span>
+          </div>
+          <input type="range" id="shadowBlur" min="0" max="50" value="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <button class="export-btn" id="exportBtn">Export Masked Image</button>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE
+    // ========================================
+    const state = {
+      imageSrc: null,
+      originalWidth: 0,
+      originalHeight: 0,
+      mask: 'rect',
+      aspect: '1:1',
+      scale: 100,
+      rotation: 0,
+      posX: 0,
+      posY: 0,
+      showFrame: false,
+      borderWidth: 3,
+      borderColor: '#ffffff',
+      cornerRadius: 12,
+      showShadow: false,
+      shadowBlur: 10
+    };
+
+    // ========================================
+    // DOM
+    // ========================================
+    const previewCanvas = document.getElementById('previewCanvas');
+    const imageContainer = document.getElementById('imageContainer');
+    const maskedImage = document.getElementById('maskedImage');
+    const frameOverlay = document.getElementById('frameOverlay');
+    const fileInput = document.getElementById('fileInput');
+
+    // ========================================
+    // HELPERS
+    // ========================================
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function broadcast(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload, broadcast: true });
+      }
+    }
+
+    function log(msg) {
+      console.log('[ImageCropMask]', msg);
+      if (window.WidgetAPI) window.WidgetAPI.log(msg);
+    }
+
+    // ========================================
+    // IMAGE LOADING
+    // ========================================
+    function loadImage(src) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        state.imageSrc = src;
+        state.originalWidth = img.width;
+        state.originalHeight = img.height;
+
+        maskedImage.src = src;
+        imageContainer.style.display = 'flex';
+        previewCanvas.classList.remove('empty');
+
+        updatePreview();
+
+        emit('image.loaded', {
+          width: img.width,
+          height: img.height
+        });
+
+        log(`Image loaded: ${img.width}x${img.height}`);
+      };
+
+      img.onerror = () => {
+        log('Failed to load image');
+      };
+
+      img.src = src;
+    }
+
+    // ========================================
+    // PREVIEW UPDATE
+    // ========================================
+    function updatePreview() {
+      if (!state.imageSrc) return;
+
+      // Apply mask class
+      maskedImage.className = `masked-image ${state.mask}`;
+
+      // Calculate dimensions based on aspect ratio
+      let width = 180;
+      let height = 180;
+
+      if (state.aspect !== 'free') {
+        const [w, h] = state.aspect.split(':').map(Number);
+        const ratio = w / h;
+
+        if (ratio > 1) {
+          height = width / ratio;
+        } else {
+          width = height * ratio;
+        }
+      }
+
+      // Apply size
+      maskedImage.style.width = `${width}px`;
+      maskedImage.style.height = `${height}px`;
+
+      // Apply transforms
+      const scale = state.scale / 100;
+      const rotation = state.rotation;
+      const translateX = state.posX;
+      const translateY = state.posY;
+
+      maskedImage.style.transform = `scale(${scale}) rotate(${rotation}deg) translate(${translateX}%, ${translateY}%)`;
+
+      // Apply corner radius for rounded mask
+      if (state.mask === 'rounded') {
+        maskedImage.style.borderRadius = `${state.cornerRadius}px`;
+      }
+
+      // Frame
+      if (state.showFrame) {
+        frameOverlay.classList.add('visible');
+        frameOverlay.style.borderWidth = `${state.borderWidth}px`;
+        frameOverlay.style.borderColor = state.borderColor;
+        if (state.mask === 'rounded') {
+          frameOverlay.style.borderRadius = `${state.cornerRadius}px`;
+        } else if (state.mask === 'circle') {
+          frameOverlay.style.borderRadius = '50%';
+        } else {
+          frameOverlay.style.borderRadius = '0';
+        }
+      } else {
+        frameOverlay.classList.remove('visible');
+      }
+
+      // Shadow
+      if (state.showShadow) {
+        imageContainer.style.filter = `drop-shadow(0 4px ${state.shadowBlur}px rgba(0,0,0,0.5))`;
+      } else {
+        imageContainer.style.filter = 'none';
+      }
+
+      emitChange();
+    }
+
+    function emitChange() {
+      emit('mask.changed', { ...state });
+    }
+
+    // ========================================
+    // FILE HANDLING
+    // ========================================
+    document.getElementById('loadImageBtn').addEventListener('click', () => fileInput.click());
+    document.getElementById('loadBtn').addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => loadImage(e.target.result);
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Drag and drop
+    previewCanvas.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      previewCanvas.style.borderColor = 'var(--accent-color)';
+    });
+
+    previewCanvas.addEventListener('dragleave', () => {
+      previewCanvas.style.borderColor = '';
+    });
+
+    previewCanvas.addEventListener('drop', (e) => {
+      e.preventDefault();
+      previewCanvas.style.borderColor = '';
+
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => loadImage(e.target.result);
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Reset
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.scale = 100;
+      state.rotation = 0;
+      state.posX = 0;
+      state.posY = 0;
+
+      document.getElementById('scale').value = 100;
+      document.getElementById('rotation').value = 0;
+      document.getElementById('posX').value = 0;
+      document.getElementById('posY').value = 0;
+
+      document.getElementById('scaleValue').textContent = '100%';
+      document.getElementById('rotationValue').textContent = '0°';
+      document.getElementById('posXValue').textContent = '0%';
+      document.getElementById('posYValue').textContent = '0%';
+
+      updatePreview();
+      log('Reset adjustments');
+    });
+
+    // ========================================
+    // MASK SELECTION
+    // ========================================
+    document.querySelectorAll('.mask-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mask-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.mask = btn.dataset.mask;
+        updatePreview();
+        log(`Mask: ${state.mask}`);
+      });
+    });
+
+    // ========================================
+    // ASPECT RATIO
+    // ========================================
+    document.querySelectorAll('.aspect-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.aspect = btn.dataset.aspect;
+        updatePreview();
+        log(`Aspect: ${state.aspect}`);
+      });
+    });
+
+    // ========================================
+    // SLIDERS
+    // ========================================
+    function setupSlider(id, stateKey, suffix, valueId) {
+      const slider = document.getElementById(id);
+      const valueEl = document.getElementById(valueId);
+
+      slider.addEventListener('input', (e) => {
+        state[stateKey] = parseFloat(e.target.value);
+        valueEl.textContent = `${state[stateKey]}${suffix}`;
+        updatePreview();
+      });
+    }
+
+    setupSlider('scale', 'scale', '%', 'scaleValue');
+    setupSlider('rotation', 'rotation', '°', 'rotationValue');
+    setupSlider('posX', 'posX', '%', 'posXValue');
+    setupSlider('posY', 'posY', '%', 'posYValue');
+    setupSlider('borderWidth', 'borderWidth', 'px', 'borderWidthValue');
+    setupSlider('cornerRadius', 'cornerRadius', 'px', 'radiusValue');
+    setupSlider('shadowBlur', 'shadowBlur', 'px', 'shadowBlurValue');
+
+    // Border color
+    document.getElementById('borderColor').addEventListener('input', (e) => {
+      state.borderColor = e.target.value;
+      updatePreview();
+    });
+
+    // ========================================
+    // TOGGLES
+    // ========================================
+    document.getElementById('toggleFrame').addEventListener('click', function() {
+      this.classList.toggle('active');
+      state.showFrame = this.classList.contains('active');
+      updatePreview();
+    });
+
+    document.getElementById('toggleShadow').addEventListener('click', function() {
+      this.classList.toggle('active');
+      state.showShadow = this.classList.contains('active');
+      updatePreview();
+    });
+
+    // ========================================
+    // EXPORT
+    // ========================================
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (!state.imageSrc) {
+        log('No image to export');
+        return;
+      }
+
+      // Create canvas for export
+      const canvas = document.createElement('canvas');
+      const size = 500; // Export size
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Apply mask via clip path (simplified for export)
+      ctx.save();
+
+      // Draw mask path
+      ctx.beginPath();
+      switch (state.mask) {
+        case 'circle':
+          ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+          break;
+        case 'ellipse':
+          ctx.ellipse(size/2, size/2, size/2, size*0.4, 0, 0, Math.PI * 2);
+          break;
+        case 'triangle':
+          ctx.moveTo(size/2, 0);
+          ctx.lineTo(size, size);
+          ctx.lineTo(0, size);
+          ctx.closePath();
+          break;
+        case 'hexagon':
+          const hexR = size/2;
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI / 3) - Math.PI/2;
+            const x = size/2 + hexR * Math.cos(angle);
+            const y = size/2 + hexR * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          break;
+        case 'star':
+          const outerR = size/2;
+          const innerR = size/4;
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 === 0 ? outerR : innerR;
+            const angle = (i * Math.PI / 5) - Math.PI/2;
+            const x = size/2 + r * Math.cos(angle);
+            const y = size/2 + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          break;
+        default:
+          ctx.rect(0, 0, size, size);
+      }
+      ctx.clip();
+
+      // Draw image
+      const img = new Image();
+      img.onload = () => {
+        const scale = state.scale / 100;
+        const imgW = size * scale;
+        const imgH = size * scale;
+        const offsetX = (size - imgW) / 2 + (state.posX / 100 * size);
+        const offsetY = (size - imgH) / 2 + (state.posY / 100 * size);
+
+        ctx.translate(size/2, size/2);
+        ctx.rotate(state.rotation * Math.PI / 180);
+        ctx.translate(-size/2, -size/2);
+
+        ctx.drawImage(img, offsetX, offsetY, imgW, imgH);
+        ctx.restore();
+
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // Download
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `masked-image-${state.mask}.png`;
+        a.click();
+
+        emit('image.exported', dataUrl);
+        broadcast('image:masked', { mask: state.mask, dataUrl });
+        log('Image exported');
+      };
+      img.src = state.imageSrc;
+    });
+
+    // ========================================
+    // WIDGET API
+    // ========================================
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Image Crop & Mask widget');
+
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'image.load':
+            const src = typeof event.payload === 'string' ? event.payload : event.payload?.url;
+            if (src) loadImage(src);
+            break;
+
+          case 'mask.set':
+            const mask = typeof event.payload === 'string' ? event.payload : event.payload?.mask;
+            if (mask) {
+              state.mask = mask;
+              document.querySelectorAll('.mask-btn').forEach(b => b.classList.remove('active'));
+              document.querySelector(`[data-mask="${mask}"]`)?.classList.add('active');
+              updatePreview();
+            }
+            break;
+
+          case 'aspect.set':
+            const aspect = typeof event.payload === 'string' ? event.payload : event.payload?.aspect;
+            if (aspect) {
+              state.aspect = aspect;
+              document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
+              document.querySelector(`[data-aspect="${aspect}"]`)?.classList.add('active');
+              updatePreview();
+            }
+            break;
+
+          case 'asset:image-selected':
+            if (event.payload?.url) {
+              loadImage(event.payload.url);
+            }
+            break;
+        }
+      });
+
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['image'],
+          canNest: true,
+          canBeNested: true
+        });
+      }
+
+      emit('widget.ready', { capabilities: ['image', 'crop', 'mask'] });
+      log('Image Crop & Mask widget ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

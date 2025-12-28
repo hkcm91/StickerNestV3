@@ -1,0 +1,21 @@
+{
+    "id": "test-ping-sender",
+    "name": "Ping Sender",
+    "version": "1.1.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "io": {
+        "inputs": [],
+        "outputs": [
+            {
+                "id": "ping",
+                "type": "event",
+                "description": "Emits a ping event when button clicked"
+            }
+        ]
+    }
+}

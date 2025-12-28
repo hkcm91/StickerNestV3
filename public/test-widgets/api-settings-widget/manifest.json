@@ -1,0 +1,61 @@
+{
+  "id": "api-settings-widget",
+  "name": "API Settings",
+  "version": "1.0.0",
+  "description": "Centralized API key management for all AI providers. Configure Replicate, OpenAI, Stability AI, Fal.ai, and custom providers.",
+  "kind": "2d",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "setApiKey": {
+      "type": "object",
+      "description": "Set API key { provider, apiKey, baseUrl? }"
+    },
+    "removeApiKey": {
+      "type": "string",
+      "description": "Remove API key for provider"
+    },
+    "validateKey": {
+      "type": "string",
+      "description": "Validate API key for provider"
+    },
+    "getConfig": {
+      "type": "trigger",
+      "description": "Request current configuration"
+    }
+  },
+  "outputs": {
+    "apiKeyUpdated": {
+      "type": "object",
+      "description": "Emitted when API key is updated { provider, isValid }"
+    },
+    "apiKeyValidated": {
+      "type": "object",
+      "description": "Emitted after validation { provider, isValid }"
+    },
+    "configExported": {
+      "type": "object",
+      "description": "Emitted with full config (excluding actual keys)"
+    },
+    "broadcastKeys": {
+      "type": "object",
+      "description": "Broadcast API keys to other widgets"
+    }
+  },
+  "events": {
+    "listens": [],
+    "emits": ["api:key-updated", "api:key-validated", "api:broadcast"]
+  },
+  "size": {
+    "width": 380,
+    "height": 500,
+    "minWidth": 320,
+    "minHeight": 400,
+    "maxWidth": 500,
+    "maxHeight": 700
+  }
+}

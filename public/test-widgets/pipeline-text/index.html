@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f0f19 0%, #1a1a2e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 16px;
+        }
+        .title {
+            color: rgba(255,255,255,0.5);
+            font-size: 10px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .display {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px 24px;
+            min-width: 200px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .display.flash {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+        }
+        .text {
+            color: #e2e8f0;
+            font-size: 18px;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .counter {
+            color: rgba(255,255,255,0.3);
+            font-size: 10px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Pipeline Text Display</div>
+    <div class="display" id="display">
+        <div class="text" id="text">Hello World</div>
+    </div>
+    <div class="counter">Updates: <span id="count">0</span></div>
+
+    <script>
+        let updateCount = 0;
+        const displayEl = document.getElementById('display');
+        const textEl = document.getElementById('text');
+        const countEl = document.getElementById('count');
+
+        // Emit event to host - portId MUST match io.outputs[].id
+        function emit(portId, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portId,
+                    payload: payload
+                }
+            }, '*');
+        }
+
+        // Update text display
+        function updateText(newText) {
+            textEl.textContent = newText;
+            updateCount++;
+            countEl.textContent = updateCount;
+            emit('textChanged', newText);
+            flashDisplay();
+        }
+
+        // Flash animation
+        function flashDisplay() {
+            displayEl.classList.add('flash');
+            setTimeout(() => displayEl.classList.remove('flash'), 300);
+        }
+
+        // Handle input on a specific port
+        function handleInput(portName, value) {
+            console.log('[Pipeline Text] Input on port:', portName, value);
+
+            switch (portName) {
+                case 'setText':
+                    if (typeof value === 'string') {
+                        updateText(value);
+                    } else if (value && typeof value === 'object') {
+                        updateText(value.text || value.message || JSON.stringify(value));
+                    }
+                    break;
+
+                case 'setData':
+                case 'clickData':
+                    if (value && typeof value === 'object') {
+                        updateText(value.message || value.text || `Clicked: ${value.count || 'N/A'}`);
+                    }
+                    break;
+
+                case 'trigger':
+                case 'clicked':
+                    if (portName === 'clicked') {
+                        updateText('Button Clicked!');
+                    } else {
+                        flashDisplay();
+                    }
+                    break;
+            }
+        }
+
+        // Listen for incoming events
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            // Handle pipeline:input (from PipelineRuntime routing - primary method)
+            if (data.type === 'pipeline:input') {
+                handleInput(data.portName, data.value);
+                return;
+            }
+
+            // Handle widget:event (legacy and direct events)
+            if (data.type === 'widget:event') {
+                const eventType = data.payload?.type;
+                const payload = data.payload?.payload;
+
+                console.log('[Pipeline Text] widget:event:', eventType, payload);
+
+                // Extract port name from event type (handles both 'clicked' and 'prefix:clicked')
+                const portName = eventType?.includes(':') ? eventType.split(':').pop() : eventType;
+                if (portName) {
+                    handleInput(portName, payload);
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

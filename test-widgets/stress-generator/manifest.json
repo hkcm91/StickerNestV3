@@ -1,0 +1,27 @@
+{
+    "id": "debug-stress-generator",
+    "name": "Canvas Stress Generator",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "stress-response": {
+            "type": "event",
+            "description": "Receives stress test responses"
+        }
+    },
+    "outputs": {
+        "stress-event": {
+            "type": "event",
+            "description": "Emits various stress test events"
+        },
+        "spawn-widget": {
+            "type": "event",
+            "description": "Requests widget spawning"
+        }
+    }
+}

@@ -1,0 +1,12 @@
+# Default code owners for all files
+* @hkcm91
+
+# Server-specific ownership
+/server/ @hkcm91
+
+# CI/CD ownership
+/.github/ @hkcm91
+
+# Documentation
+*.md @hkcm91
+/server/docs/ @hkcm91

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photobooth Strip Widget</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@400;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .strip-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .strip {
+      background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+      border-radius: 6px;
+      padding: 10px 10px 20px 10px;
+      box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        0 4px 10px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Film strip perforations */
+    .perforations {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 14px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 8px;
+    }
+
+    .perforations.top { top: 0; }
+    .perforations.bottom { bottom: 0; }
+
+    .perf {
+      width: 8px;
+      height: 6px;
+      background: #333;
+      border-radius: 1px;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 4px 4px;
+      flex-shrink: 0;
+    }
+
+    .title {
+      flex: 1;
+      text-align: center;
+    }
+
+    .title input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: 'Pacifico', cursive;
+      font-size: 14px;
+      text-align: center;
+      width: 100%;
+      letter-spacing: 1px;
+    }
+
+    .title input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Photos container */
+    .photos {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 4px;
+      overflow: hidden;
+    }
+
+    /* Photo slot */
+    .photo-slot {
+      flex: 1;
+      background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%);
+      border: 2px solid #333;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      min-height: 70px;
+    }
+
+    .photo-slot:hover {
+      border-color: #555;
+      transform: scale(1.02);
+    }
+
+    .photo-slot.filled:hover {
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .photo-slot.drag-over {
+      border-color: #e94560;
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .photo-slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .photo-slot:hover img {
+      transform: scale(1.05);
+    }
+
+    /* Filters */
+    .photo-slot.filter-none img { filter: none; }
+    .photo-slot.filter-bw img { filter: grayscale(100%) contrast(110%); }
+    .photo-slot.filter-sepia img { filter: sepia(80%) contrast(90%); }
+    .photo-slot.filter-vintage img {
+      filter: sepia(30%) contrast(110%) saturate(80%) brightness(105%);
+    }
+    .photo-slot.filter-contrast img { filter: contrast(130%) saturate(110%); }
+    .photo-slot.filter-warm img {
+      filter: sepia(20%) saturate(130%) brightness(105%) hue-rotate(-5deg);
+    }
+
+    .placeholder {
+      color: #444;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .placeholder .icon {
+      font-size: 24px;
+      opacity: 0.5;
+    }
+
+    .placeholder .num {
+      opacity: 0.6;
+    }
+
+    /* Slot controls */
+    .slot-controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .photo-slot.filled:hover .slot-controls {
+      opacity: 1;
+    }
+
+    .slot-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .slot-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(1.1);
+    }
+
+    .slot-btn.delete:hover {
+      background: rgba(233, 69, 96, 0.8);
+    }
+
+    .slot-number {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 600;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 4px 16px;
+      flex-shrink: 0;
+    }
+
+    .date-text {
+      font-size: 9px;
+      color: #555;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+    }
+
+    .logo {
+      font-size: 10px;
+      color: #444;
+      font-style: italic;
+    }
+
+    /* Controls toolbar */
+    .controls {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.9);
+      border-radius: 8px;
+      opacity: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+      margin-top: 8px;
+      z-index: 10;
+    }
+
+    .strip-wrapper:hover .controls {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .control-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .control-btn.active {
+      background: rgba(233, 69, 96, 0.6);
+    }
+
+    /* Theme variations */
+    .strip.theme-classic {
+      background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+    }
+
+    .strip.theme-white {
+      background: linear-gradient(180deg, #f8f8f8 0%, #e8e8e8 100%);
+    }
+
+    .strip.theme-white .title input,
+    .strip.theme-white .date-text,
+    .strip.theme-white .logo {
+      color: #333;
+    }
+
+    .strip.theme-white .placeholder {
+      color: #999;
+    }
+
+    .strip.theme-pink {
+      background: linear-gradient(180deg, #2d1f2f 0%, #1a1218 100%);
+    }
+
+    .strip.theme-pink .photo-slot {
+      border-color: #4a2a4a;
+    }
+
+    .strip.theme-blue {
+      background: linear-gradient(180deg, #1a2535 0%, #0d1520 100%);
+    }
+
+    .strip.theme-blue .photo-slot {
+      border-color: #2a3a4a;
+    }
+
+    /* Flash animation */
+    @keyframes flash {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .flash-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .flash-overlay.active {
+      animation: flash 0.4s ease-out;
+    }
+
+    /* Sticker decorations */
+    .sticker {
+      position: absolute;
+      font-size: 16px;
+      z-index: 5;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .strip-wrapper:hover .sticker {
+      opacity: 1;
+    }
+
+    .sticker-1 { top: 25%; right: -5px; transform: rotate(15deg); }
+    .sticker-2 { top: 50%; left: -5px; transform: rotate(-10deg); }
+    .sticker-3 { top: 75%; right: -5px; transform: rotate(5deg); }
+  </style>
+</head>
+<body>
+  <div class="strip-wrapper">
+    <div class="strip theme-classic" id="strip">
+      <div class="flash-overlay" id="flashOverlay"></div>
+
+      <div class="perforations top">
+        <div class="perf"></div><div class="perf"></div><div class="perf"></div>
+        <div class="perf"></div><div class="perf"></div><div class="perf"></div>
+      </div>
+
+      <div class="header">
+        <div class="title">
+          <input type="text" id="title" placeholder="PHOTOBOOTH" maxlength="20">
+        </div>
+      </div>
+
+      <div class="photos" id="photos">
+        <div class="photo-slot filter-none" data-slot="0">
+          <div class="placeholder">
+            <span class="icon">+</span>
+            <span class="num">1</span>
+          </div>
+          <img style="display: none;">
+          <div class="slot-controls">
+            <button class="slot-btn filter-btn" title="Filter">&#9788;</button>
+            <button class="slot-btn delete" title="Remove">&times;</button>
+          </div>
+          <span class="slot-number">1</span>
+        </div>
+        <div class="photo-slot filter-none" data-slot="1">
+          <div class="placeholder">
+            <span class="icon">+</span>
+            <span class="num">2</span>
+          </div>
+          <img style="display: none;">
+          <div class="slot-controls">
+            <button class="slot-btn filter-btn" title="Filter">&#9788;</button>
+            <button class="slot-btn delete" title="Remove">&times;</button>
+          </div>
+          <span class="slot-number">2</span>
+        </div>
+        <div class="photo-slot filter-none" data-slot="2">
+          <div class="placeholder">
+            <span class="icon">+</span>
+            <span class="num">3</span>
+          </div>
+          <img style="display: none;">
+          <div class="slot-controls">
+            <button class="slot-btn filter-btn" title="Filter">&#9788;</button>
+            <button class="slot-btn delete" title="Remove">&times;</button>
+          </div>
+          <span class="slot-number">3</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span class="date-text" id="dateText"></span>
+        <span class="logo">photobooth</span>
+      </div>
+
+      <div class="perforations bottom">
+        <div class="perf"></div><div class="perf"></div><div class="perf"></div>
+        <div class="perf"></div><div class="perf"></div><div class="perf"></div>
+      </div>
+
+      <span class="sticker sticker-1" id="sticker1"></span>
+      <span class="sticker sticker-2" id="sticker2"></span>
+      <span class="sticker sticker-3" id="sticker3"></span>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="control-btn" id="themeBtn" title="Theme">&#9632;</button>
+      <button class="control-btn" id="filterAllBtn" title="Filter all">&#9788;</button>
+      <button class="control-btn" id="stickerBtn" title="Stickers">&#9733;</button>
+      <button class="control-btn" id="clearBtn" title="Clear all">&times;</button>
+    </div>
+  </div>
+
+  <script>
+    // State
+    const slots = [null, null, null];
+    const slotFilters = [0, 0, 0];
+    const slotElements = document.querySelectorAll('.photo-slot');
+    const strip = document.getElementById('strip');
+    const titleInput = document.getElementById('title');
+    const dateText = document.getElementById('dateText');
+    const flashOverlay = document.getElementById('flashOverlay');
+    const themeBtn = document.getElementById('themeBtn');
+    const filterAllBtn = document.getElementById('filterAllBtn');
+    const stickerBtn = document.getElementById('stickerBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const sticker1 = document.getElementById('sticker1');
+    const sticker2 = document.getElementById('sticker2');
+    const sticker3 = document.getElementById('sticker3');
+
+    const themes = ['theme-classic', 'theme-white', 'theme-pink', 'theme-blue'];
+    const filters = ['filter-none', 'filter-bw', 'filter-sepia', 'filter-vintage', 'filter-contrast', 'filter-warm'];
+    const stickerSets = [
+      ['', '', ''],
+      ['*', '*', '*'],
+      ['+', '+', '+'],
+      ['#', '@', '!']
+    ];
+
+    let currentTheme = 0;
+    let currentStickerSet = 0;
+    let globalFilter = 0;
+
+    // Set date
+    function updateDate() {
+      const now = new Date();
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      dateText.textContent = now.toLocaleDateString('en-US', options).toUpperCase();
+    }
+    updateDate();
+
+    // Flash effect
+    function flash() {
+      flashOverlay.classList.remove('active');
+      void flashOverlay.offsetWidth;
+      flashOverlay.classList.add('active');
+    }
+
+    // Utility: Emit output
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    // Utility: Emit event
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload: payload }
+      }, '*');
+    }
+
+    // Set image in a specific slot
+    function setSlotImage(slotIndex, imageData) {
+      if (slotIndex < 0 || slotIndex >= 3) return;
+      if (!imageData) return;
+
+      const url = typeof imageData === 'string' ? imageData : imageData.url;
+      const name = imageData.name || '';
+
+      if (!url) return;
+
+      slots[slotIndex] = { url, name };
+
+      const slot = slotElements[slotIndex];
+      const img = slot.querySelector('img');
+      const placeholder = slot.querySelector('.placeholder');
+
+      img.src = url;
+      img.style.display = 'block';
+      placeholder.style.display = 'none';
+      slot.classList.add('filled');
+
+      flash();
+      emitImagesSet();
+    }
+
+    // Clear a specific slot
+    function clearSlot(slotIndex) {
+      if (slotIndex < 0 || slotIndex >= 3) return;
+
+      slots[slotIndex] = null;
+
+      const slot = slotElements[slotIndex];
+      const img = slot.querySelector('img');
+      const placeholder = slot.querySelector('.placeholder');
+
+      img.src = '';
+      img.style.display = 'none';
+      placeholder.style.display = 'flex';
+      slot.classList.remove('filled');
+
+      emitImagesSet();
+    }
+
+    // Clear all slots
+    function clearAll() {
+      for (let i = 0; i < 3; i++) {
+        clearSlot(i);
+      }
+    }
+
+    // Find next empty slot
+    function findNextEmptySlot() {
+      for (let i = 0; i < 3; i++) {
+        if (!slots[i]) return i;
+      }
+      return -1;
+    }
+
+    // Add image to next empty slot
+    function addToNextSlot(imageData) {
+      const nextSlot = findNextEmptySlot();
+      if (nextSlot >= 0) {
+        setSlotImage(nextSlot, imageData);
+      }
+    }
+
+    // Set all images at once
+    function setAllImages(imagesData) {
+      if (!imagesData || !imagesData.images) return;
+
+      const images = imagesData.images;
+      for (let i = 0; i < 3 && i < images.length; i++) {
+        if (images[i]) {
+          setSlotImage(i, images[i]);
+        }
+      }
+    }
+
+    // Cycle slot filter
+    function cycleSlotFilter(slotIndex) {
+      slotFilters[slotIndex] = (slotFilters[slotIndex] + 1) % filters.length;
+      const slot = slotElements[slotIndex];
+      slot.className = 'photo-slot ' + filters[slotFilters[slotIndex]] + (slots[slotIndex] ? ' filled' : '');
+    }
+
+    // Cycle all filters
+    function cycleAllFilters() {
+      globalFilter = (globalFilter + 1) % filters.length;
+      slotElements.forEach((slot, i) => {
+        slotFilters[i] = globalFilter;
+        slot.className = 'photo-slot ' + filters[globalFilter] + (slots[i] ? ' filled' : '');
+      });
+    }
+
+    // Cycle theme
+    function cycleTheme() {
+      currentTheme = (currentTheme + 1) % themes.length;
+      strip.className = 'strip ' + themes[currentTheme];
+    }
+
+    // Cycle stickers
+    function cycleStickers() {
+      currentStickerSet = (currentStickerSet + 1) % stickerSets.length;
+      const set = stickerSets[currentStickerSet];
+      sticker1.textContent = set[0];
+      sticker2.textContent = set[1];
+      sticker3.textContent = set[2];
+    }
+
+    // Emit images set event
+    function emitImagesSet() {
+      const filledSlots = slots.filter(s => s !== null);
+      emitOutput('imagesSet', {
+        images: [...slots],
+        count: filledSlots.length
+      });
+    }
+
+    // Handle slot click
+    function handleSlotClick(slotIndex) {
+      if (slots[slotIndex]) {
+        emitOutput('slotClicked', {
+          slot: slotIndex + 1,
+          image: slots[slotIndex]
+        });
+        emitEvent('photobooth:slot-clicked', {
+          slot: slotIndex + 1,
+          image: slots[slotIndex]
+        });
+      }
+    }
+
+    // Setup slot event listeners
+    slotElements.forEach((slot, index) => {
+      slot.addEventListener('click', (e) => {
+        if (e.target.closest('.slot-btn')) return;
+        handleSlotClick(index);
+      });
+
+      const filterBtn = slot.querySelector('.filter-btn');
+      const deleteBtn = slot.querySelector('.delete');
+
+      filterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cycleSlotFilter(index);
+      });
+
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearSlot(index);
+      });
+
+      // Drag and drop per slot
+      slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        slot.classList.add('drag-over');
+      });
+
+      slot.addEventListener('dragleave', () => {
+        slot.classList.remove('drag-over');
+      });
+
+      slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (ev) => setSlotImage(index, { url: ev.target.result, name: file.name });
+          reader.readAsDataURL(file);
+        }
+      });
+    });
+
+    // Control buttons
+    themeBtn.onclick = cycleTheme;
+    filterAllBtn.onclick = cycleAllFilters;
+    stickerBtn.onclick = cycleStickers;
+    clearBtn.onclick = clearAll;
+
+    // Handle incoming messages
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'setImages':
+            setAllImages(value);
+            break;
+          case 'setImage1':
+            setSlotImage(0, value);
+            break;
+          case 'setImage2':
+            setSlotImage(1, value);
+            break;
+          case 'setImage3':
+            setSlotImage(2, value);
+            break;
+          case 'imageSelected':
+            addToNextSlot(value);
+            break;
+          case 'galleryChanged':
+            if (value && value.images) setAllImages(value);
+            break;
+          case 'setTitle':
+            if (typeof value === 'string') titleInput.value = value;
+            break;
+          case 'setTheme':
+            if (typeof value === 'string') {
+              const idx = themes.indexOf('theme-' + value);
+              if (idx >= 0) {
+                currentTheme = idx;
+                strip.className = 'strip ' + themes[currentTheme];
+              }
+            }
+            break;
+          case 'setFilter':
+            if (typeof value === 'string') {
+              const idx = filters.indexOf('filter-' + value);
+              if (idx >= 0) {
+                globalFilter = idx;
+                cycleAllFilters();
+              }
+            }
+            break;
+          case 'clear':
+            clearAll();
+            break;
+        }
+        return;
+      }
+
+      if (data.type === 'widget:event') {
+        const portName = data.payload?.type;
+        const value = data.payload?.payload;
+        switch (portName) {
+          case 'setImages':
+            setAllImages(value);
+            break;
+          case 'setImage1':
+            setSlotImage(0, value);
+            break;
+          case 'setImage2':
+            setSlotImage(1, value);
+            break;
+          case 'setImage3':
+            setSlotImage(2, value);
+            break;
+          case 'imageSelected':
+            addToNextSlot(value);
+            break;
+          case 'galleryChanged':
+            if (value && value.images) setAllImages(value);
+            break;
+          case 'setTitle':
+            if (typeof value === 'string') titleInput.value = value;
+            break;
+          case 'clear':
+            clearAll();
+            break;
+        }
+      }
+
+      // Handle broadcast events (legacy format)
+      if (data.type === 'broadcast' && data.payload) {
+        if (data.payload.type === 'gallery:image-selected') {
+          addToNextSlot(data.payload.payload);
+        }
+      }
+
+      // Handle EVENT type (new format) - canvas-scoped events from other widgets
+      if (data.type === 'EVENT' && data.payload) {
+        const evt = data.payload;
+        if (evt.type === 'gallery:image-selected' && evt.scope === 'canvas') {
+          addToNextSlot(evt.payload);
+        }
+        if (evt.type === 'gallery:changed' && evt.scope === 'canvas' && evt.payload?.images) {
+          setAllImages(evt.payload);
+        }
+      }
+    });
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

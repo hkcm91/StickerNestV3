@@ -1,0 +1,50 @@
+{
+    "id": "stickernest.canvas-scrollbar",
+    "name": "Canvas Scrollbar",
+    "version": "1.0.0",
+    "kind": "ui",
+    "entry": "index.html",
+    "description": "Scrollbar widget for navigating the canvas viewport in preview mode. Provides visual scrollbars for horizontal and vertical panning.",
+    "author": "StickerNest",
+    "tags": [
+        "navigation",
+        "scrollbar",
+        "viewport",
+        "ui",
+        "preview"
+    ],
+    "inputs": {
+        "viewport": {
+            "type": "object",
+            "description": "Current viewport state {panX, panY, zoom}",
+            "required": false
+        },
+        "canvasSize": {
+            "type": "object",
+            "description": "Canvas dimensions {width, height}",
+            "required": false
+        },
+        "containerSize": {
+            "type": "object",
+            "description": "Container dimensions {width, height}",
+            "required": false
+        }
+    },
+    "outputs": {
+        "viewport:pan": {
+            "type": "event",
+            "description": "Emitted when user drags scrollbar to pan the viewport"
+        }
+    },
+    "capabilities": {
+        "draggable": true,
+        "resizable": true,
+        "rotatable": false
+    },
+    "size": {
+        "width": 200,
+        "height": 200,
+        "minWidth": 100,
+        "minHeight": 100
+    }
+}

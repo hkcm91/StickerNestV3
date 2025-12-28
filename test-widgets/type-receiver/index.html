@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: white;
+            padding: 12px;
+            height: 100vh;
+            overflow: auto;
+        }
+        .title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .port-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .port-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s;
+        }
+        .port-row.active {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+        .port-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .port-dot.number { background: #3b82f6; }
+        .port-dot.string { background: #22c55e; }
+        .port-dot.boolean { background: #f59e0b; }
+        .port-dot.object { background: #8b5cf6; }
+        .port-dot.array { background: #ec4899; }
+        .port-dot.event { background: #14b8a6; }
+        .port-dot.active {
+            box-shadow: 0 0 10px currentColor;
+        }
+        .port-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .port-name {
+            font-size: 11px;
+            color: #e2e8f0;
+        }
+        .port-value {
+            font-size: 10px;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+        .port-value.has-value {
+            color: #22c55e;
+        }
+        .type-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            color: #94a3b8;
+            flex-shrink: 0;
+        }
+        .count-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #22c55e;
+            color: white;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+        .stats {
+            margin-top: 12px;
+            padding: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            font-size: 10px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Type Receiver</div>
+    <div class="port-list">
+        <div class="port-row" data-port="numberIn">
+            <div class="port-dot number"></div>
+            <div class="port-info">
+                <div class="port-name">numberIn</div>
+                <div class="port-value">waiting...</div>
+            </div>
+            <span class="type-badge">number</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="port-row" data-port="stringIn">
+            <div class="port-dot string"></div>
+            <div class="port-info">
+                <div class="port-name">stringIn</div>
+                <div class="port-value">waiting...</div>
+            </div>
+            <span class="type-badge">string</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="port-row" data-port="booleanIn">
+            <div class="port-dot boolean"></div>
+            <div class="port-info">
+                <div class="port-name">booleanIn</div>
+                <div class="port-value">waiting...</div>
+            </div>
+            <span class="type-badge">boolean</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="port-row" data-port="objectIn">
+            <div class="port-dot object"></div>
+            <div class="port-info">
+                <div class="port-name">objectIn</div>
+                <div class="port-value">waiting...</div>
+            </div>
+            <span class="type-badge">object</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="port-row" data-port="arrayIn">
+            <div class="port-dot array"></div>
+            <div class="port-info">
+                <div class="port-name">arrayIn</div>
+                <div class="port-value">waiting...</div>
+            </div>
+            <span class="type-badge">array</span>
+            <span class="count-badge">0</span>
+        </div>
+        <div class="port-row" data-port="eventIn">
+            <div class="port-dot event"></div>
+            <div class="port-info">
+                <div class="port-name">eventIn</div>
+                <div class="port-value">waiting...</div>
+            </div>
+            <span class="type-badge">event</span>
+            <span class="count-badge">0</span>
+        </div>
+    </div>
+    <div class="stats">
+        Total received: <span id="total">0</span> |
+        Last update: <span id="lastUpdate">never</span>
+    </div>
+
+    <script>
+        const counts = {
+            numberIn: 0,
+            stringIn: 0,
+            booleanIn: 0,
+            objectIn: 0,
+            arrayIn: 0,
+            eventIn: 0
+        };
+        let totalCount = 0;
+
+        const totalEl = document.getElementById('total');
+        const lastUpdateEl = document.getElementById('lastUpdate');
+
+        function updatePort(portName, value) {
+            const row = document.querySelector(`[data-port="${portName}"]`);
+            if (!row) return;
+
+            counts[portName]++;
+            totalCount++;
+
+            // Update value display
+            const valueEl = row.querySelector('.port-value');
+            valueEl.textContent = formatValue(value);
+            valueEl.classList.add('has-value');
+
+            // Update count
+            const countEl = row.querySelector('.count-badge');
+            countEl.textContent = counts[portName];
+
+            // Update dot
+            const dot = row.querySelector('.port-dot');
+            dot.classList.add('active');
+            setTimeout(() => dot.classList.remove('active'), 500);
+
+            // Flash row
+            row.classList.add('active');
+            setTimeout(() => row.classList.remove('active'), 300);
+
+            // Update stats
+            totalEl.textContent = totalCount;
+            lastUpdateEl.textContent = new Date().toLocaleTimeString();
+        }
+
+        function formatValue(value) {
+            if (value === null) return 'null';
+            if (value === undefined) return 'undefined';
+            if (typeof value === 'boolean') return value ? 'true' : 'false';
+            if (typeof value === 'number') return value.toString();
+            if (typeof value === 'string') return `"${value.slice(0, 20)}${value.length > 20 ? '...' : ''}"`;
+            if (Array.isArray(value)) return `[${value.length} items]`;
+            if (typeof value === 'object') return `{${Object.keys(value).length} keys}`;
+            return String(value);
+        }
+
+        // Port mapping from sender to receiver
+        const portMapping = {
+            'numberOut': 'numberIn',
+            'stringOut': 'stringIn',
+            'booleanOut': 'booleanIn',
+            'objectOut': 'objectIn',
+            'arrayOut': 'arrayIn',
+            'eventOut': 'eventIn'
+        };
+
+        // Listen for incoming events
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            if (data.type === 'widget:event') {
+                const eventType = data.payload.type;
+                const payload = data.payload.payload;
+
+                console.log('[Type Receiver] Received:', eventType, payload);
+
+                // Check if this matches any of our input ports
+                for (const [senderPort, receiverPort] of Object.entries(portMapping)) {
+                    if (eventType === senderPort || eventType.endsWith(':' + senderPort) ||
+                        eventType === receiverPort || eventType.endsWith(':' + receiverPort)) {
+                        updatePort(receiverPort, payload);
+                        break;
+                    }
+                }
+
+                // Also handle direct port names
+                if (counts.hasOwnProperty(eventType)) {
+                    updatePort(eventType, payload);
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'widget:ready' }, '*');
+    </script>
+</body>
+</html>

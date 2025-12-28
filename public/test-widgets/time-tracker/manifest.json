@@ -1,0 +1,35 @@
+{
+    "id": "time-tracker",
+    "name": "Time Tracker",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "task-selected": {
+            "type": "event",
+            "description": "Receives selected task from project tracker"
+        },
+        "tasks-sync": {
+            "type": "event",
+            "description": "Receives task list sync"
+        }
+    },
+    "outputs": {
+        "task-time-update": {
+            "type": "event",
+            "description": "Emits time tracking updates"
+        },
+        "timer-started": {
+            "type": "event",
+            "description": "Emits when timer starts"
+        },
+        "timer-stopped": {
+            "type": "event",
+            "description": "Emits when timer stops"
+        }
+    }
+}

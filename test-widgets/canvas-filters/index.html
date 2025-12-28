@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #252538 100%);
+            color: #e2e8f0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            color: #8b5cf6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section {
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .slider-label {
+            width: 80px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        .slider-value {
+            width: 40px;
+            text-align: right;
+            font-size: 11px;
+            color: #64748b;
+            font-family: monospace;
+        }
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .preset-btn {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .preset-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        .overlay-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .overlay-btn {
+            flex: 1;
+            padding: 10px 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid transparent;
+            border-radius: 6px;
+            color: #94a3b8;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .overlay-btn.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+            color: #e2e8f0;
+        }
+        .overlay-btn:hover {
+            background: rgba(139, 92, 246, 0.15);
+        }
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .reset-btn {
+            flex: 1;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <h3>✨ Canvas Filters</h3>
+
+    <div class="section">
+        <div class="section-title">Adjustments</div>
+
+        <div class="slider-row">
+            <span class="slider-label">Brightness</span>
+            <input type="range" class="slider" id="brightness" min="0" max="200" value="100" oninput="updateFilter('brightness', this.value)">
+            <span class="slider-value" id="brightness-val">100%</span>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Contrast</span>
+            <input type="range" class="slider" id="contrast" min="0" max="200" value="100" oninput="updateFilter('contrast', this.value)">
+            <span class="slider-value" id="contrast-val">100%</span>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Saturation</span>
+            <input type="range" class="slider" id="saturation" min="0" max="200" value="100" oninput="updateFilter('saturation', this.value)">
+            <span class="slider-value" id="saturation-val">100%</span>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Hue</span>
+            <input type="range" class="slider" id="hue" min="0" max="360" value="0" oninput="updateFilter('hue', this.value)">
+            <span class="slider-value" id="hue-val">0°</span>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Blur</span>
+            <input type="range" class="slider" id="blur" min="0" max="20" value="0" oninput="updateFilter('blur', this.value)">
+            <span class="slider-value" id="blur-val">0px</span>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Grayscale</span>
+            <input type="range" class="slider" id="grayscale" min="0" max="100" value="0" oninput="updateFilter('grayscale', this.value)">
+            <span class="slider-value" id="grayscale-val">0%</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Filter Presets</div>
+        <div class="preset-grid">
+            <button class="preset-btn" onclick="applyPreset('normal')">Normal</button>
+            <button class="preset-btn" onclick="applyPreset('vintage')">Vintage</button>
+            <button class="preset-btn" onclick="applyPreset('noir')">Noir</button>
+            <button class="preset-btn" onclick="applyPreset('warm')">Warm</button>
+            <button class="preset-btn" onclick="applyPreset('cool')">Cool</button>
+            <button class="preset-btn" onclick="applyPreset('dramatic')">Dramatic</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Overlay Effects</div>
+        <div class="overlay-row">
+            <button class="overlay-btn active" id="overlay-none" onclick="setOverlay('none')">None</button>
+            <button class="overlay-btn" id="overlay-vignette" onclick="setOverlay('vignette')">Vignette</button>
+            <button class="overlay-btn" id="overlay-scanlines" onclick="setOverlay('scanlines')">Scanlines</button>
+        </div>
+        <div class="overlay-row">
+            <button class="overlay-btn" id="overlay-noise" onclick="setOverlay('noise')">Noise</button>
+        </div>
+
+        <div class="slider-row" id="overlay-intensity-row" style="display: none;">
+            <span class="slider-label">Intensity</span>
+            <input type="range" class="slider" id="overlayIntensity" min="0" max="100" value="50" oninput="updateOverlayIntensity(this.value)">
+            <span class="slider-value" id="overlayIntensity-val">50%</span>
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <button class="reset-btn" onclick="resetAll()">Reset All</button>
+    </div>
+
+    <script>
+        let currentFilters = {
+            brightness: 100,
+            contrast: 100,
+            saturation: 100,
+            hue: 0,
+            blur: 0,
+            grayscale: 0
+        };
+
+        let currentOverlay = { type: 'none', intensity: 50 };
+
+        const PRESETS = {
+            normal: { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0, grayscale: 0 },
+            vintage: { brightness: 110, contrast: 90, saturation: 80, hue: 20, blur: 0, grayscale: 20 },
+            noir: { brightness: 100, contrast: 120, saturation: 0, hue: 0, blur: 0, grayscale: 100 },
+            warm: { brightness: 105, contrast: 100, saturation: 110, hue: 15, blur: 0, grayscale: 0 },
+            cool: { brightness: 100, contrast: 105, saturation: 90, hue: 200, blur: 0, grayscale: 0 },
+            dramatic: { brightness: 90, contrast: 150, saturation: 120, hue: 0, blur: 0, grayscale: 0 }
+        };
+
+        function emit(eventType, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type: eventType, payload }
+            }, '*');
+        }
+
+        function broadcast(eventType, payload) {
+            window.parent.postMessage({
+                type: 'widget:broadcast',
+                payload: { type: eventType, payload }
+            }, '*');
+        }
+
+        function updateFilter(filter, value) {
+            currentFilters[filter] = parseInt(value);
+
+            // Update display
+            const unit = filter === 'hue' ? '°' : (filter === 'blur' ? 'px' : '%');
+            document.getElementById(filter + '-val').textContent = value + unit;
+
+            // Emit filters
+            emit('canvas:set-filters', currentFilters);
+            broadcast('canvas:set-filters', currentFilters);
+        }
+
+        function applyPreset(presetName) {
+            const preset = PRESETS[presetName];
+            if (!preset) return;
+
+            // Update sliders and values
+            Object.keys(preset).forEach(filter => {
+                const value = preset[filter];
+                currentFilters[filter] = value;
+                document.getElementById(filter).value = value;
+                const unit = filter === 'hue' ? '°' : (filter === 'blur' ? 'px' : '%');
+                document.getElementById(filter + '-val').textContent = value + unit;
+            });
+
+            // Emit
+            emit('canvas:set-filters', currentFilters);
+            broadcast('canvas:set-filters', currentFilters);
+        }
+
+        function setOverlay(type) {
+            // Update button states
+            document.querySelectorAll('.overlay-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('overlay-' + type).classList.add('active');
+
+            // Show/hide intensity slider
+            document.getElementById('overlay-intensity-row').style.display = type === 'none' ? 'none' : 'flex';
+
+            currentOverlay.type = type;
+
+            emit('canvas:set-overlay', currentOverlay);
+            broadcast('canvas:set-overlay', currentOverlay);
+        }
+
+        function updateOverlayIntensity(value) {
+            currentOverlay.intensity = parseInt(value);
+            document.getElementById('overlayIntensity-val').textContent = value + '%';
+
+            emit('canvas:set-overlay', currentOverlay);
+            broadcast('canvas:set-overlay', currentOverlay);
+        }
+
+        function resetAll() {
+            applyPreset('normal');
+            setOverlay('none');
+        }
+
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

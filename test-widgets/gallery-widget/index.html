@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery Widget</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .header h1 .icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .image-count {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary.active {
+      background: rgba(233, 69, 96, 0.3);
+      color: #ff6b6b;
+    }
+
+    .btn-danger {
+      background: rgba(255, 70, 70, 0.2);
+      color: #ff6b6b;
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 70, 70, 0.4);
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 2px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .view-toggle .btn {
+      padding: 5px 8px;
+      border-radius: 4px;
+    }
+
+    /* Gallery Grid */
+    .gallery {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 10px;
+      align-content: start;
+    }
+
+    .gallery.large-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .gallery.list-view {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .gallery::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .gallery::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    .gallery::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* Image Item */
+    .image-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .gallery.list-view .image-item {
+      aspect-ratio: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    .image-item:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 2;
+    }
+
+    .image-item.selected {
+      outline: 3px solid #e94560;
+      outline-offset: 2px;
+    }
+
+    .image-item.multi-selected {
+      outline: 3px solid #4ecdc4;
+      outline-offset: 2px;
+    }
+
+    .image-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .gallery.list-view .image-item img {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .image-item:hover img {
+      transform: scale(1.1);
+    }
+
+    .gallery.list-view .image-item:hover img {
+      transform: none;
+    }
+
+    .image-item .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 8px;
+    }
+
+    .image-item:hover .overlay {
+      opacity: 1;
+    }
+
+    .image-item .name {
+      font-size: 10px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .gallery.list-view .image-item .name {
+      font-size: 13px;
+      flex: 1;
+      color: #fff;
+    }
+
+    .gallery.list-view .image-item .overlay {
+      display: none;
+    }
+
+    .image-item .actions {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .image-item:hover .actions {
+      opacity: 1;
+    }
+
+    .image-item .action-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .image-item .action-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .image-item .action-btn.delete:hover {
+      background: #e94560;
+    }
+
+    .image-item .action-btn.select:hover {
+      background: #4ecdc4;
+    }
+
+    .image-item .checkbox {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .multi-select-mode .image-item .checkbox {
+      display: flex;
+    }
+
+    .image-item.multi-selected .checkbox {
+      background: #4ecdc4;
+      border-color: #4ecdc4;
+    }
+
+    /* Empty State */
+    .empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      color: rgba(255, 255, 255, 0.5);
+      text-align: center;
+      padding: 30px;
+    }
+
+    .empty-state .icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(1.05); opacity: 0.6; }
+    }
+
+    .empty-state h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* Drop Overlay */
+    .drop-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(233, 69, 96, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+    }
+
+    .drop-overlay.active {
+      display: flex;
+    }
+
+    .drop-overlay-content {
+      text-align: center;
+      color: #fff;
+      animation: bounce 0.5s ease infinite alternate;
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(-5px); }
+      to { transform: translateY(5px); }
+    }
+
+    .drop-overlay-content .icon {
+      font-size: 72px;
+      margin-bottom: 16px;
+    }
+
+    .drop-overlay-content p {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      backdrop-filter: blur(10px);
+    }
+
+    .lightbox.active {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 85%;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .lightbox .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .lightbox .close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
+    }
+
+    .lightbox .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .lightbox .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .lightbox .nav-btn.prev { left: 20px; }
+    .lightbox .nav-btn.next { right: 20px; }
+
+    .lightbox .info-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .lightbox .info-bar .name {
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .lightbox .info-bar .counter {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Selection bar */
+    .selection-bar {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+      display: none;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .selection-bar.active {
+      display: flex;
+    }
+
+    .selection-bar .count {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .selection-bar .spacer { flex: 1; }
+
+    /* Hidden file input */
+    #fileInput {
+      display: none;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 300;
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span class="icon">+</span>
+      Gallery
+    </h1>
+    <span class="image-count" id="imageCount">0 images</span>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" id="uploadBtn">+ Upload</button>
+    <button class="btn btn-secondary" id="selectModeBtn">Select</button>
+    <button class="btn btn-secondary" id="selectAllBtn" style="display: none;">All</button>
+    <div class="spacer"></div>
+    <div class="view-toggle">
+      <button class="btn btn-secondary active" id="gridViewBtn" title="Grid view">&#9638;</button>
+      <button class="btn btn-secondary" id="listViewBtn" title="List view">&#9776;</button>
+    </div>
+    <button class="btn btn-danger" id="clearBtn">Clear</button>
+  </div>
+
+  <div class="selection-bar" id="selectionBar">
+    <span class="count" id="selectionCount">0 selected</span>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary" id="sendSelectedBtn">Send Selected</button>
+    <button class="btn btn-danger" id="deleteSelectedBtn">Delete</button>
+    <button class="btn btn-secondary" id="cancelSelectBtn">Cancel</button>
+  </div>
+
+  <div class="gallery" id="gallery">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">+</div>
+      <h3>Your Gallery is Empty</h3>
+      <p>Upload images or drag & drop them here<br>to start building your collection</p>
+      <button class="btn btn-primary" id="emptyUploadBtn">+ Upload Images</button>
+    </div>
+  </div>
+
+  <div class="drop-overlay" id="dropOverlay">
+    <div class="drop-overlay-content">
+      <div class="icon">+</div>
+      <p>Drop images here</p>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="close-btn" id="lightboxClose">&times;</button>
+    <button class="nav-btn prev" id="lightboxPrev">&lt;</button>
+    <button class="nav-btn next" id="lightboxNext">&gt;</button>
+    <img id="lightboxImage" src="" alt="">
+    <div class="info-bar">
+      <span class="name" id="lightboxName"></span>
+      <span class="counter" id="lightboxCounter"></span>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <input type="file" id="fileInput" accept="image/*" multiple>
+
+  <script>
+    // State
+    let images = [];
+    let selectedId = null;
+    let multiSelected = new Set();
+    let multiSelectMode = false;
+    let viewMode = 'grid'; // 'grid', 'large', 'list'
+    let lightboxIndex = -1;
+
+    // DOM Elements
+    const gallery = document.getElementById('gallery');
+    const emptyState = document.getElementById('emptyState');
+    const imageCount = document.getElementById('imageCount');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const emptyUploadBtn = document.getElementById('emptyUploadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const fileInput = document.getElementById('fileInput');
+    const dropOverlay = document.getElementById('dropOverlay');
+    const selectModeBtn = document.getElementById('selectModeBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const selectionBar = document.getElementById('selectionBar');
+    const selectionCount = document.getElementById('selectionCount');
+    const sendSelectedBtn = document.getElementById('sendSelectedBtn');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const cancelSelectBtn = document.getElementById('cancelSelectBtn');
+    const gridViewBtn = document.getElementById('gridViewBtn');
+    const listViewBtn = document.getElementById('listViewBtn');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    const lightboxName = document.getElementById('lightboxName');
+    const lightboxCounter = document.getElementById('lightboxCounter');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const lightboxPrev = document.getElementById('lightboxPrev');
+    const lightboxNext = document.getElementById('lightboxNext');
+    const toast = document.getElementById('toast');
+
+    // Utility: Generate unique ID
+    function generateId() {
+      return 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Utility: Emit output to host
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    // Utility: Emit event
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload: payload }
+      }, '*');
+    }
+
+    // Toast notification
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // Create thumbnail from image
+    function createThumbnail(url, maxSize = 200) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          let width = img.width, height = img.height;
+          if (width > height) {
+            if (width > maxSize) { height = height * (maxSize / width); width = maxSize; }
+          } else {
+            if (height > maxSize) { width = width * (maxSize / height); height = maxSize; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => resolve(url);
+        img.src = url;
+      });
+    }
+
+    // Update UI
+    function updateUI() {
+      const count = images.length;
+      imageCount.textContent = count === 1 ? '1 image' : `${count} images`;
+      emptyState.style.display = count === 0 ? 'flex' : 'none';
+
+      // Update selection bar
+      const selCount = multiSelected.size;
+      selectionBar.classList.toggle('active', multiSelectMode && selCount > 0);
+      selectionCount.textContent = `${selCount} selected`;
+
+      // Update multi-select mode
+      gallery.classList.toggle('multi-select-mode', multiSelectMode);
+      selectModeBtn.classList.toggle('active', multiSelectMode);
+      selectAllBtn.style.display = multiSelectMode ? 'inline-flex' : 'none';
+    }
+
+    // Render single image item
+    function renderImageItem(imgObj) {
+      const item = document.createElement('div');
+      item.className = 'image-item';
+      item.dataset.id = imgObj.id;
+      if (imgObj.id === selectedId) item.classList.add('selected');
+      if (multiSelected.has(imgObj.id)) item.classList.add('multi-selected');
+
+      const img = document.createElement('img');
+      img.src = imgObj.thumbnail || imgObj.url;
+      img.alt = imgObj.name;
+      img.loading = 'lazy';
+      item.appendChild(img);
+
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = imgObj.name;
+      overlay.appendChild(nameSpan);
+      item.appendChild(overlay);
+
+      // List view name
+      const listName = document.createElement('span');
+      listName.className = 'name';
+      listName.textContent = imgObj.name;
+      listName.style.display = 'none';
+      item.appendChild(listName);
+
+      const checkbox = document.createElement('div');
+      checkbox.className = 'checkbox';
+      checkbox.innerHTML = '&#10003;';
+      item.appendChild(checkbox);
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+
+      const viewBtn = document.createElement('button');
+      viewBtn.className = 'action-btn';
+      viewBtn.innerHTML = '&#128269;';
+      viewBtn.title = 'View full size';
+      viewBtn.onclick = (e) => { e.stopPropagation(); openLightbox(imgObj.id); };
+      actions.appendChild(viewBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'action-btn delete';
+      deleteBtn.innerHTML = '&times;';
+      deleteBtn.title = 'Delete';
+      deleteBtn.onclick = (e) => { e.stopPropagation(); removeImage(imgObj.id); };
+      actions.appendChild(deleteBtn);
+
+      item.appendChild(actions);
+
+      item.onclick = () => {
+        if (multiSelectMode) {
+          toggleMultiSelect(imgObj.id);
+        } else {
+          selectImage(imgObj.id);
+        }
+      };
+
+      item.ondblclick = () => openLightbox(imgObj.id);
+
+      return item;
+    }
+
+    // Rerender gallery
+    function rerenderGallery() {
+      gallery.querySelectorAll('.image-item').forEach(el => el.remove());
+      images.forEach(imgObj => {
+        gallery.insertBefore(renderImageItem(imgObj), emptyState);
+      });
+      updateUI();
+    }
+
+    // Add image to gallery
+    async function addImage(imageData, emit = true) {
+      const id = imageData.id || generateId();
+      const url = imageData.url;
+      const name = imageData.name || 'Image';
+
+      if (images.find(img => img.url === url)) return;
+
+      const thumbnail = imageData.thumbnail || await createThumbnail(url);
+      const imgObj = { id, url, name, thumbnail };
+      images.push(imgObj);
+
+      gallery.insertBefore(renderImageItem(imgObj), emptyState);
+      updateUI();
+
+      if (emit) {
+        emitOutput('imageAdded', imgObj);
+        emitOutput('galleryChanged', { images: [...images], count: images.length });
+        emitOutput('allImages', { images: [...images] });
+        emitEvent('gallery:image-added', imgObj);
+        emitEvent('gallery:changed', { images: [...images], count: images.length });
+        showToast(`Added: ${name}`);
+      }
+
+      return imgObj;
+    }
+
+    // Remove image
+    function removeImage(id) {
+      const index = images.findIndex(img => img.id === id);
+      if (index === -1) return;
+      const name = images[index].name;
+      images.splice(index, 1);
+      gallery.querySelector(`[data-id="${id}"]`)?.remove();
+      if (selectedId === id) selectedId = null;
+      multiSelected.delete(id);
+      updateUI();
+      emitOutput('imageRemoved', id);
+      emitOutput('galleryChanged', { images: [...images], count: images.length });
+      emitOutput('allImages', { images: [...images] });
+      emitEvent('gallery:changed', { images: [...images], count: images.length });
+      showToast(`Removed: ${name}`);
+    }
+
+    // Select image
+    function selectImage(id) {
+      const imgObj = images.find(img => img.id === id);
+      if (!imgObj) return;
+      gallery.querySelectorAll('.image-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.id === id);
+      });
+      selectedId = id;
+      emitOutput('imageSelected', imgObj);
+      emitEvent('gallery:image-selected', imgObj);
+    }
+
+    // Toggle multi-select
+    function toggleMultiSelect(id) {
+      if (multiSelected.has(id)) {
+        multiSelected.delete(id);
+      } else {
+        multiSelected.add(id);
+      }
+      gallery.querySelector(`[data-id="${id}"]`)?.classList.toggle('multi-selected', multiSelected.has(id));
+      updateUI();
+    }
+
+    // Clear all images
+    function clearAll() {
+      if (images.length === 0) return;
+      images = [];
+      selectedId = null;
+      multiSelected.clear();
+      gallery.querySelectorAll('.image-item').forEach(el => el.remove());
+      updateUI();
+      emitOutput('galleryChanged', { images: [], count: 0 });
+      emitOutput('allImages', { images: [] });
+      emitEvent('gallery:changed', { images: [], count: 0 });
+      showToast('Gallery cleared');
+    }
+
+    // Handle file upload
+    function handleFiles(files) {
+      let added = 0;
+      Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => { addImage({ url: e.target.result, name: file.name }); added++; };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Multi-select mode
+    function enterMultiSelectMode() {
+      multiSelectMode = true;
+      updateUI();
+    }
+
+    function exitMultiSelectMode() {
+      multiSelectMode = false;
+      multiSelected.clear();
+      gallery.querySelectorAll('.image-item').forEach(el => el.classList.remove('multi-selected'));
+      updateUI();
+    }
+
+    function selectAll() {
+      images.forEach(img => multiSelected.add(img.id));
+      gallery.querySelectorAll('.image-item').forEach(el => el.classList.add('multi-selected'));
+      updateUI();
+    }
+
+    function sendSelected() {
+      const selected = images.filter(img => multiSelected.has(img.id));
+      emitOutput('galleryChanged', { images: selected, count: selected.length });
+      emitOutput('allImages', { images: selected });
+      emitEvent('gallery:changed', { images: selected, count: selected.length });
+      showToast(`Sent ${selected.length} images`);
+      exitMultiSelectMode();
+    }
+
+    function deleteSelected() {
+      const ids = [...multiSelected];
+      ids.forEach(id => removeImage(id));
+      exitMultiSelectMode();
+    }
+
+    // View mode
+    function setViewMode(mode) {
+      viewMode = mode;
+      gallery.classList.remove('large-grid', 'list-view');
+      gridViewBtn.classList.remove('active');
+      listViewBtn.classList.remove('active');
+      if (mode === 'list') {
+        gallery.classList.add('list-view');
+        listViewBtn.classList.add('active');
+      } else {
+        gridViewBtn.classList.add('active');
+      }
+    }
+
+    // Lightbox
+    function openLightbox(id) {
+      lightboxIndex = images.findIndex(img => img.id === id);
+      if (lightboxIndex === -1) return;
+      updateLightbox();
+      lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      lightboxIndex = -1;
+    }
+
+    function updateLightbox() {
+      if (lightboxIndex < 0 || lightboxIndex >= images.length) return;
+      const img = images[lightboxIndex];
+      lightboxImage.src = img.url;
+      lightboxName.textContent = img.name;
+      lightboxCounter.textContent = `${lightboxIndex + 1} / ${images.length}`;
+    }
+
+    function lightboxNav(dir) {
+      lightboxIndex = (lightboxIndex + dir + images.length) % images.length;
+      updateLightbox();
+    }
+
+    // Event Listeners
+    uploadBtn.onclick = () => fileInput.click();
+    emptyUploadBtn.onclick = () => fileInput.click();
+    clearBtn.onclick = clearAll;
+    fileInput.onchange = (e) => handleFiles(e.target.files);
+
+    selectModeBtn.onclick = () => multiSelectMode ? exitMultiSelectMode() : enterMultiSelectMode();
+    selectAllBtn.onclick = selectAll;
+    cancelSelectBtn.onclick = exitMultiSelectMode;
+    sendSelectedBtn.onclick = sendSelected;
+    deleteSelectedBtn.onclick = deleteSelected;
+
+    gridViewBtn.onclick = () => setViewMode('grid');
+    listViewBtn.onclick = () => setViewMode('list');
+
+    lightboxClose.onclick = closeLightbox;
+    lightboxPrev.onclick = () => lightboxNav(-1);
+    lightboxNext.onclick = () => lightboxNav(1);
+    lightbox.onclick = (e) => { if (e.target === lightbox) closeLightbox(); };
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (lightbox.classList.contains('active')) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') lightboxNav(-1);
+        if (e.key === 'ArrowRight') lightboxNav(1);
+      } else {
+        if (e.key === 'Escape' && multiSelectMode) exitMultiSelectMode();
+      }
+    });
+
+    // Drag and drop
+    document.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.classList.add('active'); });
+    document.addEventListener('dragleave', (e) => { if (e.target === dropOverlay || e.target === document.body) dropOverlay.classList.remove('active'); });
+    document.addEventListener('drop', (e) => { e.preventDefault(); dropOverlay.classList.remove('active'); handleFiles(e.dataTransfer.files); });
+
+    // Handle incoming messages
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'addImage': if (value && value.url) addImage(value); break;
+          case 'removeImage': if (typeof value === 'string') removeImage(value); break;
+          case 'clearAll': clearAll(); break;
+          case 'selectImage': if (typeof value === 'string') selectImage(value); break;
+        }
+        return;
+      }
+      if (data.type === 'widget:event') {
+        const portName = data.payload?.type;
+        const value = data.payload?.payload;
+        switch (portName) {
+          case 'addImage': if (value && value.url) addImage(value); break;
+          case 'removeImage': if (typeof value === 'string') removeImage(value); break;
+          case 'clearAll': clearAll(); break;
+          case 'selectImage': if (typeof value === 'string') selectImage(value); break;
+        }
+      }
+    });
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+    updateUI();
+  </script>
+</body>
+</html>

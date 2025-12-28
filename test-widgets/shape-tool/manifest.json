@@ -1,0 +1,52 @@
+{
+  "id": "shape-tool",
+  "name": "Shape Tool",
+  "version": "1.0.0",
+  "description": "Adobe-style shape tool for adding and editing vector shapes on the canvas in real-time",
+  "author": "StickerNest",
+  "category": "design",
+  "kind": "2d",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["shape", "vector"],
+    "canCreate": ["shape"],
+    "isDesignTool": true
+  },
+  "size": {
+    "width": 320,
+    "height": 650,
+    "minWidth": 280,
+    "maxWidth": 400
+  },
+  "inputs": {
+    "shape.load": {
+      "type": "object",
+      "description": "Load shape properties"
+    },
+    "entity:selected": {
+      "type": "object",
+      "description": "Entity selected on canvas"
+    }
+  },
+  "outputs": {
+    "shape.style-changed": {
+      "type": "object",
+      "description": "Shape style changed"
+    }
+  },
+  "broadcasts": {
+    "listens": [
+      "widget:selected",
+      "widget:deselected",
+      "entity:selected",
+      "selection:cleared",
+      "brand:color-changed"
+    ],
+    "emits": [
+      "canvas:add-shape",
+      "canvas:style-changed"
+    ]
+  },
+  "tags": ["shape", "vector", "design", "tool", "editor"]
+}

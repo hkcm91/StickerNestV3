@@ -1,0 +1,61 @@
+{
+  "id": "tamagotchi-todo",
+  "name": "Tamagotchi Todo",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Gamified todo list that syncs with Tamagotchi moodlet and pet widgets. Tasks are categorized by life areas and completing them boosts your pet's mood.",
+  "tags": ["tamagotchi", "todo", "tasks", "habits", "gamification", "productivity", "wellness"],
+  "author": "StickerNest",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "inputs": {
+    "addTask": {
+      "type": "object",
+      "description": "Add a new task {title: string, category?: string, recurring?: string, priority?: string}"
+    },
+    "completeTask": {
+      "type": "string",
+      "description": "Complete a task by ID"
+    },
+    "deleteTask": {
+      "type": "string",
+      "description": "Delete a task by ID"
+    },
+    "importTasks": {
+      "type": "array",
+      "description": "Import an array of tasks"
+    },
+    "moodletSync": {
+      "type": "object",
+      "description": "Receive moodlet state for task suggestions"
+    }
+  },
+  "outputs": {
+    "taskCompleted": {
+      "type": "object",
+      "description": "Emitted when a task is completed {id, title, category, impact}"
+    },
+    "taskAdded": {
+      "type": "object",
+      "description": "Emitted when a new task is added"
+    },
+    "tasksExport": {
+      "type": "array",
+      "description": "Export all tasks"
+    },
+    "dailyProgress": {
+      "type": "object",
+      "description": "Daily completion statistics"
+    }
+  },
+  "size": {
+    "width": 340,
+    "height": 480,
+    "minWidth": 280,
+    "minHeight": 350
+  }
+}

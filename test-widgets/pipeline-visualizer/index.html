@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .header h1 { font-size: 0.9rem; color: #22c55e; margin: 0; }
+        .badge { background: #22c55e; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.6rem; }
+        .stats { display: flex; gap: 12px; margin-bottom: 10px; font-size: 0.7rem; }
+        .stat { background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px; }
+        .stat-value { color: #22c55e; font-weight: bold; }
+        .events-container { max-height: 200px; overflow-y: auto; }
+        .event-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-left: 3px solid #22c55e;
+            font-size: 0.7rem;
+        }
+        .event-card.incoming { border-left-color: #3b82f6; }
+        .event-card.outgoing { border-left-color: #f59e0b; }
+        .event-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .event-type { color: #22c55e; font-weight: bold; font-family: monospace; }
+        .event-scope { color: #64748b; font-size: 0.6rem; padding: 2px 6px; background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .event-route { display: flex; align-items: center; gap: 6px; margin: 4px 0; color: #94a3b8; font-size: 0.65rem; }
+        .route-arrow { color: #22c55e; }
+        .event-payload { background: rgba(0,0,0,0.3); padding: 4px 6px; border-radius: 3px; font-family: monospace; font-size: 0.6rem; color: #64748b; max-height: 40px; overflow: hidden; }
+        .filter-row { display: flex; gap: 6px; margin-bottom: 10px; }
+        .filter-btn {
+            padding: 4px 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.65rem;
+        }
+        .filter-btn.active { background: #22c55e; border-color: #22c55e; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Pipeline Visualizer</h1>
+        <span class="badge">DEBUG</span>
+    </div>
+
+    <div class="stats">
+        <div class="stat">Total: <span class="stat-value" id="total">0</span></div>
+        <div class="stat">Incoming: <span class="stat-value" id="incoming">0</span></div>
+        <div class="stat">Outgoing: <span class="stat-value" id="outgoing">0</span></div>
+    </div>
+
+    <div class="filter-row">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="pipeline">Pipeline</button>
+        <button class="filter-btn" data-filter="widget">Widget</button>
+        <button class="filter-btn" data-filter="canvas">Canvas</button>
+    </div>
+
+    <div class="events-container" id="events"></div>
+
+    <script>
+        let state = {
+            events: [],
+            total: 0,
+            incoming: 0,
+            outgoing: 0,
+            filter: 'all'
+        };
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function truncate(str, len) {
+            if (!str) return '';
+            const s = typeof str === 'string' ? str : JSON.stringify(str);
+            return s.length > len ? s.substring(0, len) + '...' : s;
+        }
+
+        function getEventDirection(event) {
+            if (event.type.startsWith('pipeline:')) return 'pipeline';
+            if (event.sourceWidgetId) return 'outgoing';
+            return 'incoming';
+        }
+
+        function shouldShow(event) {
+            if (state.filter === 'all') return true;
+            const type = event.type.split(':')[0];
+            return type === state.filter;
+        }
+
+        function updateUI() {
+            document.getElementById('total').textContent = state.total;
+            document.getElementById('incoming').textContent = state.incoming;
+            document.getElementById('outgoing').textContent = state.outgoing;
+
+            const eventsEl = document.getElementById('events');
+            const filtered = state.events.filter(shouldShow);
+
+            eventsEl.innerHTML = filtered.slice(-20).reverse().map(e => {
+                const direction = getEventDirection(e);
+                const dirClass = direction === 'outgoing' ? 'outgoing' : (direction === 'pipeline' ? 'incoming' : 'incoming');
+                return `
+                    <div class="event-card ${dirClass}">
+                        <div class="event-header">
+                            <span class="event-type">${e.type}</span>
+                            <span class="event-scope">${e.scope || 'unknown'}</span>
+                        </div>
+                        <div class="event-route">
+                            <span>${truncate(e.sourceWidgetId, 8) || 'system'}</span>
+                            <span class="route-arrow">→</span>
+                            <span>${truncate(e.targetWidgetId, 8) || 'broadcast'}</span>
+                        </div>
+                        <div class="event-payload">${truncate(e.payload, 80)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleEvent(event) {
+            if (event.type.startsWith('bridge:')) return;
+            if (event.type.startsWith('debug:')) return;
+
+            state.total++;
+            const direction = getEventDirection(event);
+            if (direction === 'outgoing') state.outgoing++;
+            else state.incoming++;
+
+            state.events.push({
+                type: event.type,
+                scope: event.scope,
+                sourceWidgetId: event.sourceWidgetId,
+                targetWidgetId: event.targetWidgetId,
+                payload: event.payload,
+                timestamp: Date.now()
+            });
+
+            if (state.events.length > 100) state.events.shift();
+
+            updateUI();
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.filter = btn.dataset.filter;
+                updateUI();
+            });
+        });
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Pipeline Visualizer ready');
+            window.WidgetAPI.onEvent('*', handleEvent);
+            updateUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+    "id": "source-audio",
+    "name": "Audio Source",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {},
+    "outputs": {
+        "audio-analysis": {
+            "type": "object",
+            "description": "Frequency and time domain data"
+        },
+        "modulate": {
+            "type": "event",
+            "description": "Volume envelope (0-1)"
+        }
+    }
+}

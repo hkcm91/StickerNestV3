@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 16px;
+        }
+        .title {
+            color: rgba(255,255,255,0.9);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .timer-display {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 16px 24px;
+            text-align: center;
+        }
+        .value {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            font-variant-numeric: tabular-nums;
+        }
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        button {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        button.active {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        .status {
+            color: rgba(255,255,255,0.6);
+            font-size: 10px;
+            margin-top: 8px;
+        }
+        .indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .indicator.running { background: #22c55e; animation: pulse 1s infinite; }
+        .indicator.stopped { background: #ef4444; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Pipeline Timer</div>
+    <div class="timer-display">
+        <div class="value" id="value">0</div>
+    </div>
+    <div class="controls">
+        <button id="startBtn" class="active">Start</button>
+        <button id="stopBtn">Stop</button>
+        <button id="resetBtn">Reset</button>
+    </div>
+    <div class="status">
+        <span class="indicator running" id="indicator"></span>
+        <span id="statusText">Running</span>
+    </div>
+
+    <script>
+        let count = 0;
+        let running = true;
+        let intervalId = null;
+
+        const valueEl = document.getElementById('value');
+        const indicatorEl = document.getElementById('indicator');
+        const statusTextEl = document.getElementById('statusText');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Emit event to host
+        function emit(portName, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portName,
+                    payload: payload
+                }
+            }, '*');
+        }
+
+        function tick() {
+            count = (count + 1) % 101; // 0-100 loop
+            valueEl.textContent = count;
+
+            // Emit tick value (number)
+            emit('tick', count);
+
+            // Emit tick event (full data)
+            emit('tickEvent', {
+                value: count,
+                timestamp: Date.now(),
+                running: running
+            });
+        }
+
+        function start() {
+            if (running) return;
+            running = true;
+            intervalId = setInterval(tick, 100); // 100ms = 10 ticks/sec
+            updateStatus();
+        }
+
+        function stop() {
+            running = false;
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            updateStatus();
+        }
+
+        function reset() {
+            count = 0;
+            valueEl.textContent = count;
+        }
+
+        function updateStatus() {
+            indicatorEl.className = running ? 'indicator running' : 'indicator stopped';
+            statusTextEl.textContent = running ? 'Running' : 'Stopped';
+            startBtn.classList.toggle('active', running);
+            stopBtn.classList.toggle('active', !running);
+        }
+
+        startBtn.addEventListener('click', start);
+        stopBtn.addEventListener('click', stop);
+        resetBtn.addEventListener('click', reset);
+
+        // Start timer
+        intervalId = setInterval(tick, 100);
+
+        // Signal ready
+        window.parent.postMessage({ type: 'widget:ready' }, '*');
+    </script>
+</body>
+</html>

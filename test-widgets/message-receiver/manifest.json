@@ -1,0 +1,35 @@
+{
+  "id": "message-receiver",
+  "name": "Message Receiver",
+  "version": "1.0.0",
+  "kind": "display",
+  "entry": "index.html",
+  "description": "Receive and display messages from other canvases for cross-canvas communication testing",
+  "author": "StickerNest Demo",
+  "tags": ["messaging", "test", "pipeline", "cross-canvas", "communication"],
+  "inputs": {
+    "cross-canvas:message": {
+      "type": "event",
+      "description": "Receives cross-canvas messages"
+    },
+    "message": {
+      "type": "object",
+      "description": "Direct message input"
+    }
+  },
+  "outputs": {
+    "message:received": {
+      "type": "event",
+      "description": "Emitted when a message is received"
+    }
+  },
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "size": {
+    "width": 320,
+    "height": 280
+  }
+}

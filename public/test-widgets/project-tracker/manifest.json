@@ -1,0 +1,47 @@
+{
+    "id": "project-tracker",
+    "name": "Project Tracker",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "task-time-update": {
+            "type": "event",
+            "description": "Receives time tracking updates from timer widget"
+        },
+        "task-note-added": {
+            "type": "event",
+            "description": "Receives note attachment notifications"
+        },
+        "request-tasks": {
+            "type": "event",
+            "description": "Other widgets requesting current task list"
+        }
+    },
+    "outputs": {
+        "task-created": {
+            "type": "event",
+            "description": "Emits when a new task is created"
+        },
+        "task-updated": {
+            "type": "event",
+            "description": "Emits when a task is updated"
+        },
+        "task-deleted": {
+            "type": "event",
+            "description": "Emits when a task is deleted"
+        },
+        "task-selected": {
+            "type": "event",
+            "description": "Emits when a task is selected/focused"
+        },
+        "tasks-sync": {
+            "type": "event",
+            "description": "Broadcasts full task list for sync"
+        }
+    }
+}

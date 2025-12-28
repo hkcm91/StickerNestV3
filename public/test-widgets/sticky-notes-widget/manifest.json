@@ -1,0 +1,60 @@
+{
+  "id": "sticky-notes-widget",
+  "name": "Sticky Notes",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Multi-tab sticky notes widget with customizable colors, perfect for quick notes and reminders on your canvas",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "addNote": {
+      "type": "object",
+      "description": "Add a new note { text?: string, color?: string }"
+    },
+    "deleteNote": {
+      "type": "string",
+      "description": "Delete note by ID"
+    },
+    "updateNote": {
+      "type": "object",
+      "description": "Update note { id: string, text?: string, color?: string }"
+    },
+    "loadState": {
+      "type": "object",
+      "description": "Load saved state { notes: array }"
+    }
+  },
+  "outputs": {
+    "noteAdded": {
+      "type": "object",
+      "description": "Emitted when note created { id, text, color, timestamp }"
+    },
+    "noteUpdated": {
+      "type": "object",
+      "description": "Emitted when note modified { id, text, color }"
+    },
+    "noteDeleted": {
+      "type": "string",
+      "description": "Emitted when note deleted (note ID)"
+    },
+    "stateChanged": {
+      "type": "object",
+      "description": "Emitted when any state changes for persistence { notes }"
+    }
+  },
+  "events": {
+    "listens": ["sticky:add", "sticky:delete", "sticky:update", "sticky:load"],
+    "emits": ["sticky:added", "sticky:updated", "sticky:deleted", "sticky:state"]
+  },
+  "size": {
+    "width": 320,
+    "height": 380,
+    "minWidth": 240,
+    "minHeight": 280,
+    "maxWidth": 600,
+    "maxHeight": 700
+  }
+}

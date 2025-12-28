@@ -1,0 +1,1804 @@
+// Prisma schema for StickerNest v2
+// Aligns with frontend domain types in /src/types/domain.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User & Authentication
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String?  // bcrypt hashed, null for OAuth-only users
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Stripe customer ID
+  stripeCustomerId String? @unique @map("stripe_customer_id")
+
+  // Relations
+  sessions        Session[]
+  oauthAccounts   OAuthAccount[]
+  canvases        Canvas[]
+  assets          Asset[]
+  inviteTokens    InviteToken[]
+  subscription    UserSubscription?
+  creatorAccount  CreatorAccount?
+  usageRecord     UsageRecord?
+  usageSnapshots  UsageSnapshot[]
+
+  // New marketplace relations
+  marketplaceItems     MarketplaceItem[]
+  marketplaceRatings   MarketplaceRating[]
+  marketplaceComments  MarketplaceComment[]
+  marketplacePurchases MarketplacePurchase[]
+
+  // Legacy widget marketplace (for backward compatibility)
+  widgetPackages  WidgetPackage[]  @relation("LegacyWidgetPackages")
+  widgetRatings   WidgetRating[]
+  widgetComments  WidgetComment[]
+  widgetPurchases WidgetPurchase[]
+
+  // Canvas commerce (shoppable pages)
+  canvasProducts CanvasProduct[] @relation("CreatorProducts")
+
+  // Social layer relations
+  profile          UserProfile?
+  followers        Follow[]        @relation("UserFollowers")
+  following        Follow[]        @relation("UserFollowing")
+  blockedBy        Block[]         @relation("BlockedUsers")
+  blocking         Block[]         @relation("BlockingUsers")
+  notifications    Notification[]
+  sentMessages     ChatMessage[]   @relation("MessageSender")
+  chatRooms        ChatRoomMember[]
+  activities       Activity[]      @relation("ActivityActor")
+  activityTargets  Activity[]      @relation("ActivityTarget")
+  collaborations   CollaborationMember[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  refreshToken String   @unique @map("refresh_token")
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model OAuthAccount {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  provider        String   // 'google', 'github', 'discord'
+  providerUserId  String   @map("provider_user_id")
+  email           String?
+  displayName     String?  @map("display_name")
+  avatarUrl       String?  @map("avatar_url")
+  accessToken     String?  @map("access_token")
+  refreshToken    String?  @map("refresh_token")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+// ============================================
+// Canvas
+// ============================================
+
+model Canvas {
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id")
+  name         String
+  visibility   CanvasVisibility @default(private)
+  slug         String?          @unique
+  description  String?
+  thumbnailUrl String?          @map("thumbnail_url")
+  viewCount    Int              @default(0) @map("view_count")
+
+  // Canvas dimensions
+  width        Int?
+  height       Int?
+
+  // Password protection for shared canvases
+  hasPassword  Boolean          @default(false) @map("has_password")
+  passwordHash String?          @map("password_hash")
+
+  // Background configuration (JSON matches CanvasBackground type)
+  backgroundConfig Json?        @map("background_config")
+
+  // Canvas settings (JSON matches CanvasSettings type)
+  settings     Json?
+
+  // Version for optimistic locking
+  version      Int              @default(1)
+
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  widgetInstances WidgetInstance[]
+  pipelines       Pipeline[]
+  canvasVersions  CanvasVersion[]
+  eventRecords    EventRecord[]
+  embedTokens     EmbedToken[]
+
+  // Canvas commerce (shoppable pages)
+  products        CanvasProduct[]
+  formSubmissions FormSubmission[]
+  contentGates    ContentGate[]
+
+  @@index([userId])
+  @@index([visibility])
+  @@index([slug])
+  @@map("canvases")
+}
+
+enum CanvasVisibility {
+  private
+  unlisted
+  public
+
+  @@map("canvas_visibility")
+}
+
+model CanvasVersion {
+  id        String   @id @default(cuid())
+  canvasId  String   @map("canvas_id")
+  version   Int
+  name      String?
+
+  // Snapshot of canvas state
+  snapshot  Json     // Contains widgets, pipelines, settings, etc.
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@unique([canvasId, version])
+  @@index([canvasId])
+  @@map("canvas_versions")
+}
+
+// ============================================
+// Widget Instances (on canvas)
+// ============================================
+
+model WidgetInstance {
+  id          String   @id @default(cuid())
+  canvasId    String   @map("canvas_id")
+  widgetDefId String   @map("widget_def_id") // References widget definition
+  version     String   @default("1.0.0")
+
+  // Position & size (matches WidgetInstance type)
+  positionX   Float    @default(0) @map("position_x")
+  positionY   Float    @default(0) @map("position_y")
+  width       Float    @default(200)
+  height      Float    @default(200)
+  rotation    Float    @default(0)
+  zIndex      Int      @default(0) @map("z_index")
+
+  // Size preset enum
+  sizePreset  String   @default("md") @map("size_preset")
+
+  // Widget state (JSON - widget-specific data)
+  state       Json     @default("{}")
+
+  // Metadata (source, generated content, etc.)
+  metadata    Json?
+
+  // Hierarchy
+  parentId    String?  @map("parent_id")
+  isContainer Boolean  @default(false) @map("is_container")
+  childIds    String[] @default([]) @map("child_ids")
+
+  // Display properties
+  name        String?
+  groupId     String?  @map("group_id")
+  locked      Boolean  @default(false)
+  visible     Boolean  @default(true)
+  opacity     Float    @default(1)
+  scaleMode   String   @default("fit") @map("scale_mode")
+
+  // Content sizing
+  contentSize Json?    @map("content_size")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@index([canvasId])
+  @@index([widgetDefId])
+  @@index([groupId])
+  @@map("widget_instances")
+}
+
+// ============================================
+// Pipelines
+// ============================================
+
+model Pipeline {
+  id          String   @id @default(cuid())
+  canvasId    String   @map("canvas_id")
+  name        String
+  description String?
+
+  // Pipeline structure (JSON arrays)
+  nodes       Json     @default("[]") // PipelineNode[]
+  connections Json     @default("[]") // PipelineConnection[]
+
+  enabled     Boolean  @default(true)
+
+  // Widget edits for AI pipelines
+  widgetEdits Json?    @map("widget_edits") // PipelineWidgetEdit[]
+
+  version     Int      @default(1)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@index([canvasId])
+  @@map("pipelines")
+}
+
+// ============================================
+// Marketplace - Multi-type Items
+// ============================================
+
+// Marketplace item types
+enum MarketplaceItemType {
+  canvas_widget   // Frontend-only interactive widgets
+  system_widget   // Backend-powered widgets with server logic
+  sticker_pack    // Collection of stickers (PNGs, Lotties, SVGs, GIFs)
+  pipeline        // AI pipeline/workflow templates
+  theme           // Canvas themes and styling presets
+  template        // Pre-built canvas templates
+
+  @@map("marketplace_item_type")
+}
+
+// Sticker format types
+enum StickerFormat {
+  png
+  jpeg
+  webp
+  gif
+  apng
+  svg
+  lottie
+
+  @@map("sticker_format")
+}
+
+model MarketplaceItem {
+  id          String   @id @default(cuid())
+  authorId    String   @map("author_id")
+
+  // Item identity
+  slug        String   @unique // URL-friendly identifier (e.g., "cool-weather-widget")
+  name        String
+  description String?
+  shortDescription String? @map("short_description")
+
+  // Item type
+  itemType    MarketplaceItemType @default(canvas_widget) @map("item_type")
+
+  // Categorization
+  category    String   @default("general")
+  tags        String[] @default([])
+
+  // Stats
+  downloads   Int      @default(0)
+  rating      Float    @default(0)
+  ratingCount Int      @default(0) @map("rating_count")
+  viewCount   Int      @default(0) @map("view_count")
+
+  // Status
+  isPublished Boolean  @default(false) @map("is_published")
+  isOfficial  Boolean  @default(false) @map("is_official")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  isVerified  Boolean  @default(false) @map("is_verified") // Reviewed by team
+
+  // Preview assets
+  thumbnailUrl  String?  @map("thumbnail_url")
+  previewUrls   String[] @default([]) @map("preview_urls") // Gallery images
+  previewVideo  String?  @map("preview_video") // Demo video URL
+
+  // Pricing
+  isFree        Boolean @default(true) @map("is_free")
+  oneTimePrice  Int?    @map("one_time_price")  // Price in cents
+  monthlyPrice  Int?    @map("monthly_price")   // Price in cents
+  yearlyPrice   Int?    @map("yearly_price")    // Price in cents
+
+  // Stripe product/price IDs
+  stripeProductId      String? @map("stripe_product_id")
+  stripeOneTimePriceId String? @map("stripe_one_time_price_id")
+  stripeMonthlyPriceId String? @map("stripe_monthly_price_id")
+  stripeYearlyPriceId  String? @map("stripe_yearly_price_id")
+
+  // Type-specific metadata (JSON) - structure depends on itemType
+  // For widgets: { manifest: {...}, capabilities: [...], minVersion: "1.0" }
+  // For sticker_pack: { stickerCount: 20, formats: ["png", "lottie"], animated: true }
+  // For pipeline: { nodeCount: 5, triggers: ["manual", "schedule"], aiModels: ["gpt-4"] }
+  // For theme: { colors: {...}, fonts: [...], darkMode: true }
+  // For template: { widgetCount: 10, canvasSize: {...}, category: "dashboard" }
+  metadata    Json?
+
+  // License info
+  license     String   @default("standard") // "standard", "extended", "exclusive"
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  author    User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  versions  MarketplaceItemVersion[]
+  ratings   MarketplaceRating[]
+  comments  MarketplaceComment[]
+  purchases MarketplacePurchase[]
+  stickers  Sticker[]              // For sticker packs
+
+  @@index([authorId])
+  @@index([itemType])
+  @@index([category])
+  @@index([isPublished])
+  @@index([isFree])
+  @@index([isFeatured])
+  @@map("marketplace_items")
+}
+
+model MarketplaceItemVersion {
+  id        String   @id @default(cuid())
+  itemId    String   @map("item_id")
+  version   String   // Semantic version
+
+  // Content (structure depends on item type)
+  // For widgets: manifest JSON + bundle path
+  // For sticker_pack: list of sticker IDs in this version
+  // For pipeline: pipeline definition JSON
+  // For theme: theme configuration JSON
+  // For template: canvas snapshot JSON
+  content   Json
+
+  // Storage path (for bundled assets)
+  bundlePath String?  @map("bundle_path")
+  bundleSize Int      @default(0) @map("bundle_size") // bytes
+
+  // Changelog
+  changelog String?
+
+  // Compatibility
+  minAppVersion String? @map("min_app_version")
+
+  // Status
+  isLatest  Boolean  @default(false) @map("is_latest")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  item MarketplaceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, version])
+  @@index([itemId])
+  @@map("marketplace_item_versions")
+}
+
+// Individual stickers within a sticker pack
+model Sticker {
+  id        String   @id @default(cuid())
+  packId    String   @map("pack_id")
+
+  // Sticker info
+  name      String
+  filename  String
+  format    StickerFormat
+
+  // Storage
+  storagePath String  @map("storage_path")
+  publicUrl   String? @map("public_url")
+
+  // Dimensions
+  width     Int?
+  height    Int?
+
+  // For animated stickers
+  isAnimated   Boolean @default(false) @map("is_animated")
+  duration     Float?  // seconds, for animated
+  frameCount   Int?    @map("frame_count")
+
+  // File info
+  fileSize  Int      @map("file_size") // bytes
+
+  // Metadata (colors, style tags, etc.)
+  metadata  Json?
+
+  // Ordering within pack
+  sortOrder Int      @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  pack MarketplaceItem @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@index([packId])
+  @@index([format])
+  @@map("stickers")
+}
+
+model MarketplaceRating {
+  id        String   @id @default(cuid())
+  itemId    String   @map("item_id")
+  userId    String   @map("user_id")
+  rating    Int      // 1-5
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  item MarketplaceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, userId])
+  @@index([itemId])
+  @@map("marketplace_ratings")
+}
+
+model MarketplaceComment {
+  id        String   @id @default(cuid())
+  itemId    String   @map("item_id")
+  userId    String   @map("user_id")
+  content   String
+  parentId  String?  @map("parent_id") // For replies
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  item MarketplaceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([userId])
+  @@map("marketplace_comments")
+}
+
+model MarketplacePurchase {
+  id        String @id @default(cuid())
+  userId    String @map("user_id")
+  itemId    String @map("item_id")
+
+  // Purchase details
+  purchaseType PurchaseType
+  status       PurchaseStatus @default(active)
+  priceAmount  Int            @map("price_amount") // In cents
+
+  // Stripe IDs
+  stripePaymentIntentId  String? @map("stripe_payment_intent_id")
+  stripeSubscriptionId   String? @map("stripe_subscription_id")
+
+  // For subscription purchases
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+
+  // Creator payout tracking
+  creatorEarnings Int     @default(0) @map("creator_earnings") // In cents
+  platformFee     Int     @default(0) @map("platform_fee")     // In cents
+  payoutComplete  Boolean @default(false) @map("payout_complete")
+
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+  expiresAt   DateTime? @map("expires_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item MarketplaceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@index([itemId])
+  @@index([status])
+  @@map("marketplace_purchases")
+}
+
+// ============================================
+// Legacy Widget Marketplace (for backward compatibility)
+// TODO: Migrate to MarketplaceItem and remove
+// ============================================
+
+model WidgetPackage {
+  id          String   @id @default(cuid())
+  authorId    String   @map("author_id")
+
+  // Package identity (matches manifest)
+  packageId   String   @unique @map("package_id") // e.g., "my-cool-widget"
+  name        String
+  description String?
+
+  // Categorization
+  category    String   @default("utility")
+  tags        String[] @default([])
+
+  // Stats
+  downloads   Int      @default(0)
+  rating      Float    @default(0)
+  ratingCount Int      @default(0) @map("rating_count")
+
+  // Status
+  isPublished Boolean  @default(false) @map("is_published")
+  isOfficial  Boolean  @default(false) @map("is_official")
+
+  // Preview
+  thumbnailUrl String? @map("thumbnail_url")
+  previewUrl   String? @map("preview_url")
+
+  // Pricing
+  isFree        Boolean @default(true) @map("is_free")
+  oneTimePrice  Int?    @map("one_time_price")  // Price in cents
+  monthlyPrice  Int?    @map("monthly_price")   // Price in cents
+  yearlyPrice   Int?    @map("yearly_price")    // Price in cents
+
+  // Stripe product/price IDs
+  stripeProductId      String? @map("stripe_product_id")
+  stripeOneTimePriceId String? @map("stripe_one_time_price_id")
+  stripeMonthlyPriceId String? @map("stripe_monthly_price_id")
+  stripeYearlyPriceId  String? @map("stripe_yearly_price_id")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  author    User                   @relation("LegacyWidgetPackages", fields: [authorId], references: [id], onDelete: Cascade)
+  versions  WidgetPackageVersion[]
+  ratings   WidgetRating[]
+  comments  WidgetComment[]
+  purchases WidgetPurchase[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([isPublished])
+  @@index([isFree])
+  @@map("widget_packages")
+}
+
+model WidgetPackageVersion {
+  id        String   @id @default(cuid())
+  packageId String   @map("package_id")
+  version   String   // Semantic version
+
+  // Manifest (full WidgetManifest JSON)
+  manifest  Json
+
+  // Storage path
+  bundlePath String  @map("bundle_path")
+  bundleSize Int     @map("bundle_size") // bytes
+
+  // Changelog
+  changelog String?
+
+  // Status
+  isLatest  Boolean  @default(false) @map("is_latest")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  package WidgetPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, version])
+  @@index([packageId])
+  @@map("widget_package_versions")
+}
+
+model WidgetRating {
+  id        String   @id @default(cuid())
+  packageId String   @map("package_id")
+  userId    String   @map("user_id")
+  rating    Int      // 1-5
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  package WidgetPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, userId])
+  @@index([packageId])
+  @@map("widget_ratings")
+}
+
+model WidgetComment {
+  id        String   @id @default(cuid())
+  packageId String   @map("package_id")
+  userId    String   @map("user_id")
+  content   String
+  parentId  String?  @map("parent_id") // For replies
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  package WidgetPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([packageId])
+  @@index([userId])
+  @@map("widget_comments")
+}
+
+// ============================================
+// Event Records (for canvas event logging)
+// ============================================
+
+model EventRecord {
+  id        String   @id @default(cuid())
+  canvasId  String   @map("canvas_id")
+
+  // Event data (matches RuntimeMessage format)
+  eventType String   @map("event_type")
+  channel   String   @default("events")
+  payload   Json
+
+  // Source information
+  sourceType   String?  @map("source_type") // "tab", "worker", "server"
+  sourceId     String?  @map("source_id")
+  sourceUserId String?  @map("source_user_id")
+
+  // Target information
+  targetType String?  @map("target_type") // "broadcast", "widget", "canvas"
+  targetId   String?  @map("target_id")
+
+  timestamp DateTime @default(now())
+
+  // Relations
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@index([canvasId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@map("event_records")
+}
+
+// ============================================
+// Assets
+// ============================================
+
+model Asset {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  canvasId  String?   @map("canvas_id") // Optional - can be user-level
+
+  // Asset info
+  name      String
+  mimeType  String    @map("mime_type")
+  size      Int       // bytes
+
+  // Storage
+  storagePath String  @map("storage_path")
+  publicUrl   String? @map("public_url")
+
+  // Asset type
+  assetType String    @default("image") @map("asset_type") // "image", "lottie", "video", "audio"
+
+  // Metadata (dimensions, duration, etc.)
+  metadata  Json?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([canvasId])
+  @@index([assetType])
+  @@map("assets")
+}
+
+// ============================================
+// Invite Tokens
+// ============================================
+
+model InviteToken {
+  id        String    @id @default(cuid())
+  creatorId String    @map("creator_id")
+  token     String    @unique
+
+  // What the invite is for
+  targetType String   @map("target_type") // "canvas", "workspace"
+  targetId   String   @map("target_id")
+
+  // Permissions granted
+  permission String   @default("view") // "view", "edit", "admin"
+
+  // Usage limits
+  maxUses   Int?      @map("max_uses")
+  useCount  Int       @default(0) @map("use_count")
+
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([targetType, targetId])
+  @@map("invite_tokens")
+}
+
+// ============================================
+// Subscriptions & Payments
+// ============================================
+
+enum SubscriptionTier {
+  free
+  starter
+  pro
+  enterprise
+
+  @@map("subscription_tier")
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  past_due
+  incomplete
+  trialing
+
+  @@map("subscription_status")
+}
+
+enum BillingInterval {
+  monthly
+  yearly
+
+  @@map("billing_interval")
+}
+
+model UserSubscription {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Subscription details
+  tier            SubscriptionTier   @default(free)
+  status          SubscriptionStatus @default(active)
+  billingInterval BillingInterval?   @map("billing_interval")
+
+  // Stripe IDs
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  stripePriceId        String? @map("stripe_price_id")
+
+  // Billing period
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+
+  // Cancellation
+  cancelAtPeriodEnd Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt        DateTime? @map("canceled_at")
+
+  // Trial
+  trialStart DateTime? @map("trial_start")
+  trialEnd   DateTime? @map("trial_end")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tier])
+  @@index([status])
+  @@map("user_subscriptions")
+}
+
+// ============================================
+// Creator Accounts (Stripe Connect)
+// ============================================
+
+enum CreatorAccountStatus {
+  pending
+  onboarding
+  active
+  restricted
+  disabled
+
+  @@map("creator_account_status")
+}
+
+model CreatorAccount {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Stripe Connect
+  stripeAccountId String               @unique @map("stripe_account_id")
+  status          CreatorAccountStatus @default(pending)
+
+  // Onboarding
+  onboardingComplete Boolean @default(false) @map("onboarding_complete")
+  chargesEnabled     Boolean @default(false) @map("charges_enabled")
+  payoutsEnabled     Boolean @default(false) @map("payouts_enabled")
+
+  // Account info
+  businessName String? @map("business_name")
+  country      String  @default("US")
+
+  // Earnings
+  totalEarnings   Int @default(0) @map("total_earnings")   // In cents
+  pendingPayout   Int @default(0) @map("pending_payout")   // In cents
+  totalSalesCount Int @default(0) @map("total_sales_count")
+
+  // Platform fee percentage (can be customized per creator)
+  platformFeePercent Float @default(15) @map("platform_fee_percent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("creator_accounts")
+}
+
+// ============================================
+// Widget Purchases
+// ============================================
+
+enum PurchaseType {
+  one_time
+  subscription
+
+  @@map("purchase_type")
+}
+
+enum PurchaseStatus {
+  active
+  expired
+  canceled
+  refunded
+
+  @@map("purchase_status")
+}
+
+model WidgetPurchase {
+  id        String @id @default(cuid())
+  userId    String @map("user_id")
+  packageId String @map("package_id")
+
+  // Purchase details
+  purchaseType PurchaseType
+  status       PurchaseStatus @default(active)
+  priceAmount  Int            @map("price_amount") // In cents
+
+  // Stripe IDs
+  stripePaymentIntentId  String? @map("stripe_payment_intent_id")
+  stripeSubscriptionId   String? @map("stripe_subscription_id")
+
+  // For subscription purchases
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+
+  // Creator payout tracking
+  creatorEarnings Int     @default(0) @map("creator_earnings") // In cents
+  platformFee     Int     @default(0) @map("platform_fee")     // In cents
+  payoutComplete  Boolean @default(false) @map("payout_complete")
+
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+  expiresAt   DateTime? @map("expires_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package WidgetPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, packageId])
+  @@index([userId])
+  @@index([packageId])
+  @@index([status])
+  @@map("widget_purchases")
+}
+
+// ============================================
+// Usage Tracking
+// ============================================
+
+model UsageRecord {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Resource counts
+  canvasCount          Int @default(0) @map("canvas_count")
+  widgetCount          Int @default(0) @map("widget_count")
+  publishedWidgetCount Int @default(0) @map("published_widget_count")
+
+  // Storage (in bytes)
+  storageUsedBytes BigInt @default(0) @map("storage_used_bytes")
+
+  // Monthly usage (reset each billing period)
+  aiCreditsUsed     Int    @default(0) @map("ai_credits_used")
+  bandwidthUsedBytes BigInt @default(0) @map("bandwidth_used_bytes")
+
+  // Period tracking
+  periodStart DateTime @default(now()) @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("usage_records")
+}
+
+model UsageSnapshot {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Period (e.g., "2024-01" for January 2024)
+  period String
+
+  // Snapshot of usage at period end
+  canvasCount          Int    @default(0) @map("canvas_count")
+  widgetCount          Int    @default(0) @map("widget_count")
+  publishedWidgetCount Int    @default(0) @map("published_widget_count")
+  storageUsedBytes     BigInt @default(0) @map("storage_used_bytes")
+  aiCreditsUsed        Int    @default(0) @map("ai_credits_used")
+  bandwidthUsedBytes   BigInt @default(0) @map("bandwidth_used_bytes")
+  peakStorageBytes     BigInt @default(0) @map("peak_storage_bytes")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+  @@index([userId])
+  @@index([period])
+  @@map("usage_snapshots")
+}
+
+// ============================================
+// Embedded Canvas Tokens
+// ============================================
+
+model EmbedToken {
+  id       String @id @default(cuid())
+  canvasId String @map("canvas_id")
+
+  // Token for authentication
+  token String @unique
+
+  // Embed settings
+  allowedOrigins String[] @default([]) @map("allowed_origins") // Empty = all origins
+  mode           String   @default("view") // "view", "interact"
+
+  // Customization
+  showBranding Boolean @default(true) @map("show_branding")
+  theme        String  @default("dark")
+
+  // Usage tracking
+  viewCount Int @default(0) @map("view_count")
+
+  // Status
+  isActive  Boolean   @default(true) @map("is_active")
+  expiresAt DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relation
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@index([canvasId])
+  @@index([token])
+  @@map("embed_tokens")
+}
+
+// ============================================
+// Canvas Commerce - Shoppable Pages
+// ============================================
+
+/// Products that creators can sell on their canvas pages
+model CanvasProduct {
+  id        String @id @default(cuid())
+  canvasId  String @map("canvas_id")
+  creatorId String @map("creator_id")
+
+  // Product details
+  name        String
+  description String?
+  imageUrl    String? @map("image_url")
+
+  // Pricing (in cents)
+  priceCents         Int  @map("price_cents")
+  compareAtPriceCents Int? @map("compare_at_price_cents") // For "was $X, now $Y"
+  currency           String @default("usd")
+
+  // Stripe integration
+  stripeProductId String? @map("stripe_product_id")
+  stripePriceId   String? @map("stripe_price_id")
+
+  // Product type
+  productType     CanvasProductType @default(one_time) @map("product_type")
+  billingInterval BillingInterval?  @map("billing_interval")
+
+  // For digital downloads
+  downloadUrl   String? @map("download_url")
+  downloadLimit Int     @default(3) @map("download_limit")
+
+  // Inventory
+  trackInventory Boolean @default(false) @map("track_inventory")
+  inventoryCount Int     @default(0) @map("inventory_count")
+
+  // Status
+  active    Boolean @default(true)
+  sortOrder Int     @default(0) @map("sort_order")
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  canvas  Canvas       @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  creator User         @relation("CreatorProducts", fields: [creatorId], references: [id], onDelete: Cascade)
+  orders  CanvasOrder[]
+
+  @@index([canvasId])
+  @@index([creatorId])
+  @@index([active])
+  @@map("canvas_products")
+}
+
+enum CanvasProductType {
+  one_time
+  subscription
+  digital_download
+
+  @@map("canvas_product_type")
+}
+
+/// Orders from canvas page purchases
+model CanvasOrder {
+  id          String @id @default(cuid())
+  orderNumber String @unique @map("order_number")
+
+  // Relations
+  canvasId   String  @map("canvas_id")
+  productId  String  @map("product_id")
+  creatorId  String  @map("creator_id")
+  customerId String? @map("customer_id") // nullable for guest checkout
+
+  // Customer info (always stored)
+  customerEmail String  @map("customer_email")
+  customerName  String? @map("customer_name")
+
+  // Pricing
+  amountCents Int    @map("amount_cents")
+  currency    String @default("usd")
+
+  // Stripe
+  stripePaymentIntentId   String? @map("stripe_payment_intent_id")
+  stripeCheckoutSessionId String? @map("stripe_checkout_session_id")
+
+  // Status
+  status CanvasOrderStatus @default(pending)
+
+  // Fulfillment
+  fulfilledAt   DateTime? @map("fulfilled_at")
+  downloadCount Int       @default(0) @map("download_count")
+
+  // Metadata (UTM params, referrer, etc.)
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  product  CanvasProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer CanvasCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([creatorId])
+  @@index([customerEmail])
+  @@index([status])
+  @@index([stripePaymentIntentId])
+  @@map("canvas_orders")
+}
+
+enum CanvasOrderStatus {
+  pending
+  paid
+  failed
+  refunded
+  partial_refund
+
+  @@map("canvas_order_status")
+}
+
+// ============================================
+// Lead Capture & Form Submissions
+// ============================================
+
+/// Form submissions from canvas visitors
+model FormSubmission {
+  id        String @id @default(cuid())
+  canvasId  String @map("canvas_id")
+  creatorId String @map("creator_id")
+  widgetId  String @map("widget_id") // Widget instance that captured submission
+
+  // Form data
+  formData Json   @map("form_data") // { email, name, message, etc. }
+  formType String @default("generic") @map("form_type") // contact, newsletter, lead, custom
+
+  // Visitor tracking
+  visitorId   String? @map("visitor_id")
+  ipAddress   String? @map("ip_address")
+  userAgent   String? @map("user_agent")
+  referrer    String?
+  utmSource   String? @map("utm_source")
+  utmMedium   String? @map("utm_medium")
+  utmCampaign String? @map("utm_campaign")
+
+  // Status
+  status FormSubmissionStatus @default(new)
+  notes  String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@index([canvasId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("form_submissions")
+}
+
+enum FormSubmissionStatus {
+  new
+  contacted
+  converted
+  archived
+
+  @@map("form_submission_status")
+}
+
+/// Creator notification settings
+model CreatorNotificationSettings {
+  id        String @id @default(cuid())
+  creatorId String @unique @map("creator_id")
+
+  // Email notifications
+  emailOnFormSubmission Boolean @default(true) @map("email_on_form_submission")
+  emailOnOrder          Boolean @default(true) @map("email_on_order")
+  emailDigestFrequency  String  @default("instant") @map("email_digest_frequency") // instant, daily, weekly, none
+  notificationEmail     String? @map("notification_email") // Override email
+
+  // Webhook integration
+  webhookUrl     String?  @map("webhook_url")
+  webhookEnabled Boolean  @default(false) @map("webhook_enabled")
+  webhookSecret  String?  @map("webhook_secret")
+  webhookEvents  String[] @default(["form_submission", "order_completed"]) @map("webhook_events")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("creator_notification_settings")
+}
+
+/// Webhook delivery log
+model WebhookDelivery {
+  id        String @id @default(cuid())
+  creatorId String @map("creator_id")
+
+  eventType String @map("event_type")
+  payload   Json
+
+  // Delivery status
+  status         WebhookDeliveryStatus @default(pending)
+  responseStatus Int?                  @map("response_status")
+  responseBody   String?               @map("response_body")
+  errorMessage   String?               @map("error_message")
+
+  // Retry tracking
+  attemptCount Int       @default(0) @map("attempt_count")
+  nextRetryAt  DateTime? @map("next_retry_at")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deliveredAt DateTime? @map("delivered_at")
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([nextRetryAt])
+  @@map("webhook_deliveries")
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  success
+  failed
+
+  @@map("webhook_delivery_status")
+}
+
+// ============================================
+// Customer Authentication (for canvas pages)
+// ============================================
+
+/// Customers who visit/buy from canvas pages (per-creator namespace)
+model CanvasCustomer {
+  id        String @id @default(cuid())
+  creatorId String @map("creator_id")
+
+  // Customer details
+  email     String
+  name      String?
+  avatarUrl String? @map("avatar_url")
+
+  // Auth
+  authProvider  CustomerAuthProvider @default(magic_link) @map("auth_provider")
+  passwordHash  String?              @map("password_hash") // Only for email_password
+  emailVerified Boolean              @default(false) @map("email_verified")
+
+  // Profile
+  metadata Json? // Custom fields, tags, notes
+
+  // Tracking
+  firstSeenCanvasId String? @map("first_seen_canvas_id")
+  totalOrders       Int     @default(0) @map("total_orders")
+  totalSpentCents   Int     @default(0) @map("total_spent_cents")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  lastSeenAt DateTime? @map("last_seen_at")
+
+  // Relations
+  sessions CustomerSession[]
+  orders   CanvasOrder[]
+
+  @@unique([creatorId, email])
+  @@index([creatorId])
+  @@index([email])
+  @@map("canvas_customers")
+}
+
+enum CustomerAuthProvider {
+  magic_link
+  google
+  email_password
+
+  @@map("customer_auth_provider")
+}
+
+/// Customer sessions for canvas pages
+model CustomerSession {
+  id         String @id @default(cuid())
+  customerId String @map("customer_id")
+  creatorId  String @map("creator_id")
+  canvasId   String? @map("canvas_id") // Which canvas they're accessing
+
+  // Session token (hashed)
+  tokenHash String @unique @map("token_hash")
+
+  // Session info
+  userAgent String? @map("user_agent")
+  ipAddress String? @map("ip_address")
+
+  // Expiry
+  expiresAt    DateTime @map("expires_at")
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  customer CanvasCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("customer_sessions")
+}
+
+/// Magic link tokens for customer auth
+model MagicLinkToken {
+  id        String @id @default(cuid())
+  email     String
+  creatorId String @map("creator_id")
+  canvasId  String? @map("canvas_id")
+
+  // Token (hashed)
+  tokenHash String @unique @map("token_hash")
+
+  // Redirect after auth
+  redirectUrl String? @map("redirect_url")
+
+  // Expiry and usage
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("magic_link_tokens")
+}
+
+/// Content gates - what requires auth on a canvas
+model ContentGate {
+  id       String @id @default(cuid())
+  canvasId String @map("canvas_id")
+
+  // What's gated
+  gateType ContentGateType @map("gate_type")
+  targetId String?         @map("target_id") // Widget ID or section ID (null = entire canvas)
+
+  // Gate requirements
+  requiresAuth         Boolean @default(true) @map("requires_auth")
+  requiresSubscription Boolean @default(false) @map("requires_subscription")
+  subscriptionProductId String? @map("subscription_product_id")
+  requiresPurchase     Boolean @default(false) @map("requires_purchase")
+  purchaseProductId    String? @map("purchase_product_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  @@index([canvasId])
+  @@map("content_gates")
+}
+
+enum ContentGateType {
+  canvas
+  widget
+  section
+
+  @@map("content_gate_type")
+}
+
+// ============================================
+// Social Layer - User Profile
+// ============================================
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+
+  // Profile info
+  displayName String?  @map("display_name")
+  bio         String?
+  avatarUrl   String?  @map("avatar_url")
+  bannerUrl   String?  @map("banner_url")
+  website     String?
+  location    String?
+
+  // Social links
+  twitterHandle  String? @map("twitter_handle")
+  githubHandle   String? @map("github_handle")
+  discordHandle  String? @map("discord_handle")
+
+  // Privacy settings
+  privacyMode    ProfilePrivacyMode @default(public) @map("privacy_mode")
+  showOnlineStatus Boolean @default(true) @map("show_online_status")
+  allowDMs       Boolean @default(true) @map("allow_dms")
+
+  // Stats (denormalized for performance)
+  followerCount  Int @default(0) @map("follower_count")
+  followingCount Int @default(0) @map("following_count")
+  canvasCount    Int @default(0) @map("canvas_count")
+
+  // Verification
+  isVerified Boolean @default(false) @map("is_verified")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+enum ProfilePrivacyMode {
+  public
+  friends_only
+  private
+
+  @@map("profile_privacy_mode")
+}
+
+// ============================================
+// Social Layer - Follow System
+// ============================================
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  blocker User @relation("BlockingUsers", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUsers", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ============================================
+// Social Layer - Notifications
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+
+  // Notification content
+  type       NotificationType
+  title      String
+  body       String?
+  avatarUrl  String?  @map("avatar_url")
+
+  // References
+  actorId    String?  @map("actor_id")      // User who triggered
+  targetType String?  @map("target_type")   // canvas, widget, comment, etc.
+  targetId   String?  @map("target_id")
+  actionUrl  String?  @map("action_url")    // Where to navigate
+
+  // Status
+  isRead     Boolean  @default(false) @map("is_read")
+  readAt     DateTime? @map("read_at")
+
+  // Grouping (for collapsing similar notifications)
+  groupKey   String?  @map("group_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([groupKey])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  follow           // Someone followed you
+  mention          // Mentioned in comment/chat
+  comment          // Comment on your canvas
+  like             // Liked your canvas/widget
+  collab_invite    // Invited to collaborate
+  collab_join      // Someone joined your canvas
+  widget_published // Your widget was published
+  purchase         // Someone purchased your item
+  system           // System notification
+
+  @@map("notification_type")
+}
+
+// ============================================
+// Social Layer - Chat System
+// ============================================
+
+model ChatRoom {
+  id        String   @id @default(cuid())
+
+  // Room info
+  name        String?
+  avatarUrl   String?  @map("avatar_url")
+  roomType    ChatRoomType @default(direct) @map("room_type")
+
+  // For canvas-linked rooms
+  canvasId    String?  @map("canvas_id")
+
+  // Settings
+  isArchived  Boolean  @default(false) @map("is_archived")
+
+  // Last activity for sorting
+  lastMessageAt DateTime? @map("last_message_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members  ChatRoomMember[]
+  messages ChatMessage[]
+
+  @@index([canvasId])
+  @@index([lastMessageAt])
+  @@map("chat_rooms")
+}
+
+enum ChatRoomType {
+  direct  // 1:1 DM
+  group   // Group chat
+  canvas  // Canvas collaboration chat
+
+  @@map("chat_room_type")
+}
+
+model ChatRoomMember {
+  id        String   @id @default(cuid())
+  roomId    String   @map("room_id")
+  userId    String   @map("user_id")
+
+  // Member role
+  role      ChatMemberRole @default(member)
+
+  // Member state
+  lastReadAt   DateTime? @map("last_read_at")
+  isMuted      Boolean   @default(false) @map("is_muted")
+  leftAt       DateTime? @map("left_at")
+
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+  @@map("chat_room_members")
+}
+
+enum ChatMemberRole {
+  owner
+  admin
+  member
+
+  @@map("chat_member_role")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String   @map("room_id")
+  senderId  String   @map("sender_id")
+
+  // Message content
+  content   String
+  contentType ChatMessageContentType @default(text) @map("content_type")
+
+  // Attachments (JSON array of attachment objects)
+  attachments Json?
+
+  // Reply threading
+  replyToId String?  @map("reply_to_id")
+
+  // Edit tracking
+  isEdited  Boolean  @default(false) @map("is_edited")
+  editedAt  DateTime? @map("edited_at")
+
+  // Soft delete
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  room     ChatRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender   User            @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo  ChatMessage?    @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies  ChatMessage[]   @relation("MessageReplies")
+  reactions MessageReaction[]
+
+  @@index([roomId])
+  @@index([senderId])
+  @@index([roomId, createdAt])
+  @@map("chat_messages")
+}
+
+enum ChatMessageContentType {
+  text
+  image
+  file
+  canvas_link
+  widget_link
+  system
+
+  @@map("chat_message_content_type")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+
+  emoji     String   // Unicode emoji or custom emoji ID
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("message_reactions")
+}
+
+// ============================================
+// Social Layer - Activity Feed
+// ============================================
+
+model Activity {
+  id        String   @id @default(cuid())
+
+  // Who did what
+  actorId   String   @map("actor_id")
+  type      ActivityType
+
+  // Target of action
+  targetType  String?  @map("target_type")  // canvas, widget, user, etc.
+  targetId    String?  @map("target_id")
+  targetUserId String? @map("target_user_id") // For user-targeted activities
+
+  // Activity metadata (JSON)
+  metadata  Json?
+
+  // Visibility
+  visibility ActivityVisibility @default(public)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  actor      User  @relation("ActivityActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetUser User? @relation("ActivityTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([targetUserId])
+  @@index([type])
+  @@index([visibility])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+enum ActivityType {
+  canvas_created
+  canvas_published
+  canvas_updated
+  canvas_shared
+  widget_published
+  widget_installed
+  user_followed
+  user_joined
+  collab_started
+  comment_added
+  item_purchased
+
+  @@map("activity_type")
+}
+
+enum ActivityVisibility {
+  public
+  followers_only
+  private
+
+  @@map("activity_visibility")
+}
+
+// ============================================
+// Social Layer - Real-time Collaboration
+// ============================================
+
+model CollaborationRoom {
+  id        String   @id @default(cuid())
+  canvasId  String   @map("canvas_id")
+
+  // Room state
+  isActive  Boolean  @default(true) @map("is_active")
+
+  // Settings
+  allowAnonymous  Boolean @default(false) @map("allow_anonymous")
+  maxParticipants Int     @default(10) @map("max_participants")
+
+  // Linked chat room
+  chatRoomId String? @unique @map("chat_room_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  closedAt  DateTime? @map("closed_at")
+
+  // Relations
+  members CollaborationMember[]
+
+  @@index([canvasId])
+  @@index([isActive])
+  @@map("collaboration_rooms")
+}
+
+model CollaborationMember {
+  id        String   @id @default(cuid())
+  roomId    String   @map("room_id")
+  userId    String   @map("user_id")
+
+  // Member role and permissions
+  role      CollaborationRole @default(viewer)
+
+  // Connection state
+  isConnected Boolean   @default(false) @map("is_connected")
+  lastSeenAt  DateTime? @map("last_seen_at")
+
+  // Cursor state (for real-time presence)
+  cursorX     Float?    @map("cursor_x")
+  cursorY     Float?    @map("cursor_y")
+  cursorColor String?   @map("cursor_color")
+
+  // Selection state
+  selectedWidgets String[] @default([]) @map("selected_widgets")
+
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+
+  // Relations
+  room CollaborationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+  @@index([isConnected])
+  @@map("collaboration_members")
+}
+
+enum CollaborationRole {
+  owner
+  editor
+  viewer
+
+  @@map("collaboration_role")
+}

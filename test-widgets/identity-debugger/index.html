@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Debugger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #9c27b0;
+            font-weight: 600;
+        }
+        .identity-card {
+            background: linear-gradient(135deg, #2d1f3d 0%, #1a1a2e 100%);
+            border: 1px solid #9c27b0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .id-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(156, 39, 176, 0.2);
+        }
+        .id-row:last-child { border-bottom: none; }
+        .id-label {
+            color: #888;
+            font-size: 10px;
+        }
+        .id-value {
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+            color: #ce93d8;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .id-value.highlight {
+            color: #e1bee7;
+            background: rgba(156, 39, 176, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .copy-btn {
+            background: none;
+            border: none;
+            color: #9c27b0;
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 10px;
+        }
+        .copy-btn:hover { color: #ce93d8; }
+        .section {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .section h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #9c27b0;
+        }
+        .stat-label {
+            font-size: 9px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .persistence-test {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .persistence-item {
+            background: rgba(156, 39, 176, 0.1);
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 9px;
+        }
+        .persistence-item.pass { border-color: #2ecc71; color: #2ecc71; }
+        .persistence-item.fail { border-color: #e74c3c; color: #e74c3c; }
+        .persistence-item.pending { border-color: #f39c12; color: #f39c12; }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .btn-refresh { background: #9c27b0; color: #fff; }
+        .btn-test { background: #3498db; color: #fff; }
+        .btn-query { background: #2ecc71; color: #000; }
+        .event-log {
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .event-entry {
+            font-family: 'Consolas', monospace;
+            font-size: 9px;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+        }
+        .event-entry:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🆔 Identity Debugger</h1>
+    </div>
+
+    <div class="controls">
+        <button class="btn-refresh" id="refreshBtn">Refresh</button>
+        <button class="btn-query" id="queryBtn">Query Runtime</button>
+        <button class="btn-test" id="testBtn">Run Tests</button>
+    </div>
+
+    <div class="identity-card">
+        <div class="id-row">
+            <span class="id-label">Device ID</span>
+            <span class="id-value highlight" id="deviceId">-</span>
+            <button class="copy-btn" onclick="copyId('deviceId')">📋</button>
+        </div>
+        <div class="id-row">
+            <span class="id-label">Tab ID</span>
+            <span class="id-value highlight" id="tabId">-</span>
+            <button class="copy-btn" onclick="copyId('tabId')">📋</button>
+        </div>
+        <div class="id-row">
+            <span class="id-label">Session ID</span>
+            <span class="id-value highlight" id="sessionId">-</span>
+            <button class="copy-btn" onclick="copyId('sessionId')">📋</button>
+        </div>
+        <div class="id-row">
+            <span class="id-label">Canvas ID</span>
+            <span class="id-value" id="canvasId">-</span>
+        </div>
+        <div class="id-row">
+            <span class="id-label">User ID</span>
+            <span class="id-value" id="userId">-</span>
+        </div>
+        <div class="id-row">
+            <span class="id-label">Widget Instance ID</span>
+            <span class="id-value" id="widgetId">-</span>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-value" id="identityQueries">0</div>
+            <div class="stat-label">Identity Queries</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="identityUpdates">0</div>
+            <div class="stat-label">Updates Received</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Persistence Tests</h3>
+        <div class="persistence-test" id="persistenceTests">
+            <div class="persistence-item pending">localStorage: pending</div>
+            <div class="persistence-item pending">sessionStorage: pending</div>
+            <div class="persistence-item pending">Same Tab ID: pending</div>
+            <div class="persistence-item pending">Same Device ID: pending</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Identity Sources</h3>
+        <div id="sourceInfo">
+            <div class="id-row">
+                <span class="id-label">localStorage deviceId:</span>
+                <span class="id-value" id="lsDeviceId">-</span>
+            </div>
+            <div class="id-row">
+                <span class="id-label">sessionStorage tabId:</span>
+                <span class="id-value" id="ssTabId">-</span>
+            </div>
+            <div class="id-row">
+                <span class="id-label">WidgetAPI identity:</span>
+                <span class="id-value" id="apiIdentity">-</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Event Log</h3>
+        <div class="event-log" id="eventLog">No events yet</div>
+    </div>
+
+    <script>
+        // State
+        let identityQueries = 0;
+        let identityUpdates = 0;
+        const eventHistory = [];
+        const savedIds = {
+            deviceId: null,
+            tabId: null
+        };
+
+        // DOM elements
+        const deviceIdEl = document.getElementById('deviceId');
+        const tabIdEl = document.getElementById('tabId');
+        const sessionIdEl = document.getElementById('sessionId');
+        const canvasIdEl = document.getElementById('canvasId');
+        const userIdEl = document.getElementById('userId');
+        const widgetIdEl = document.getElementById('widgetId');
+        const queriesEl = document.getElementById('identityQueries');
+        const updatesEl = document.getElementById('identityUpdates');
+        const persistenceTestsEl = document.getElementById('persistenceTests');
+        const eventLogEl = document.getElementById('eventLog');
+        const lsDeviceIdEl = document.getElementById('lsDeviceId');
+        const ssTabIdEl = document.getElementById('ssTabId');
+        const apiIdentityEl = document.getElementById('apiIdentity');
+
+        function logEvent(msg) {
+            eventHistory.unshift({
+                message: msg,
+                timestamp: Date.now()
+            });
+            if (eventHistory.length > 20) eventHistory.pop();
+            renderEventLog();
+        }
+
+        function renderEventLog() {
+            if (eventHistory.length === 0) {
+                eventLogEl.textContent = 'No events yet';
+                return;
+            }
+
+            const entries = eventHistory.map(e => {
+                const age = Date.now() - e.timestamp;
+                const ageStr = age < 1000 ? `${age}ms` : `${(age/1000).toFixed(1)}s`;
+                return `<div class="event-entry">[${ageStr}] ${e.message}</div>`;
+            }).join('');
+
+            eventLogEl.innerHTML = entries;
+        }
+
+        function updateIdentityDisplay(identity) {
+            if (!identity) return;
+
+            deviceIdEl.textContent = identity.deviceId || '-';
+            tabIdEl.textContent = identity.tabId || '-';
+            sessionIdEl.textContent = identity.sessionId || '-';
+            canvasIdEl.textContent = identity.canvasId || '-';
+            userIdEl.textContent = identity.userId || '-';
+            widgetIdEl.textContent = identity.widgetId || '-';
+
+            // Save for persistence testing
+            if (!savedIds.deviceId) savedIds.deviceId = identity.deviceId;
+            if (!savedIds.tabId) savedIds.tabId = identity.tabId;
+
+            logEvent(`Identity updated: device=${identity.deviceId?.substring(0,8)}...`);
+        }
+
+        function checkStorageSources() {
+            try {
+                const lsDeviceId = localStorage.getItem('stickernest:deviceId');
+                lsDeviceIdEl.textContent = lsDeviceId || '(not set)';
+            } catch (e) {
+                lsDeviceIdEl.textContent = '(access denied)';
+            }
+
+            try {
+                const ssTabId = sessionStorage.getItem('stickernest:tabId');
+                ssTabIdEl.textContent = ssTabId || '(not set)';
+            } catch (e) {
+                ssTabIdEl.textContent = '(access denied)';
+            }
+
+            // Check WidgetAPI
+            if (window.WidgetAPI?.getIdentity) {
+                const identity = window.WidgetAPI.getIdentity();
+                apiIdentityEl.textContent = identity ? 'Available' : 'Not available';
+                if (identity) {
+                    updateIdentityDisplay(identity);
+                }
+            } else {
+                apiIdentityEl.textContent = 'WidgetAPI.getIdentity not available';
+            }
+        }
+
+        function runPersistenceTests() {
+            const tests = [];
+
+            // Test localStorage
+            try {
+                const testKey = 'stickernest:test:' + Date.now();
+                localStorage.setItem(testKey, 'test');
+                const read = localStorage.getItem(testKey);
+                localStorage.removeItem(testKey);
+                tests.push({ name: 'localStorage', pass: read === 'test' });
+            } catch (e) {
+                tests.push({ name: 'localStorage', pass: false });
+            }
+
+            // Test sessionStorage
+            try {
+                const testKey = 'stickernest:test:' + Date.now();
+                sessionStorage.setItem(testKey, 'test');
+                const read = sessionStorage.getItem(testKey);
+                sessionStorage.removeItem(testKey);
+                tests.push({ name: 'sessionStorage', pass: read === 'test' });
+            } catch (e) {
+                tests.push({ name: 'sessionStorage', pass: false });
+            }
+
+            // Test Tab ID consistency
+            if (savedIds.tabId && tabIdEl.textContent !== '-') {
+                tests.push({
+                    name: 'Same Tab ID',
+                    pass: savedIds.tabId === tabIdEl.textContent
+                });
+            } else {
+                tests.push({ name: 'Same Tab ID', pass: null });
+            }
+
+            // Test Device ID consistency
+            if (savedIds.deviceId && deviceIdEl.textContent !== '-') {
+                tests.push({
+                    name: 'Same Device ID',
+                    pass: savedIds.deviceId === deviceIdEl.textContent
+                });
+            } else {
+                tests.push({ name: 'Same Device ID', pass: null });
+            }
+
+            // Render results
+            persistenceTestsEl.innerHTML = tests.map(t => {
+                const cls = t.pass === null ? 'pending' : (t.pass ? 'pass' : 'fail');
+                const status = t.pass === null ? 'pending' : (t.pass ? '✓' : '✗');
+                return `<div class="persistence-item ${cls}">${t.name}: ${status}</div>`;
+            }).join('');
+
+            logEvent('Ran persistence tests');
+        }
+
+        function refresh() {
+            checkStorageSources();
+            identityQueries++;
+            queriesEl.textContent = identityQueries;
+            logEvent('Refreshed identity');
+        }
+
+        function queryRuntime() {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent('identity-query', {
+                    requestId: Date.now(),
+                    widgetId: widgetIdEl.textContent
+                });
+                identityQueries++;
+                queriesEl.textContent = identityQueries;
+                logEvent('Queried runtime for identity');
+            } else {
+                logEvent('WidgetAPI not available');
+            }
+        }
+
+        function copyId(elementId) {
+            const el = document.getElementById(elementId);
+            if (el && el.textContent !== '-') {
+                navigator.clipboard.writeText(el.textContent);
+                logEvent(`Copied ${elementId} to clipboard`);
+            }
+        }
+        window.copyId = copyId;
+
+        // Event listeners
+        document.getElementById('refreshBtn').addEventListener('click', refresh);
+        document.getElementById('queryBtn').addEventListener('click', queryRuntime);
+        document.getElementById('testBtn').addEventListener('click', runPersistenceTests);
+
+        // Listen for identity updates
+        if (window.WidgetAPI) {
+            window.WidgetAPI.onEvent('identity-update', (payload) => {
+                identityUpdates++;
+                updatesEl.textContent = identityUpdates;
+                updateIdentityDisplay(payload);
+            });
+
+            window.WidgetAPI.onEvent('identity-response', (payload) => {
+                updateIdentityDisplay(payload);
+                logEvent('Received identity response from runtime');
+            });
+        }
+
+        // Initial setup
+        refresh();
+        runPersistenceTests();
+    </script>
+</body>
+</html>

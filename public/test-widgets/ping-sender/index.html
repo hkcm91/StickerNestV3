@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: sans-serif;
+            background: #f0f9ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0284c7;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Ping Sender</h3>
+    <button id="pingBtn">Send Ping 📡</button>
+
+    <script>
+        const btn = document.getElementById('pingBtn');
+
+        // Emit output on port - portId MUST match io.outputs[].id
+        function emit(portId, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portId,  // Use port ID directly
+                    payload: payload
+                }
+            }, '*');
+        }
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+
+        btn.addEventListener('click', () => {
+            console.log('Sending ping...');
+            // Emit on 'ping' port - matches io.outputs[].id: "ping"
+            emit('ping', {
+                timestamp: Date.now(),
+                message: 'Hello from sender!'
+            });
+
+            // Visual feedback
+            const originalText = btn.innerText;
+            btn.innerText = 'Sent!';
+            setTimeout(() => btn.innerText = originalText, 500);
+        });
+    </script>
+</body>
+
+</html>

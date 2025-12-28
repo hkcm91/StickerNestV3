@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            cursor: crosshair;
+        }
+        .entity {
+            cursor: move;
+        }
+        .entity:hover {
+            filter: brightness(1.1);
+        }
+        .entity.selected {
+            outline: 2px dashed #0066ff;
+            outline-offset: 2px;
+        }
+        .selection-handles {
+            pointer-events: none;
+        }
+        .handle {
+            fill: #ffffff;
+            stroke: #0066ff;
+            stroke-width: 1;
+            pointer-events: all;
+            cursor: nwse-resize;
+        }
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)"/>
+            <g id="entities"></g>
+            <g id="selection-overlay"></g>
+        </svg>
+        <div class="status-bar">
+            <span id="entity-count">Entities: 0</span>
+            <span id="selection-info">No selection</span>
+        </div>
+    </div>
+
+    <script>
+        // Vector Canvas - Core entity management widget
+        const canvas = document.getElementById('canvas');
+        const entitiesGroup = document.getElementById('entities');
+        const selectionOverlay = document.getElementById('selection-overlay');
+        const entityCountEl = document.getElementById('entity-count');
+        const selectionInfoEl = document.getElementById('selection-info');
+
+        // Entity storage
+        const entities = new Map();
+        let selectedId = null;
+        let nextId = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let entityStart = { x: 0, y: 0 };
+
+        // Create or get shadow filter for an entity
+        function getOrCreateShadowFilter(entity) {
+            if (!entity.shadow || !entity.shadow.enabled) return null;
+
+            const filterId = `shadow-${entity.id}`;
+            let filter = document.getElementById(filterId);
+
+            if (!filter) {
+                const defs = canvas.querySelector('defs');
+                filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+                filter.setAttribute('id', filterId);
+                filter.setAttribute('x', '-50%');
+                filter.setAttribute('y', '-50%');
+                filter.setAttribute('width', '200%');
+                filter.setAttribute('height', '200%');
+                defs.appendChild(filter);
+            }
+
+            // Clear existing filter content
+            filter.innerHTML = '';
+
+            const shadow = entity.shadow;
+            const offsetX = shadow.offsetX || 4;
+            const offsetY = shadow.offsetY || 4;
+            const blur = shadow.blur || 8;
+            const color = shadow.color || 'rgba(0,0,0,0.5)';
+            const opacity = shadow.opacity !== undefined ? shadow.opacity : 0.5;
+
+            // Create drop shadow effect
+            const feDropShadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+            feDropShadow.setAttribute('dx', offsetX);
+            feDropShadow.setAttribute('dy', offsetY);
+            feDropShadow.setAttribute('stdDeviation', blur / 2);
+            feDropShadow.setAttribute('flood-color', color);
+            feDropShadow.setAttribute('flood-opacity', opacity);
+            filter.appendChild(feDropShadow);
+
+            return filterId;
+        }
+
+        // Remove shadow filter for an entity
+        function removeShadowFilter(entityId) {
+            const filter = document.getElementById(`shadow-${entityId}`);
+            if (filter) filter.remove();
+        }
+
+        // Create SVG element for entity
+        function createEntityElement(entity) {
+            let el;
+            switch (entity.type) {
+                case 'rect':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    el.setAttribute('x', entity.x);
+                    el.setAttribute('y', entity.y);
+                    el.setAttribute('width', entity.width || 100);
+                    el.setAttribute('height', entity.height || 100);
+                    el.setAttribute('rx', entity.rx || 0);
+                    break;
+                case 'circle':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    el.setAttribute('cx', entity.x + (entity.radius || 50));
+                    el.setAttribute('cy', entity.y + (entity.radius || 50));
+                    el.setAttribute('r', entity.radius || 50);
+                    break;
+                case 'ellipse':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                    el.setAttribute('cx', entity.x + (entity.rx || 75));
+                    el.setAttribute('cy', entity.y + (entity.ry || 50));
+                    el.setAttribute('rx', entity.rx || 75);
+                    el.setAttribute('ry', entity.ry || 50);
+                    break;
+                case 'polygon':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    el.setAttribute('points', entity.points || generatePolygonPoints(entity.x, entity.y, entity.sides || 6, entity.radius || 50));
+                    break;
+                case 'line':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    el.setAttribute('x1', entity.x);
+                    el.setAttribute('y1', entity.y);
+                    el.setAttribute('x2', entity.x2 || entity.x + 100);
+                    el.setAttribute('y2', entity.y2 || entity.y);
+                    break;
+                case 'path':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    el.setAttribute('d', entity.d || `M${entity.x},${entity.y} L${entity.x+50},${entity.y-50} L${entity.x+100},${entity.y}`);
+                    break;
+                case 'star':
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    el.setAttribute('points', generateStarPoints(entity.x, entity.y, entity.points || 5, entity.outerRadius || 50, entity.innerRadius || 25));
+                    break;
+                default:
+                    el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    el.setAttribute('x', entity.x);
+                    el.setAttribute('y', entity.y);
+                    el.setAttribute('width', 100);
+                    el.setAttribute('height', 100);
+            }
+
+            el.setAttribute('fill', entity.fill || '#3b82f6');
+            el.setAttribute('stroke', entity.stroke || '#1e40af');
+            el.setAttribute('stroke-width', entity.strokeWidth || 2);
+            el.setAttribute('opacity', entity.opacity || 1);
+            el.setAttribute('data-id', entity.id);
+            el.classList.add('entity');
+
+            if (entity.transform) {
+                el.setAttribute('transform', entity.transform);
+            }
+
+            // Apply shadow filter if exists
+            const filterId = getOrCreateShadowFilter(entity);
+            if (filterId) {
+                el.setAttribute('filter', `url(#${filterId})`);
+            }
+
+            // Event listeners
+            el.addEventListener('mousedown', (e) => startDrag(e, entity.id));
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectEntity(entity.id);
+            });
+
+            return el;
+        }
+
+        function generatePolygonPoints(cx, cy, sides, radius) {
+            const points = [];
+            for (let i = 0; i < sides; i++) {
+                const angle = (i * 2 * Math.PI / sides) - Math.PI / 2;
+                points.push(`${cx + radius + radius * Math.cos(angle)},${cy + radius + radius * Math.sin(angle)}`);
+            }
+            return points.join(' ');
+        }
+
+        function generateStarPoints(cx, cy, points, outerR, innerR) {
+            const result = [];
+            for (let i = 0; i < points * 2; i++) {
+                const angle = (i * Math.PI / points) - Math.PI / 2;
+                const r = i % 2 === 0 ? outerR : innerR;
+                result.push(`${cx + outerR + r * Math.cos(angle)},${cy + outerR + r * Math.sin(angle)}`);
+            }
+            return result.join(' ');
+        }
+
+        // Add entity
+        function addEntity(entityData) {
+            const id = entityData.id || `entity-${nextId++}`;
+            const entity = { ...entityData, id };
+            entities.set(id, entity);
+
+            const el = createEntityElement(entity);
+            entitiesGroup.appendChild(el);
+            updateStatus();
+
+            // Broadcast entity added
+            emit('vector:entity-added', { entity });
+            return id;
+        }
+
+        // Update entity
+        function updateEntity(id, updates) {
+            const entity = entities.get(id);
+            if (!entity) return;
+
+            Object.assign(entity, updates);
+
+            // Remove old element and create new one
+            const oldEl = entitiesGroup.querySelector(`[data-id="${id}"]`);
+            if (oldEl) {
+                const newEl = createEntityElement(entity);
+                if (selectedId === id) newEl.classList.add('selected');
+                oldEl.replaceWith(newEl);
+            }
+
+            // Broadcast update
+            emit('vector:entity-updated', { entity });
+            updateSelectionOverlay();
+        }
+
+        // Delete entity
+        function deleteEntity(id) {
+            const entity = entities.get(id);
+            if (!entity) return;
+
+            // Clean up shadow filter if exists
+            removeShadowFilter(id);
+
+            entities.delete(id);
+            const el = entitiesGroup.querySelector(`[data-id="${id}"]`);
+            if (el) el.remove();
+
+            if (selectedId === id) {
+                selectedId = null;
+                updateSelectionOverlay();
+            }
+
+            updateStatus();
+            emit('vector:entity-deleted', { id });
+        }
+
+        // Select entity
+        function selectEntity(id) {
+            // Deselect previous
+            if (selectedId) {
+                const prevEl = entitiesGroup.querySelector(`[data-id="${selectedId}"]`);
+                if (prevEl) prevEl.classList.remove('selected');
+            }
+
+            selectedId = id;
+            const entity = entities.get(id);
+
+            if (entity) {
+                const el = entitiesGroup.querySelector(`[data-id="${id}"]`);
+                if (el) el.classList.add('selected');
+                updateSelectionOverlay();
+                // Send full entity details for other widgets to sync (including shadow)
+                emit('vector:selection-changed', {
+                    id: entity.id,
+                    type: entity.type,
+                    fill: entity.fill,
+                    stroke: entity.stroke,
+                    strokeWidth: entity.strokeWidth,
+                    opacity: entity.opacity,
+                    shadow: entity.shadow || null,
+                    selected: true
+                });
+            }
+
+            updateStatus();
+        }
+
+        // Deselect all
+        function deselectAll() {
+            if (selectedId) {
+                const el = entitiesGroup.querySelector(`[data-id="${selectedId}"]`);
+                if (el) el.classList.remove('selected');
+                emit('vector:selection-changed', { entity: null, selected: false });
+            }
+            selectedId = null;
+            selectionOverlay.innerHTML = '';
+            updateStatus();
+        }
+
+        // Update selection overlay with handles
+        function updateSelectionOverlay() {
+            selectionOverlay.innerHTML = '';
+            if (!selectedId) return;
+
+            const entity = entities.get(selectedId);
+            if (!entity) return;
+
+            const el = entitiesGroup.querySelector(`[data-id="${selectedId}"]`);
+            if (!el) return;
+
+            const bbox = el.getBBox();
+
+            // Selection rectangle
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', bbox.x - 4);
+            rect.setAttribute('y', bbox.y - 4);
+            rect.setAttribute('width', bbox.width + 8);
+            rect.setAttribute('height', bbox.height + 8);
+            rect.setAttribute('fill', 'none');
+            rect.setAttribute('stroke', '#0066ff');
+            rect.setAttribute('stroke-width', '1');
+            rect.setAttribute('stroke-dasharray', '4,2');
+            selectionOverlay.appendChild(rect);
+
+            // Corner handles
+            const handleSize = 8;
+            const corners = [
+                { x: bbox.x - 4, y: bbox.y - 4, cursor: 'nw-resize' },
+                { x: bbox.x + bbox.width - 4, y: bbox.y - 4, cursor: 'ne-resize' },
+                { x: bbox.x - 4, y: bbox.y + bbox.height - 4, cursor: 'sw-resize' },
+                { x: bbox.x + bbox.width - 4, y: bbox.y + bbox.height - 4, cursor: 'se-resize' }
+            ];
+
+            corners.forEach(corner => {
+                const handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                handle.setAttribute('x', corner.x - handleSize/2);
+                handle.setAttribute('y', corner.y - handleSize/2);
+                handle.setAttribute('width', handleSize);
+                handle.setAttribute('height', handleSize);
+                handle.setAttribute('class', 'handle');
+                handle.style.cursor = corner.cursor;
+                selectionOverlay.appendChild(handle);
+            });
+        }
+
+        // Drag handling
+        function startDrag(e, id) {
+            isDragging = true;
+            dragStart = { x: e.clientX, y: e.clientY };
+            const entity = entities.get(id);
+            entityStart = { x: entity.x, y: entity.y };
+            selectEntity(id);
+
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', endDrag);
+        }
+
+        function onDrag(e) {
+            if (!isDragging || !selectedId) return;
+
+            const dx = e.clientX - dragStart.x;
+            const dy = e.clientY - dragStart.y;
+
+            updateEntity(selectedId, {
+                x: entityStart.x + dx,
+                y: entityStart.y + dy
+            });
+        }
+
+        function endDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', endDrag);
+        }
+
+        // Update status bar
+        function updateStatus() {
+            entityCountEl.textContent = `Entities: ${entities.size}`;
+            if (selectedId) {
+                const entity = entities.get(selectedId);
+                selectionInfoEl.textContent = `Selected: ${entity.type} (${entity.id})`;
+            } else {
+                selectionInfoEl.textContent = 'No selection';
+            }
+        }
+
+        // Canvas click to deselect
+        canvas.addEventListener('click', (e) => {
+            if (e.target === canvas || e.target.tagName === 'rect' && !e.target.classList.contains('entity')) {
+                deselectAll();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedId) {
+                    deleteEntity(selectedId);
+                }
+            }
+            if (e.key === 'Escape') {
+                deselectAll();
+            }
+        });
+
+        // Emit event to parent
+        function emit(type, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+        }
+
+        // Handle incoming messages
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            console.log('[Vector Canvas] Message:', data.type || data);
+
+            // Handle new protocol (EVENT)
+            if (data.type === 'EVENT' && data.payload) {
+                handleEvent(data.payload);
+            }
+            // Handle legacy protocol (widget:event)
+            if (data.type === 'widget:event' && data.payload) {
+                handleEvent(data.payload);
+            }
+        });
+
+        function handleEvent(evt) {
+            const { type, payload } = evt;
+            console.log('[Vector Canvas] Event:', type, payload);
+
+            switch (type) {
+                case 'vector:spawn-shape':
+                    addEntity({
+                        type: payload.shape,
+                        x: payload.x || 50,
+                        y: payload.y || 50,
+                        ...payload.options
+                    });
+                    break;
+
+                case 'vector:set-fill':
+                    if (selectedId) {
+                        updateEntity(selectedId, { fill: payload.fill || payload.color });
+                    }
+                    break;
+
+                case 'vector:set-stroke':
+                    if (selectedId) {
+                        updateEntity(selectedId, { stroke: payload.stroke || payload.color });
+                    }
+                    break;
+
+                case 'vector:set-stroke-width':
+                    if (selectedId) {
+                        updateEntity(selectedId, { strokeWidth: payload.strokeWidth || payload.width });
+                    }
+                    break;
+
+                case 'vector:set-opacity':
+                    if (selectedId) {
+                        updateEntity(selectedId, { opacity: payload.opacity });
+                    }
+                    break;
+
+                case 'vector:set-shadow':
+                    if (selectedId) {
+                        const entity = entities.get(selectedId);
+                        if (entity) {
+                            // Update shadow properties
+                            const shadow = {
+                                enabled: payload.enabled !== undefined ? payload.enabled : true,
+                                offsetX: payload.offsetX !== undefined ? payload.offsetX : (entity.shadow?.offsetX || 4),
+                                offsetY: payload.offsetY !== undefined ? payload.offsetY : (entity.shadow?.offsetY || 4),
+                                blur: payload.blur !== undefined ? payload.blur : (entity.shadow?.blur || 8),
+                                color: payload.color || entity.shadow?.color || 'rgba(0,0,0,0.5)',
+                                opacity: payload.opacity !== undefined ? payload.opacity : (entity.shadow?.opacity || 0.5)
+                            };
+
+                            if (!shadow.enabled) {
+                                // Remove shadow
+                                removeShadowFilter(selectedId);
+                                updateEntity(selectedId, { shadow: null });
+                            } else {
+                                updateEntity(selectedId, { shadow });
+                            }
+
+                            // Broadcast shadow change
+                            emit('vector:entity-updated', { id: selectedId, shadow: entity.shadow });
+                        }
+                    }
+                    break;
+
+                case 'vector:transform':
+                    if (selectedId) {
+                        const entity = entities.get(selectedId);
+                        // Handle scale
+                        if (payload.scaleX !== undefined || payload.scaleY !== undefined) {
+                            const scaleX = payload.scaleX !== undefined ? payload.scaleX : 1;
+                            const scaleY = payload.scaleY !== undefined ? payload.scaleY : 1;
+                            updateEntity(selectedId, {
+                                width: (entity.width || 100) * Math.abs(scaleX),
+                                height: (entity.height || 100) * Math.abs(scaleY),
+                                radius: (entity.radius || 50) * Math.abs(scaleX),
+                                rx: (entity.rx || 50) * Math.abs(scaleX),
+                                ry: (entity.ry || 50) * Math.abs(scaleY)
+                            });
+                        }
+                        // Handle rotation
+                        if (payload.rotate !== undefined) {
+                            const el = entitiesGroup.querySelector(`[data-id="${selectedId}"]`);
+                            if (el) {
+                                const bbox = el.getBBox();
+                                const cx = bbox.x + bbox.width / 2;
+                                const cy = bbox.y + bbox.height / 2;
+                                const currentTransform = entity.transform || '';
+                                const currentRotation = parseFloat(currentTransform.match(/rotate\(([^,)]+)/)?.[1] || 0);
+                                const newRotation = currentRotation + payload.rotate;
+                                updateEntity(selectedId, {
+                                    transform: `rotate(${newRotation}, ${cx}, ${cy})`
+                                });
+                            }
+                        }
+                        // Handle translation
+                        if (payload.translateX !== undefined || payload.translateY !== undefined) {
+                            updateEntity(selectedId, {
+                                x: entity.x + (payload.translateX || 0),
+                                y: entity.y + (payload.translateY || 0)
+                            });
+                        }
+                    }
+                    break;
+
+                case 'vector:delete-selected':
+                    if (selectedId) {
+                        deleteEntity(selectedId);
+                    }
+                    break;
+
+                case 'vector:duplicate-selected':
+                    if (selectedId) {
+                        const entity = entities.get(selectedId);
+                        addEntity({
+                            ...entity,
+                            id: null,
+                            x: entity.x + 20,
+                            y: entity.y + 20
+                        });
+                    }
+                    break;
+
+                case 'vector:bring-forward':
+                case 'vector:send-backward':
+                case 'vector:bring-to-front':
+                case 'vector:send-to-back':
+                    if (selectedId) {
+                        reorderEntity(selectedId, type.replace('vector:', ''));
+                    }
+                    break;
+
+                case 'vector:get-entities':
+                    emit('vector:entities-list', {
+                        entities: Array.from(entities.values())
+                    });
+                    break;
+
+                case 'vector:get-svg':
+                    // Only export the entities, not grid/selection overlay
+                    const svgContent = entitiesGroup.innerHTML;
+                    const bbox = canvas.getBoundingClientRect();
+                    emit('vector:svg-data', {
+                        svg: svgContent,
+                        width: bbox.width,
+                        height: bbox.height
+                    });
+                    break;
+            }
+        }
+
+        function reorderEntity(id, action) {
+            const el = entitiesGroup.querySelector(`[data-id="${id}"]`);
+            if (!el) return;
+
+            switch (action) {
+                case 'bring-forward':
+                    if (el.nextElementSibling) {
+                        el.nextElementSibling.after(el);
+                    }
+                    break;
+                case 'send-backward':
+                    if (el.previousElementSibling) {
+                        el.previousElementSibling.before(el);
+                    }
+                    break;
+                case 'bring-to-front':
+                    entitiesGroup.appendChild(el);
+                    break;
+                case 'send-to-back':
+                    entitiesGroup.insertBefore(el, entitiesGroup.firstChild);
+                    break;
+            }
+        }
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+        console.log('[Vector Canvas] Ready');
+    </script>
+</body>
+</html>

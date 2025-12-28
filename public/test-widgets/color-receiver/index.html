@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            transition: background 0.5s ease;
+        }
+
+        .text {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="text" id="label">Waiting for color...</div>
+
+    <script>
+        const label = document.getElementById('label');
+
+        function handleColor(colorValue) {
+            // Handle both { color: '#fff' } object and direct '#fff' string
+            const color = typeof colorValue === 'object' ? colorValue.color : colorValue;
+            if (color) {
+                document.body.style.background = color;
+                label.innerText = `Color: ${color}`;
+            }
+        }
+
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            // Handle pipeline:input (from PipelineRuntime routing)
+            if (data.type === 'pipeline:input' && data.portName === 'color') {
+                handleColor(data.value);
+                return;
+            }
+
+            // Handle widget:event (legacy and direct events)
+            if (data.type === 'widget:event') {
+                const eventType = data.payload?.type;
+                // Accept 'color' or legacy 'test:color' for backwards compatibility
+                if (eventType === 'color' || eventType === 'test:color') {
+                    handleColor(data.payload?.payload);
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+
+</html>

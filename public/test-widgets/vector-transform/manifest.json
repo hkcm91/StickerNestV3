@@ -1,0 +1,26 @@
+{
+  "id": "vector-transform",
+  "name": "Transform Tool",
+  "version": "1.0.0",
+  "kind": "2d",
+  "description": "Transform vector entities - scale, rotate, move, flip",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "icon": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2L15 5H13V11H11V5H9L12 2Z' fill='%233b82f6'/><path d='M12 22L9 19H11V13H13V19H15L12 22Z' fill='%233b82f6'/><path d='M2 12L5 9V11H11V13H5V15L2 12Z' fill='%233b82f6'/><path d='M22 12L19 15V13H13V11H19V9L22 12Z' fill='%233b82f6'/></svg>",
+  "category": "vector-graphics",
+  "size": {
+    "defaultWidth": 200,
+    "defaultHeight": 360,
+    "minWidth": 160,
+    "minHeight": 300
+  },
+  "permissions": [],
+  "events": {
+    "emits": ["vector:transform", "vector:duplicate-selected", "vector:delete-selected"],
+    "listens": ["vector:selection-changed"]
+  }
+}

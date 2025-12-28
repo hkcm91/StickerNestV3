@@ -1,0 +1,26 @@
+{
+  "id": "vector-color-picker",
+  "name": "Color Picker",
+  "version": "1.0.0",
+  "kind": "2d",
+  "description": "Pick and apply colors to vector entities - fill and stroke",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "icon": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%23fff' stroke='%23333' stroke-width='2'/><circle cx='12' cy='6' r='3' fill='%23ef4444'/><circle cx='17' cy='14' r='3' fill='%2322c55e'/><circle cx='7' cy='14' r='3' fill='%233b82f6'/></svg>",
+  "category": "vector-graphics",
+  "size": {
+    "defaultWidth": 200,
+    "defaultHeight": 320,
+    "minWidth": 160,
+    "minHeight": 280
+  },
+  "permissions": [],
+  "events": {
+    "emits": ["vector:set-fill", "vector:set-stroke"],
+    "listens": ["vector:selection-changed"]
+  }
+}

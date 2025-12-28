@@ -1,0 +1,27 @@
+{
+    "id": "farm-stats",
+    "name": "Farm Stats",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "harvest": {
+            "type": "event",
+            "description": "Receives harvest data from crop plots"
+        },
+        "status": {
+            "type": "event",
+            "description": "Receives status updates from plots"
+        }
+    },
+    "outputs": {
+        "purchase": {
+            "type": "event",
+            "description": "Emits purchase request for seeds"
+        }
+    }
+}

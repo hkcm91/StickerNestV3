@@ -1,0 +1,32 @@
+{
+    "id": "pipeline-test-progressbar",
+    "name": "Pipeline Progress Bar",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "description": "Test progress bar for pipeline validation - receives value updates",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "setValue": {
+            "type": "number",
+            "description": "Set progress value (0-100)"
+        },
+        "setData": {
+            "type": "object",
+            "description": "Set progress from object (uses .value property)"
+        }
+    },
+    "outputs": {
+        "complete": {
+            "type": "trigger",
+            "description": "Emitted when progress reaches 100"
+        },
+        "valueChanged": {
+            "type": "number",
+            "description": "Current progress value"
+        }
+    }
+}

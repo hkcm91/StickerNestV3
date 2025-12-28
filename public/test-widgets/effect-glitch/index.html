@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #1a1a1a;
+            color: #ff0055;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+            border: 1px solid #ff0055;
+        }
+
+        .header {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .indicator {
+            width: 10px;
+            height: 10px;
+            background: #333;
+            border: 1px solid #ff0055;
+        }
+
+        .indicator.active {
+            background: #ff0055;
+            box-shadow: 0 0 8px #ff0055;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 10px;
+            color: #aaa;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #ff0055;
+        }
+
+        .value {
+            font-size: 10px;
+            color: #fff;
+            align-self: flex-end;
+        }
+
+        .meter {
+            height: 4px;
+            background: #333;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: #ff0055;
+            width: 0%;
+            transition: width 0.05s linear;
+        }
+
+        .threshold-line {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            width: 2px;
+            background: #fff;
+            left: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        GLITCH_FX
+        <div class="indicator" id="active-led"></div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>THRESHOLD</label>
+            <input type="range" id="threshold" min="0" max="1" step="0.05" value="0.5">
+            <div class="value" id="threshold-val">0.50</div>
+        </div>
+
+        <div class="control-group">
+            <label>INTENSITY</label>
+            <input type="range" id="intensity" min="0" max="100" step="1" value="80">
+            <div class="value" id="intensity-val">80%</div>
+        </div>
+
+        <div class="control-group">
+            <label>MODE</label>
+            <select id="mode" style="background: #333; color: #fff; border: 1px solid #555; padding: 4px;">
+                <option value="digital">Digital</option>
+                <option value="analog">Analog (Scanlines)</option>
+                <option value="mixed">Mixed</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="meter">
+        <div class="meter-fill" id="input-meter"></div>
+        <div class="threshold-line" id="thresh-line"></div>
+    </div>
+
+    <script>
+        const led = document.getElementById('active-led');
+        const thresholdInput = document.getElementById('threshold');
+        const intensityInput = document.getElementById('intensity');
+        const modeInput = document.getElementById('mode');
+        const inputMeter = document.getElementById('input-meter');
+        const threshLine = document.getElementById('thresh-line');
+
+        // State
+        let currentModulation = 0;
+        let isGlitching = false;
+
+        // UI Updates
+        thresholdInput.addEventListener('input', (e) => {
+            document.getElementById('threshold-val').textContent = parseFloat(e.target.value).toFixed(2);
+            threshLine.style.left = (e.target.value * 100) + '%';
+        });
+
+        intensityInput.addEventListener('input', (e) => {
+            document.getElementById('intensity-val').textContent = e.target.value + '%';
+        });
+
+        function updateGlitchState() {
+            const threshold = parseFloat(thresholdInput.value);
+            const shouldGlitch = currentModulation >= threshold;
+
+            if (shouldGlitch !== isGlitching) {
+                isGlitching = shouldGlitch;
+
+                if (isGlitching) {
+                    led.classList.add('active');
+                } else {
+                    led.classList.remove('active');
+                }
+
+                // Emit to Filter Overlay
+                if (window.WidgetAPI) {
+                    const mode = modeInput.value;
+                    window.WidgetAPI.emitEvent('effect:update', {
+                        glitch: isGlitching && (mode === 'digital' || mode === 'mixed'),
+                        scanlines: isGlitching && (mode === 'analog' || mode === 'mixed'),
+                        intensity: parseFloat(intensityInput.value)
+                    });
+                }
+            }
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            window.WidgetAPI.log('Glitch Effect initialized');
+
+            // Listen for modulation
+            window.WidgetAPI.onEvent('modulate', (event) => {
+                // Only care if target is generic or specifically 'glitch'
+                if (event.payload.target && event.payload.target !== 'glitch') return;
+
+                currentModulation = event.payload.value || 0;
+
+                // Visual feedback
+                inputMeter.style.width = (currentModulation * 100) + '%';
+
+                updateGlitchState();
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+
+</html>

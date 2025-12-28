@@ -1,0 +1,23 @@
+{
+    "id": "synth-master",
+    "name": "Master Synthesizer",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "audio-analysis": {
+            "type": "object",
+            "description": "FFT data from audio source"
+        }
+    },
+    "outputs": {
+        "modulate": {
+            "type": "event",
+            "description": "Control signal (0-1)"
+        }
+    }
+}

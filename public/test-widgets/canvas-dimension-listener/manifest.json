@@ -1,0 +1,22 @@
+{
+    "id": "debug-canvas-dimension-listener",
+    "name": "Canvas Dimension Listener",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "canvas-resize": {
+            "type": "event",
+            "description": "Receives canvas resize events"
+        },
+        "viewport-change": {
+            "type": "event",
+            "description": "Receives viewport change events"
+        }
+    },
+    "outputs": {}
+}

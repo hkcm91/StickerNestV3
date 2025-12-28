@@ -1,0 +1,35 @@
+{
+  "id": "message-sender",
+  "name": "Message Sender",
+  "version": "1.1.0",
+  "kind": "interactive",
+  "entry": "index.html",
+  "description": "Send messages to other canvases for cross-canvas communication testing",
+  "author": "StickerNest Demo",
+  "tags": ["messaging", "test", "pipeline", "cross-canvas", "communication"],
+  "inputs": {
+    "targetCanvas": {
+      "type": "string",
+      "description": "Target canvas ID to send messages to (optional - broadcasts to all if empty)"
+    }
+  },
+  "outputs": {
+    "message": {
+      "type": "object",
+      "description": "Cross-canvas message broadcast"
+    }
+  },
+  "io": {
+    "inputs": [],
+    "outputs": ["cross.message"]
+  },
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "size": {
+    "width": 320,
+    "height": 280
+  }
+}

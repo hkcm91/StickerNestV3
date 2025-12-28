@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview Player Widget</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--widget-bg, #0d0d0d);
+      color: var(--widget-text, #e0e0e0);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--widget-header-bg, #1a1a1a);
+      border-bottom: 1px solid var(--widget-border, #333);
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      opacity: 0.7;
+    }
+
+    .source-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .source-selector select {
+      background: var(--widget-input-bg, #2a2a2a);
+      color: var(--widget-text, #e0e0e0);
+      border: 1px solid var(--widget-border, #444);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      max-width: 140px;
+    }
+
+    .btn {
+      background: var(--widget-btn-bg, #2a2a2a);
+      color: var(--widget-text, #e0e0e0);
+      border: 1px solid var(--widget-border, #444);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--widget-btn-hover, #3a3a3a);
+    }
+
+    .btn.active {
+      background: #6366f1;
+      border-color: #6366f1;
+    }
+
+    .preview-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .preview-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-content.contain img,
+    .preview-content.contain video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .preview-content.cover img,
+    .preview-content.cover video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-content.fill img,
+    .preview-content.fill video {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+
+    .preview-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #666;
+      padding: 40px;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      opacity: 0.3;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h2 {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      max-width: 240px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .source-label {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+    }
+
+    .source-label .type-badge {
+      background: #6366f1;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .source-label .type-badge.youtube {
+      background: #ff0000;
+    }
+
+    .source-label .type-badge.image {
+      background: #10b981;
+    }
+
+    .source-label .type-badge.audio {
+      background: #f59e0b;
+    }
+
+    .source-label .type-badge.synth {
+      background: #8b5cf6;
+    }
+
+    .title-text {
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Synth Visualizer */
+    .synth-visualizer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+
+    .waveform-canvas {
+      width: 100%;
+      height: 60%;
+      max-height: 200px;
+    }
+
+    .synth-info {
+      text-align: center;
+      padding: 16px;
+    }
+
+    .synth-info .frequency {
+      font-size: 32px;
+      font-weight: 300;
+      color: #8b5cf6;
+      margin-bottom: 4px;
+    }
+
+    .synth-info .waveform-type {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Audio Visualizer */
+    .audio-visualizer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+
+    .audio-bar {
+      width: 4px;
+      background: linear-gradient(180deg, #6366f1, #8b5cf6);
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      display: none;
+      position: absolute;
+      top: 40px;
+      right: 8px;
+      background: var(--widget-bg, #1a1a1a);
+      border: 1px solid var(--widget-border, #333);
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 220px;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .settings-panel h3 {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--widget-border, #333);
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 11px;
+    }
+
+    .setting-row label {
+      color: #888;
+    }
+
+    .setting-row select,
+    .setting-row input[type="checkbox"] {
+      background: var(--widget-input-bg, #2a2a2a);
+      color: var(--widget-text, #e0e0e0);
+      border: 1px solid var(--widget-border, #444);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .registered-sources {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--widget-border, #333);
+    }
+
+    .registered-sources h4 {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .source-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      background: var(--widget-input-bg, #2a2a2a);
+      border-radius: 4px;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+
+    .source-item .source-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .source-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .source-item .dot.inactive {
+      background: #666;
+    }
+
+    /* Loading state */
+    .loading {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #333;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <svg class="header-icon" viewBox="0 0 24 24">
+        <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5z"/>
+      </svg>
+      Preview
+    </h1>
+    <div class="source-selector">
+      <select id="sourceSelect">
+        <option value="">Auto (Latest)</option>
+      </select>
+      <button class="btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </div>
+
+  <div class="preview-container">
+    <div class="preview-content contain" id="previewContent">
+      <div class="empty-state" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
+          <path d="M9.5 7.5v9l7-4.5z"/>
+        </svg>
+        <h2>No Preview Source</h2>
+        <p>Connect this widget to a YouTube Playlist, Gallery, or other widget that emits previews.</p>
+      </div>
+    </div>
+
+    <div class="source-label" id="sourceLabel" style="display: none;">
+      <span class="type-badge" id="typeBadge">-</span>
+      <span class="title-text" id="titleText">-</span>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+      <h3>Settings</h3>
+      <div class="setting-row">
+        <label>Fit Mode</label>
+        <select id="fitModeSelect">
+          <option value="contain">Contain</option>
+          <option value="cover">Cover</option>
+          <option value="fill">Fill</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>Auto-switch source</label>
+        <input type="checkbox" id="autoSwitchCheck" checked>
+      </div>
+      <div class="setting-row">
+        <label>Show source label</label>
+        <input type="checkbox" id="showLabelCheck" checked>
+      </div>
+
+      <div class="registered-sources" id="registeredSources">
+        <h4>Available Sources</h4>
+        <div id="sourcesList">
+          <p style="color: #666; font-size: 11px;">No sources detected yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Widget Communication =====
+    function emit(portId, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portId, payload }
+      }, '*');
+    }
+
+    // ===== State =====
+    let currentPreview = null;
+    let selectedSource = '';
+    let autoSwitch = true;
+    let showLabel = true;
+    let fitMode = 'contain';
+    let sources = new Map(); // Track available sources
+    let youtubePlayer = null;
+
+    // ===== Preview Handlers =====
+    function handlePreview(data, sourceId = 'unknown') {
+      if (!data) return;
+
+      // Register source
+      registerSource(sourceId, data.type || 'unknown');
+
+      // Check if we should display this preview
+      if (!autoSwitch && selectedSource && selectedSource !== sourceId) {
+        return;
+      }
+
+      currentPreview = { ...data, sourceId };
+      renderPreview(data);
+
+      emit('previewLoaded', { type: data.type, data });
+    }
+
+    function registerSource(sourceId, type) {
+      if (!sources.has(sourceId)) {
+        sources.set(sourceId, { type, lastSeen: Date.now() });
+        updateSourceSelector();
+        updateSourcesList();
+      } else {
+        sources.get(sourceId).lastSeen = Date.now();
+      }
+    }
+
+    function renderPreview(data) {
+      const container = document.getElementById('previewContent');
+      const emptyState = document.getElementById('emptyState');
+      const sourceLabel = document.getElementById('sourceLabel');
+      const typeBadge = document.getElementById('typeBadge');
+      const titleText = document.getElementById('titleText');
+      const loading = document.getElementById('loading');
+
+      // Clear previous content (except empty state)
+      container.innerHTML = '';
+
+      // Show loading
+      loading.classList.add('active');
+
+      switch (data.type) {
+        case 'youtube':
+          renderYouTubePreview(data, container);
+          break;
+        case 'spotify':
+          renderSpotifyPreview(data, container);
+          break;
+        case 'image':
+          renderImagePreview(data, container);
+          break;
+        case 'synth':
+          renderSynthPreview(data, container);
+          break;
+        case 'audio':
+          renderAudioPreview(data, container);
+          break;
+        default:
+          // Try to render based on content
+          if (data.videoId) {
+            renderYouTubePreview(data, container);
+          } else if (data.url && isImageUrl(data.url)) {
+            renderImagePreview({ ...data, type: 'image' }, container);
+          } else {
+            container.appendChild(emptyState);
+            loading.classList.remove('active');
+            return;
+          }
+      }
+
+      // Update source label
+      if (showLabel) {
+        typeBadge.textContent = data.type || 'media';
+        typeBadge.className = 'type-badge ' + (data.type || '');
+        titleText.textContent = data.title || data.name || 'Untitled';
+        sourceLabel.style.display = 'flex';
+      } else {
+        sourceLabel.style.display = 'none';
+      }
+    }
+
+    function renderYouTubePreview(data, container) {
+      const loading = document.getElementById('loading');
+
+      // Create YouTube embed
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube.com/embed/${data.videoId}?autoplay=${data.playing ? 1 : 0}&controls=1&modestbranding=1&rel=0`;
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+
+      iframe.onload = () => {
+        loading.classList.remove('active');
+      };
+
+      container.appendChild(iframe);
+    }
+
+    function renderSpotifyPreview(data, container) {
+      const loading = document.getElementById('loading');
+
+      if (data.embedUrl) {
+        // Use provided embed URL
+        const iframe = document.createElement('iframe');
+        iframe.src = data.embedUrl;
+        iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+        iframe.loading = 'lazy';
+        iframe.style.borderRadius = '12px';
+
+        iframe.onload = () => {
+          loading.classList.remove('active');
+        };
+
+        container.appendChild(iframe);
+      } else if (data.spotifyId) {
+        // Construct embed URL from ID
+        const type = data.spotifyType || 'track';
+        const iframe = document.createElement('iframe');
+        iframe.src = `https://open.spotify.com/embed/${type}/${data.spotifyId}?utm_source=generator&theme=0`;
+        iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+        iframe.loading = 'lazy';
+        iframe.style.borderRadius = '12px';
+
+        iframe.onload = () => {
+          loading.classList.remove('active');
+        };
+
+        container.appendChild(iframe);
+      } else {
+        // Fall back to thumbnail display
+        loading.classList.remove('active');
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(145deg, #121212, #191414);';
+
+        if (data.thumbnail) {
+          const img = document.createElement('img');
+          img.src = data.thumbnail;
+          img.style.cssText = 'width: 150px; height: 150px; border-radius: 8px; margin-bottom: 16px;';
+          wrapper.appendChild(img);
+        }
+
+        const title = document.createElement('div');
+        title.style.cssText = 'color: #fff; font-size: 16px; font-weight: 600; text-align: center;';
+        title.textContent = data.title || 'Spotify Track';
+        wrapper.appendChild(title);
+
+        if (data.artist) {
+          const artist = document.createElement('div');
+          artist.style.cssText = 'color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 4px;';
+          artist.textContent = data.artist;
+          wrapper.appendChild(artist);
+        }
+
+        container.appendChild(wrapper);
+      }
+    }
+
+    function renderImagePreview(data, container) {
+      const loading = document.getElementById('loading');
+
+      const img = document.createElement('img');
+      img.src = data.url || data.thumbnail;
+      img.alt = data.title || data.name || 'Preview';
+
+      img.onload = () => {
+        loading.classList.remove('active');
+      };
+
+      img.onerror = () => {
+        loading.classList.remove('active');
+        showError('Failed to load image');
+      };
+
+      container.appendChild(img);
+    }
+
+    function renderSynthPreview(data, container) {
+      const loading = document.getElementById('loading');
+      loading.classList.remove('active');
+
+      const visualizer = document.createElement('div');
+      visualizer.className = 'synth-visualizer';
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'waveform-canvas';
+      canvas.width = 400;
+      canvas.height = 150;
+
+      const info = document.createElement('div');
+      info.className = 'synth-info';
+      info.innerHTML = `
+        <div class="frequency">${data.frequency ? data.frequency.toFixed(1) + ' Hz' : '---'}</div>
+        <div class="waveform-type">${data.waveform || 'sine'} wave</div>
+      `;
+
+      visualizer.appendChild(canvas);
+      visualizer.appendChild(info);
+      container.appendChild(visualizer);
+
+      // Draw waveform
+      drawWaveform(canvas, data.waveform || 'sine', data.frequency || 440, data.playing);
+    }
+
+    function drawWaveform(canvas, waveform, frequency, playing) {
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      const centerY = height / 2;
+      const amplitude = height * 0.35;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Background grid
+      ctx.strokeStyle = '#2a2a4a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.stroke();
+
+      // Waveform
+      ctx.strokeStyle = playing ? '#8b5cf6' : '#4a4a6a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      const cycles = Math.min(Math.max(frequency / 100, 2), 8);
+
+      for (let x = 0; x < width; x++) {
+        const t = (x / width) * cycles * Math.PI * 2;
+        let y;
+
+        switch (waveform) {
+          case 'square':
+            y = Math.sign(Math.sin(t)) * amplitude;
+            break;
+          case 'sawtooth':
+            y = ((t % (Math.PI * 2)) / Math.PI - 1) * amplitude;
+            break;
+          case 'triangle':
+            y = (Math.asin(Math.sin(t)) / (Math.PI / 2)) * amplitude;
+            break;
+          default: // sine
+            y = Math.sin(t) * amplitude;
+        }
+
+        if (x === 0) {
+          ctx.moveTo(x, centerY + y);
+        } else {
+          ctx.lineTo(x, centerY + y);
+        }
+      }
+
+      ctx.stroke();
+
+      // Glow effect when playing
+      if (playing) {
+        ctx.shadowColor = '#8b5cf6';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function renderAudioPreview(data, container) {
+      const loading = document.getElementById('loading');
+      loading.classList.remove('active');
+
+      const visualizer = document.createElement('div');
+      visualizer.className = 'audio-visualizer';
+
+      // Create audio bars
+      const numBars = 32;
+      for (let i = 0; i < numBars; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'audio-bar';
+        bar.style.height = data.playing ? `${Math.random() * 60 + 20}%` : '10%';
+        visualizer.appendChild(bar);
+      }
+
+      container.appendChild(visualizer);
+
+      // Animate bars if playing
+      if (data.playing) {
+        animateAudioBars(visualizer);
+      }
+    }
+
+    function animateAudioBars(visualizer) {
+      const bars = visualizer.querySelectorAll('.audio-bar');
+      const animate = () => {
+        if (!document.body.contains(visualizer)) return;
+
+        bars.forEach(bar => {
+          bar.style.height = `${Math.random() * 60 + 20}%`;
+        });
+
+        requestAnimationFrame(animate);
+      };
+      animate();
+    }
+
+    function isImageUrl(url) {
+      return /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url);
+    }
+
+    function showError(message) {
+      const container = document.getElementById('previewContent');
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          <h2>Error</h2>
+          <p>${message}</p>
+        </div>
+      `;
+    }
+
+    function clearPreview() {
+      const container = document.getElementById('previewContent');
+      const emptyState = document.getElementById('emptyState');
+      const sourceLabel = document.getElementById('sourceLabel');
+
+      container.innerHTML = '';
+      container.appendChild(emptyState);
+      sourceLabel.style.display = 'none';
+      currentPreview = null;
+    }
+
+    // ===== Source Management =====
+    function updateSourceSelector() {
+      const select = document.getElementById('sourceSelect');
+      const currentValue = select.value;
+
+      // Keep "Auto" option
+      select.innerHTML = '<option value="">Auto (Latest)</option>';
+
+      sources.forEach((info, sourceId) => {
+        const option = document.createElement('option');
+        option.value = sourceId;
+        option.textContent = `${sourceId} (${info.type})`;
+        select.appendChild(option);
+      });
+
+      // Restore selection
+      if (currentValue && sources.has(currentValue)) {
+        select.value = currentValue;
+      }
+    }
+
+    function updateSourcesList() {
+      const list = document.getElementById('sourcesList');
+
+      if (sources.size === 0) {
+        list.innerHTML = '<p style="color: #666; font-size: 11px;">No sources detected yet</p>';
+        return;
+      }
+
+      list.innerHTML = Array.from(sources.entries()).map(([id, info]) => {
+        const isRecent = Date.now() - info.lastSeen < 30000;
+        return `
+          <div class="source-item">
+            <span class="source-name">
+              <span class="dot ${isRecent ? '' : 'inactive'}"></span>
+              ${id}
+            </span>
+            <span style="color: #666">${info.type}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ===== Settings =====
+    function updateFitMode(mode) {
+      fitMode = mode;
+      const container = document.getElementById('previewContent');
+      container.className = 'preview-content ' + mode;
+      saveSettings();
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem('preview-player-settings', JSON.stringify({
+          selectedSource,
+          autoSwitch,
+          showLabel,
+          fitMode
+        }));
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    }
+
+    function loadSettings() {
+      try {
+        const data = JSON.parse(localStorage.getItem('preview-player-settings'));
+        if (data) {
+          selectedSource = data.selectedSource || '';
+          autoSwitch = data.autoSwitch !== false;
+          showLabel = data.showLabel !== false;
+          fitMode = data.fitMode || 'contain';
+
+          document.getElementById('sourceSelect').value = selectedSource;
+          document.getElementById('autoSwitchCheck').checked = autoSwitch;
+          document.getElementById('showLabelCheck').checked = showLabel;
+          document.getElementById('fitModeSelect').value = fitMode;
+          document.getElementById('previewContent').className = 'preview-content ' + fitMode;
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e);
+      }
+    }
+
+    // ===== Event Listeners =====
+    document.getElementById('sourceSelect').addEventListener('change', (e) => {
+      selectedSource = e.target.value;
+      saveSettings();
+      emit('sourceChanged', { sourceId: selectedSource, sourceType: sources.get(selectedSource)?.type });
+    });
+
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      const panel = document.getElementById('settingsPanel');
+      panel.classList.toggle('active');
+    });
+
+    document.getElementById('fitModeSelect').addEventListener('change', (e) => {
+      updateFitMode(e.target.value);
+    });
+
+    document.getElementById('autoSwitchCheck').addEventListener('change', (e) => {
+      autoSwitch = e.target.checked;
+      saveSettings();
+    });
+
+    document.getElementById('showLabelCheck').addEventListener('change', (e) => {
+      showLabel = e.target.checked;
+      const sourceLabel = document.getElementById('sourceLabel');
+      sourceLabel.style.display = showLabel && currentPreview ? 'flex' : 'none';
+      saveSettings();
+    });
+
+    // Close settings panel when clicking outside
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('settingsPanel');
+      const btn = document.getElementById('settingsBtn');
+      if (panel.classList.contains('active') && !panel.contains(e.target) && e.target !== btn) {
+        panel.classList.remove('active');
+      }
+    });
+
+    // ===== Widget Input Handler =====
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        handleInput(data.portName, data.value, data.sourceWidgetId);
+      }
+
+      // Legacy format
+      if (data.type === 'widget:event' && data.payload) {
+        handleInput(data.payload.type, data.payload.payload, data.payload.sourceWidgetId);
+      }
+
+      // Handle EVENT type (new format) - canvas-scoped events from other widgets
+      if (data.type === 'EVENT' && data.payload) {
+        const evt = data.payload;
+        if (evt.scope === 'canvas') {
+          // Handle gallery events
+          if (evt.type === 'gallery:image-selected' && evt.payload) {
+            handleInput('imageSelected', evt.payload, evt.sourceWidgetId || 'gallery');
+          }
+          // Handle YouTube playlist events
+          if (evt.type === 'videoChanged' && evt.payload) {
+            handleInput('videoChanged', evt.payload, evt.sourceWidgetId || 'youtube-playlist');
+          }
+          if (evt.type === 'preview' && evt.payload) {
+            handleInput('preview', evt.payload, evt.sourceWidgetId || 'preview');
+          }
+          if (evt.type === 'playlist:preview' && evt.payload) {
+            handleInput('preview', evt.payload, evt.sourceWidgetId || 'youtube-playlist');
+          }
+          // Handle Spotify playlist events
+          if (evt.type === 'trackChanged' && evt.payload) {
+            handleInput('trackChanged', evt.payload, evt.sourceWidgetId || 'spotify-playlist');
+          }
+          if (evt.type === 'spotify:preview' && evt.payload) {
+            handleInput('preview', evt.payload, evt.sourceWidgetId || 'spotify-playlist');
+          }
+          if (evt.type === 'spotify:changed' && evt.payload) {
+            handleInput('trackChanged', evt.payload, evt.sourceWidgetId || 'spotify-playlist');
+          }
+        }
+      }
+
+      // Config from parent
+      if (data.type === 'widget:config') {
+        if (data.payload?.config) {
+          if (data.payload.config.defaultSource) {
+            selectedSource = data.payload.config.defaultSource;
+            document.getElementById('sourceSelect').value = selectedSource;
+          }
+          if (data.payload.config.autoSwitch !== undefined) {
+            autoSwitch = data.payload.config.autoSwitch;
+            document.getElementById('autoSwitchCheck').checked = autoSwitch;
+          }
+          if (data.payload.config.showSourceLabel !== undefined) {
+            showLabel = data.payload.config.showSourceLabel;
+            document.getElementById('showLabelCheck').checked = showLabel;
+          }
+          if (data.payload.config.fitMode) {
+            updateFitMode(data.payload.config.fitMode);
+            document.getElementById('fitModeSelect').value = fitMode;
+          }
+        }
+      }
+    });
+
+    function handleInput(port, value, sourceId) {
+      switch (port) {
+        case 'preview':
+          handlePreview(value, sourceId || 'preview');
+          break;
+
+        case 'imageSelected':
+        case 'currentImage':
+          handlePreview({
+            type: 'image',
+            url: value.url,
+            title: value.name || value.title,
+            thumbnail: value.thumbnail || value.url
+          }, sourceId || 'gallery');
+          break;
+
+        case 'videoChanged':
+          handlePreview({
+            type: 'youtube',
+            videoId: value.videoId,
+            title: value.title,
+            thumbnail: value.thumbnail,
+            playing: false
+          }, sourceId || 'youtube-playlist');
+          break;
+
+        case 'trackChanged':
+          handlePreview({
+            type: 'spotify',
+            spotifyId: value.spotifyId,
+            spotifyType: value.type || 'track',
+            title: value.title,
+            artist: value.artist,
+            thumbnail: value.artwork || value.thumbnail,
+            embedUrl: value.embedUrl,
+            playing: false
+          }, sourceId || 'spotify-playlist');
+          break;
+
+        case 'synthPreview':
+          handlePreview({
+            type: 'synth',
+            waveform: value.waveform,
+            frequency: value.frequency,
+            playing: value.playing,
+            title: `${value.waveform || 'Sine'} Wave - ${value.frequency?.toFixed(1) || 440} Hz`
+          }, sourceId || 'synthesizer');
+          break;
+
+        case 'setSource':
+          if (value && sources.has(value)) {
+            selectedSource = value;
+            document.getElementById('sourceSelect').value = value;
+            saveSettings();
+          }
+          break;
+
+        case 'clear':
+          clearPreview();
+          break;
+      }
+    }
+
+    // ===== Initialization =====
+    loadSettings();
+
+    // Update sources list periodically
+    setInterval(updateSourcesList, 5000);
+
+    // Signal ready to parent
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-text-muted: #64748b;
+      --sn-accent-primary: #8b5cf6;
+      --sn-accent-secondary: #a78bfa;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-border-hover: rgba(139, 92, 246, 0.4);
+      --sn-radius-sm: 4px;
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+      --sn-success: #22c55e;
+      --sn-warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--sn-bg-primary);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header with Add Button */
+    .header {
+      padding: 12px;
+      background: var(--sn-bg-tertiary);
+      border-bottom: 1px solid var(--sn-border-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .add-btn {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--sn-accent-primary);
+      border: none;
+      border-radius: var(--sn-radius-md);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .add-btn:hover {
+      background: var(--sn-accent-secondary);
+      transform: translateY(-1px);
+    }
+
+    .add-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Selection Status */
+    .selection-status {
+      padding: 8px 12px;
+      background: var(--sn-bg-secondary);
+      border-bottom: 1px solid var(--sn-border-primary);
+      font-size: 11px;
+      color: var(--sn-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .selection-status.has-selection {
+      color: var(--sn-success);
+    }
+
+    .selection-status .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sn-text-muted);
+    }
+
+    .selection-status.has-selection .dot {
+      background: var(--sn-success);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--sn-bg-secondary);
+      padding: 12px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sn-text-secondary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .control-value {
+      color: var(--sn-accent-primary);
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    /* Inputs */
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    select:hover { border-color: var(--sn-border-hover); }
+    select:focus { outline: none; border-color: var(--sn-accent-primary); }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--sn-bg-primary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--sn-accent-primary);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform var(--sn-transition-fast);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="color"] {
+      width: 36px;
+      height: 32px;
+      padding: 0;
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+    .color-hex {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      font-family: monospace;
+      text-transform: uppercase;
+    }
+
+    /* Button Groups */
+    .btn-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn:hover {
+      background: var(--sn-bg-tertiary);
+      border-color: var(--sn-border-hover);
+      color: var(--sn-text-primary);
+    }
+
+    .btn.active {
+      background: var(--sn-accent-primary);
+      border-color: var(--sn-accent-primary);
+      color: white;
+    }
+
+    .btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Presets Grid */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .preset-btn {
+      padding: 10px 8px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      text-align: left;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--sn-accent-primary);
+      color: var(--sn-accent-primary);
+    }
+
+    .preset-btn .preview {
+      margin-bottom: 4px;
+      color: var(--sn-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preset-btn[data-preset="headline"] .preview { font-weight: 700; font-size: 14px; }
+    .preset-btn[data-preset="subheading"] .preview { font-weight: 600; font-size: 12px; }
+    .preset-btn[data-preset="body"] .preview { font-weight: 400; font-size: 11px; }
+    .preset-btn[data-preset="caption"] .preview { font-weight: 400; font-size: 9px; color: var(--sn-text-secondary); }
+
+    /* Text Input for content */
+    textarea {
+      width: 100%;
+      padding: 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      resize: vertical;
+      min-height: 60px;
+      font-family: inherit;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--sn-accent-primary);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--sn-bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--sn-bg-tertiary); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--sn-accent-primary); }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@100;300;400;500;700;900&family=Montserrat:wght@100;300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Bebas+Neue&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header with Add Button -->
+  <div class="header">
+    <button class="add-btn" id="addTextBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+      Add Text to Canvas
+    </button>
+  </div>
+
+  <!-- Selection Status -->
+  <div class="selection-status" id="selectionStatus">
+    <span class="dot"></span>
+    <span id="statusText">No text selected</span>
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <!-- Text Content -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Text Content</span>
+      </div>
+      <textarea id="textContent" placeholder="Enter text content...">Sample Text</textarea>
+    </div>
+
+    <!-- Font Family -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Font Family</span>
+      </div>
+      <select id="fontFamily">
+        <optgroup label="Sans-Serif">
+          <option value="Inter" selected>Inter</option>
+          <option value="Roboto">Roboto</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="Open Sans">Open Sans</option>
+          <option value="Poppins">Poppins</option>
+        </optgroup>
+        <optgroup label="Serif">
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Times New Roman">Times New Roman</option>
+        </optgroup>
+        <optgroup label="Display">
+          <option value="Bebas Neue">Bebas Neue</option>
+        </optgroup>
+        <optgroup label="Script">
+          <option value="Dancing Script">Dancing Script</option>
+        </optgroup>
+        <optgroup label="System">
+          <option value="system-ui">System UI</option>
+          <option value="Arial">Arial</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <!-- Size & Weight -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Size & Weight</span>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Font Size</span>
+            <span class="control-value" id="fontSizeValue">32px</span>
+          </div>
+          <input type="range" id="fontSize" min="8" max="200" value="32">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Font Weight</span>
+            <span class="control-value" id="fontWeightValue">400</span>
+          </div>
+          <input type="range" id="fontWeight" min="100" max="900" step="100" value="400">
+        </div>
+      </div>
+    </div>
+
+    <!-- Color -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Color</span>
+      </div>
+      <div class="color-row">
+        <input type="color" id="textColor" value="#e2e8f0">
+        <input type="text" class="color-hex" id="colorHex" value="#E2E8F0" maxlength="7">
+      </div>
+    </div>
+
+    <!-- Spacing -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Spacing</span>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Letter Spacing</span>
+            <span class="control-value" id="letterSpacingValue">0px</span>
+          </div>
+          <input type="range" id="letterSpacing" min="-10" max="30" value="0" step="0.5">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Line Height</span>
+            <span class="control-value" id="lineHeightValue">1.5</span>
+          </div>
+          <input type="range" id="lineHeight" min="0.8" max="3" value="1.5" step="0.1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Alignment -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Alignment</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn active" data-align="left" title="Align Left">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm0 4h12v2H3V7zm0 4h18v2H3v-2zm0 4h12v2H3v-2zm0 4h18v2H3v-2z"/>
+          </svg>
+        </button>
+        <button class="btn" data-align="center" title="Align Center">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm3 4h12v2H6V7zm-3 4h18v2H3v-2zm3 4h12v2H6v-2zm-3 4h18v2H3v-2z"/>
+          </svg>
+        </button>
+        <button class="btn" data-align="right" title="Align Right">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v2H3V3zm6 4h12v2H9V7zm-6 4h18v2H3v-2zm6 4h12v2H9v-2zm-6 4h18v2H3v-2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Style Options -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Style Options</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn" id="toggleItalic" title="Italic">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 4v2h2.21l-3.42 12H6v2h8v-2h-2.21l3.42-12H18V4h-8z"/>
+          </svg>
+        </button>
+        <button class="btn" id="toggleUnderline" title="Underline">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17c3.31 0 6-2.69 6-6V3h-2.5v8c0 1.93-1.57 3.5-3.5 3.5S8.5 12.93 8.5 11V3H6v8c0 3.31 2.69 6 6 6zm-7 2v2h14v-2H5z"/>
+          </svg>
+        </button>
+        <button class="btn" id="toggleStrike" title="Strikethrough">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 19h4v-3h-4v3zM5 4v3h5v3h4V7h5V4H5zM3 14h18v-2H3v2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Text Transform -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Text Transform</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn active" data-transform="none">Aa</button>
+        <button class="btn" data-transform="uppercase">AA</button>
+        <button class="btn" data-transform="lowercase">aa</button>
+        <button class="btn" data-transform="capitalize">Aa</button>
+      </div>
+    </div>
+
+    <!-- Quick Presets -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Quick Presets</span>
+      </div>
+      <div class="preset-grid">
+        <button class="preset-btn" data-preset="headline">
+          <div class="preview">Headline</div>
+          <span>Bold 48px</span>
+        </button>
+        <button class="preset-btn" data-preset="subheading">
+          <div class="preview">Subheading</div>
+          <span>Semibold 24px</span>
+        </button>
+        <button class="preset-btn" data-preset="body">
+          <div class="preview">Body Text</div>
+          <span>Regular 16px</span>
+        </button>
+        <button class="preset-btn" data-preset="caption">
+          <div class="preview">Caption</div>
+          <span>Regular 12px</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE
+    // ========================================
+    const state = {
+      content: 'Sample Text',
+      fontFamily: 'Inter',
+      fontSize: 32,
+      fontWeight: 400,
+      color: '#e2e8f0',
+      letterSpacing: 0,
+      lineHeight: 1.5,
+      textAlign: 'left',
+      textTransform: 'none',
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      selectedWidgetId: null,
+      selectedEntityId: null,
+    };
+
+    // Presets
+    const presets = {
+      headline: { fontFamily: 'Montserrat', fontSize: 48, fontWeight: 700, letterSpacing: -1, lineHeight: 1.1 },
+      subheading: { fontFamily: 'Inter', fontSize: 24, fontWeight: 600, letterSpacing: 0, lineHeight: 1.3 },
+      body: { fontFamily: 'Open Sans', fontSize: 16, fontWeight: 400, letterSpacing: 0, lineHeight: 1.6 },
+      caption: { fontFamily: 'Inter', fontSize: 12, fontWeight: 400, letterSpacing: 0.5, lineHeight: 1.4 },
+    };
+
+    // DOM Elements
+    const textContent = document.getElementById('textContent');
+    const fontFamily = document.getElementById('fontFamily');
+    const fontSize = document.getElementById('fontSize');
+    const fontWeight = document.getElementById('fontWeight');
+    const textColor = document.getElementById('textColor');
+    const colorHex = document.getElementById('colorHex');
+    const letterSpacing = document.getElementById('letterSpacing');
+    const lineHeight = document.getElementById('lineHeight');
+    const selectionStatus = document.getElementById('selectionStatus');
+    const statusText = document.getElementById('statusText');
+
+    // ========================================
+    // HELPERS
+    // ========================================
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function broadcast(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload, broadcast: true });
+      }
+    }
+
+    function log(msg) {
+      console.log('[TextTool]', msg);
+      if (window.WidgetAPI) window.WidgetAPI.log(msg);
+    }
+
+    function updateUI() {
+      textContent.value = state.content;
+      fontFamily.value = state.fontFamily;
+      fontSize.value = state.fontSize;
+      fontWeight.value = state.fontWeight;
+      textColor.value = state.color;
+      colorHex.value = state.color.toUpperCase();
+      letterSpacing.value = state.letterSpacing;
+      lineHeight.value = state.lineHeight;
+
+      document.getElementById('fontSizeValue').textContent = `${state.fontSize}px`;
+      document.getElementById('fontWeightValue').textContent = state.fontWeight;
+      document.getElementById('letterSpacingValue').textContent = `${state.letterSpacing}px`;
+      document.getElementById('lineHeightValue').textContent = state.lineHeight.toFixed(1);
+
+      document.querySelectorAll('[data-align]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.align === state.textAlign);
+      });
+      document.querySelectorAll('[data-transform]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.transform === state.textTransform);
+      });
+
+      document.getElementById('toggleItalic').classList.toggle('active', state.fontStyle === 'italic');
+      document.getElementById('toggleUnderline').classList.toggle('active', state.textDecoration.includes('underline'));
+      document.getElementById('toggleStrike').classList.toggle('active', state.textDecoration.includes('line-through'));
+    }
+
+    function updateSelectionStatus() {
+      if (state.selectedWidgetId) {
+        selectionStatus.classList.add('has-selection');
+        statusText.textContent = `Editing: ${state.selectedWidgetId.slice(0, 12)}...`;
+      } else {
+        selectionStatus.classList.remove('has-selection');
+        statusText.textContent = 'No text selected';
+      }
+    }
+
+    function emitStyleChange() {
+      const styleData = {
+        content: state.content,
+        fontFamily: state.fontFamily,
+        fontSize: state.fontSize,
+        fontWeight: state.fontWeight,
+        color: state.color,
+        letterSpacing: state.letterSpacing,
+        lineHeight: state.lineHeight,
+        textAlign: state.textAlign,
+        textTransform: state.textTransform,
+        fontStyle: state.fontStyle,
+        textDecoration: state.textDecoration,
+      };
+
+      // Broadcast to update selected entities
+      broadcast('canvas:style-changed', {
+        targetType: 'text',
+        targetId: state.selectedWidgetId,
+        styles: styleData
+      });
+
+      // Also emit specific text style event
+      emit('text.style-changed', styleData);
+    }
+
+    // ========================================
+    // EVENT HANDLERS
+    // ========================================
+
+    // Add Text Button
+    document.getElementById('addTextBtn').addEventListener('click', () => {
+      broadcast('canvas:add-text', {
+        content: state.content,
+        fontFamily: state.fontFamily,
+        fontSize: state.fontSize,
+        fontWeight: state.fontWeight,
+        color: state.color,
+        letterSpacing: state.letterSpacing,
+        lineHeight: state.lineHeight,
+        textAlign: state.textAlign,
+        textTransform: state.textTransform,
+        fontStyle: state.fontStyle,
+        textDecoration: state.textDecoration,
+      });
+      log('Added text to canvas');
+    });
+
+    // Text Content
+    textContent.addEventListener('input', (e) => {
+      state.content = e.target.value;
+      emitStyleChange();
+    });
+
+    // Font Family
+    fontFamily.addEventListener('change', (e) => {
+      state.fontFamily = e.target.value;
+      emitStyleChange();
+    });
+
+    // Font Size
+    fontSize.addEventListener('input', (e) => {
+      state.fontSize = parseInt(e.target.value);
+      document.getElementById('fontSizeValue').textContent = `${state.fontSize}px`;
+      emitStyleChange();
+    });
+
+    // Font Weight
+    fontWeight.addEventListener('input', (e) => {
+      state.fontWeight = parseInt(e.target.value);
+      document.getElementById('fontWeightValue').textContent = state.fontWeight;
+      emitStyleChange();
+    });
+
+    // Text Color
+    textColor.addEventListener('input', (e) => {
+      state.color = e.target.value;
+      colorHex.value = state.color.toUpperCase();
+      emitStyleChange();
+    });
+
+    colorHex.addEventListener('input', (e) => {
+      let hex = e.target.value;
+      if (!hex.startsWith('#')) hex = '#' + hex;
+      if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        state.color = hex;
+        textColor.value = hex;
+        emitStyleChange();
+      }
+    });
+
+    // Letter Spacing
+    letterSpacing.addEventListener('input', (e) => {
+      state.letterSpacing = parseFloat(e.target.value);
+      document.getElementById('letterSpacingValue').textContent = `${state.letterSpacing}px`;
+      emitStyleChange();
+    });
+
+    // Line Height
+    lineHeight.addEventListener('input', (e) => {
+      state.lineHeight = parseFloat(e.target.value);
+      document.getElementById('lineHeightValue').textContent = state.lineHeight.toFixed(1);
+      emitStyleChange();
+    });
+
+    // Alignment
+    document.querySelectorAll('[data-align]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.textAlign = btn.dataset.align;
+        updateUI();
+        emitStyleChange();
+      });
+    });
+
+    // Transform
+    document.querySelectorAll('[data-transform]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.textTransform = btn.dataset.transform;
+        updateUI();
+        emitStyleChange();
+      });
+    });
+
+    // Style Toggles
+    document.getElementById('toggleItalic').addEventListener('click', () => {
+      state.fontStyle = state.fontStyle === 'italic' ? 'normal' : 'italic';
+      updateUI();
+      emitStyleChange();
+    });
+
+    document.getElementById('toggleUnderline').addEventListener('click', () => {
+      const hasUnderline = state.textDecoration.includes('underline');
+      if (hasUnderline) {
+        state.textDecoration = state.textDecoration.replace('underline', '').trim() || 'none';
+      } else {
+        state.textDecoration = state.textDecoration === 'none' ? 'underline' : state.textDecoration + ' underline';
+      }
+      updateUI();
+      emitStyleChange();
+    });
+
+    document.getElementById('toggleStrike').addEventListener('click', () => {
+      const hasStrike = state.textDecoration.includes('line-through');
+      if (hasStrike) {
+        state.textDecoration = state.textDecoration.replace('line-through', '').trim() || 'none';
+      } else {
+        state.textDecoration = state.textDecoration === 'none' ? 'line-through' : state.textDecoration + ' line-through';
+      }
+      updateUI();
+      emitStyleChange();
+    });
+
+    // Presets
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = presets[btn.dataset.preset];
+        if (preset) {
+          Object.assign(state, preset);
+          updateUI();
+          emitStyleChange();
+          log(`Applied preset: ${btn.dataset.preset}`);
+        }
+      });
+    });
+
+    // ========================================
+    // WIDGET API
+    // ========================================
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Text Tool');
+
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'widget:selected':
+          case 'entity:selected':
+            // A widget/entity was selected on the canvas
+            if (event.payload?.entityType === 'text' || event.payload?.type === 'text') {
+              state.selectedWidgetId = event.payload.widgetInstanceId || event.payload.id;
+              state.selectedEntityId = event.payload.entityId || event.payload.id;
+
+              // Load the selected entity's current styles
+              if (event.payload.styles) {
+                Object.entries(event.payload.styles).forEach(([key, value]) => {
+                  if (key in state) state[key] = value;
+                });
+              }
+              if (event.payload.content) state.content = event.payload.content;
+
+              updateUI();
+              updateSelectionStatus();
+              log(`Selected text: ${state.selectedWidgetId}`);
+            }
+            break;
+
+          case 'widget:deselected':
+          case 'selection:cleared':
+            state.selectedWidgetId = null;
+            state.selectedEntityId = null;
+            updateSelectionStatus();
+            break;
+
+          case 'text.load':
+            // Load text properties from another source
+            if (event.payload) {
+              Object.entries(event.payload).forEach(([key, value]) => {
+                if (key in state) state[key] = value;
+              });
+              updateUI();
+            }
+            break;
+
+          case 'brand:color-changed':
+            if (event.payload?.color) {
+              state.color = event.payload.color;
+              updateUI();
+              emitStyleChange();
+            }
+            break;
+
+          case 'brand:font-changed':
+            if (event.payload?.fontFamily) {
+              state.fontFamily = event.payload.fontFamily;
+              updateUI();
+              emitStyleChange();
+            }
+            break;
+        }
+      });
+
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['text'],
+          canCreate: ['text'],
+          isDesignTool: true,
+        });
+      }
+
+      updateUI();
+      updateSelectionStatus();
+      emit('widget.ready', { capabilities: ['text', 'typography', 'design-tool'] });
+      log('Text Tool ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

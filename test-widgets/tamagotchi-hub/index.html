@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tamagotchi Hub</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-tertiary: #25253a;
+      --bg-card: linear-gradient(145deg, #1f1f35, #15152a);
+      --accent: #00d4aa;
+      --accent-secondary: #a855f7;
+      --accent-warm: #f59e0b;
+      --text-primary: #eee;
+      --text-secondary: #888;
+      --border: #2a2a45;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    /* Pet Status Card */
+    .pet-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .pet-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pet-avatar {
+      width: 64px;
+      height: 64px;
+      background: var(--bg-tertiary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      border: 3px solid var(--accent);
+    }
+
+    .pet-info {
+      flex: 1;
+    }
+
+    .pet-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .pet-mood {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .mood-badge {
+      padding: 2px 8px;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      font-size: 11px;
+    }
+
+    .mood-badge.happy { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+    .mood-badge.sad { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .mood-badge.hungry { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+    .mood-badge.tired { background: rgba(168, 85, 247, 0.2); color: var(--accent-secondary); }
+
+    .pet-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+    }
+
+    .stat-icon {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* Moodlets Overview */
+    .moodlets-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .moodlet-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .moodlet-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      border-left: 3px solid var(--border);
+    }
+
+    .moodlet-item.positive { border-left-color: var(--success); }
+    .moodlet-item.negative { border-left-color: var(--danger); }
+
+    .moodlet-icon {
+      font-size: 18px;
+    }
+
+    .moodlet-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .moodlet-name {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .moodlet-value {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    /* Tasks Progress */
+    .tasks-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .progress-ring {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .ring-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .ring-container svg {
+      transform: rotate(-90deg);
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: var(--bg-tertiary);
+      stroke-width: 8;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: url(#progressGradient);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .ring-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .ring-percent {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .ring-label {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    .tasks-info {
+      flex: 1;
+    }
+
+    .tasks-count {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .streak-display {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2));
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .category-bars {
+      margin-top: 12px;
+    }
+
+    .category-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .cat-icon {
+      font-size: 14px;
+      width: 20px;
+    }
+
+    .cat-progress {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .cat-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .cat-fill.hygiene { background: #5dade2; }
+    .cat-fill.nutrition { background: #58d68d; }
+    .cat-fill.health { background: #e74c3c; }
+    .cat-fill.productivity { background: #f39c12; }
+    .cat-fill.financial { background: #f1c40f; }
+
+    /* Quick Actions */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .action-btn .icon {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .action-btn .label {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    .action-btn:hover .label {
+      color: white;
+    }
+
+    /* Activity Log */
+    .activity-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .activity-list {
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-icon {
+      font-size: 14px;
+    }
+
+    .activity-text {
+      flex: 1;
+      color: var(--text-secondary);
+    }
+
+    .activity-time {
+      font-size: 10px;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-btn {
+      flex: 1;
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .footer-btn:hover {
+      background: var(--accent);
+    }
+
+    .footer-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-title">Tamagotchi Hub</div>
+    <div class="connection-status">
+      <div class="status-dot"></div>
+      <span id="connectionText">Synced</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <!-- Pet Status -->
+    <div class="pet-card">
+      <div class="pet-header">
+        <div class="pet-avatar" id="petAvatar">&#x1F43E;</div>
+        <div class="pet-info">
+          <div class="pet-name" id="petName">My Pet</div>
+          <div class="pet-mood">
+            Feeling: <span class="mood-badge happy" id="moodBadge">Happy</span>
+          </div>
+        </div>
+      </div>
+      <div class="pet-stats">
+        <div class="stat-item">
+          <div class="stat-icon">&#x1F60A;</div>
+          <div class="stat-value" id="happinessVal">80%</div>
+          <div class="stat-label">Happy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon">&#x26A1;</div>
+          <div class="stat-value" id="energyVal">70%</div>
+          <div class="stat-label">Energy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon">&#x1F35E;</div>
+          <div class="stat-value" id="hungerVal">60%</div>
+          <div class="stat-label">Fed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Moodlets Overview -->
+    <div class="moodlets-card">
+      <div class="card-title">
+        <span>&#x1F3AF;</span> Moodlets
+      </div>
+      <div class="moodlet-grid" id="moodletGrid">
+        <div class="moodlet-item">
+          <span class="moodlet-icon">&#x1F6BF;</span>
+          <div class="moodlet-info">
+            <div class="moodlet-name">Hygiene</div>
+            <div class="moodlet-value">Okay</div>
+          </div>
+        </div>
+        <div class="moodlet-item">
+          <span class="moodlet-icon">&#x1F957;</span>
+          <div class="moodlet-info">
+            <div class="moodlet-name">Nutrition</div>
+            <div class="moodlet-value">Okay</div>
+          </div>
+        </div>
+        <div class="moodlet-item">
+          <span class="moodlet-icon">&#x1F4A7;</span>
+          <div class="moodlet-info">
+            <div class="moodlet-name">Hydration</div>
+            <div class="moodlet-value">Okay</div>
+          </div>
+        </div>
+        <div class="moodlet-item">
+          <span class="moodlet-icon">&#x2705;</span>
+          <div class="moodlet-info">
+            <div class="moodlet-name">Productivity</div>
+            <div class="moodlet-value">Okay</div>
+          </div>
+        </div>
+        <div class="moodlet-item">
+          <span class="moodlet-icon">&#x1F3E5;</span>
+          <div class="moodlet-info">
+            <div class="moodlet-name">Health</div>
+            <div class="moodlet-value">Okay</div>
+          </div>
+        </div>
+        <div class="moodlet-item">
+          <span class="moodlet-icon">&#x1F4B0;</span>
+          <div class="moodlet-info">
+            <div class="moodlet-name">Financial</div>
+            <div class="moodlet-value">Okay</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tasks Progress -->
+    <div class="tasks-card">
+      <div class="card-title">
+        <span>&#x1F4DD;</span> Today's Progress
+      </div>
+      <div class="progress-ring">
+        <div class="ring-container">
+          <svg width="80" height="80">
+            <defs>
+              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#00d4aa"/>
+                <stop offset="100%" style="stop-color:#a855f7"/>
+              </linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="40" cy="40" r="32"/>
+            <circle class="ring-progress" id="progressRing" cx="40" cy="40" r="32"
+                    stroke-dasharray="201" stroke-dashoffset="201"/>
+          </svg>
+          <div class="ring-text">
+            <div class="ring-percent" id="taskPercent">0%</div>
+            <div class="ring-label">done</div>
+          </div>
+        </div>
+        <div class="tasks-info">
+          <div class="tasks-count" id="tasksCount">0 of 0 tasks</div>
+          <div class="streak-display">
+            <span>&#x1F525;</span>
+            <span id="streakDays">0</span> day streak
+          </div>
+        </div>
+      </div>
+      <div class="category-bars" id="categoryBars">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="actions-grid">
+      <button class="action-btn" id="btnFeedPet">
+        <span class="icon">&#x1F35E;</span>
+        <span class="label">Feed</span>
+      </button>
+      <button class="action-btn" id="btnPlayPet">
+        <span class="icon">&#x1F3AE;</span>
+        <span class="label">Play</span>
+      </button>
+      <button class="action-btn" id="btnSleepPet">
+        <span class="icon">&#x1F4A4;</span>
+        <span class="label">Sleep</span>
+      </button>
+      <button class="action-btn" id="btnSync">
+        <span class="icon">&#x1F504;</span>
+        <span class="label">Sync</span>
+      </button>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="activity-card">
+      <div class="card-title">
+        <span>&#x1F4DC;</span> Recent Activity
+      </div>
+      <div class="activity-list" id="activityList">
+        <div class="activity-item">
+          <span class="activity-icon">&#x2728;</span>
+          <span class="activity-text">Hub initialized</span>
+          <span class="activity-time">Just now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="footer-btn" id="btnExport">Export State</button>
+    <button class="footer-btn primary" id="btnSyncAll">Sync All Widgets</button>
+  </div>
+
+  <script>
+    // ===== STATE =====
+    const state = {
+      pet: {
+        name: 'My Pet',
+        mood: 'neutral',
+        happiness: 80,
+        energy: 70,
+        hunger: 60
+      },
+      moodlets: {
+        hygiene: { value: 0, label: 'Okay' },
+        nutrition: { value: 0, label: 'Okay' },
+        hydration: { value: 0, label: 'Okay' },
+        productivity: { value: 0, label: 'Okay' },
+        health: { value: 0, label: 'Okay' },
+        financial: { value: 0, label: 'Okay' }
+      },
+      tasks: {
+        total: 0,
+        completed: 0,
+        streak: 0,
+        byCategory: {}
+      },
+      activities: [],
+      lastSync: null
+    };
+
+    const moodletConfig = {
+      hygiene: { icon: '&#x1F6BF;', name: 'Hygiene' },
+      nutrition: { icon: '&#x1F957;', name: 'Nutrition' },
+      hydration: { icon: '&#x1F4A7;', name: 'Hydration' },
+      productivity: { icon: '&#x2705;', name: 'Productivity' },
+      health: { icon: '&#x1F3E5;', name: 'Health' },
+      financial: { icon: '&#x1F4B0;', name: 'Financial' }
+    };
+
+    // ===== UPDATE FUNCTIONS =====
+    function updatePetDisplay() {
+      document.getElementById('petName').textContent = state.pet.name;
+      document.getElementById('happinessVal').textContent = state.pet.happiness + '%';
+      document.getElementById('energyVal').textContent = state.pet.energy + '%';
+      document.getElementById('hungerVal').textContent = state.pet.hunger + '%';
+
+      // Update mood badge
+      const moodBadge = document.getElementById('moodBadge');
+      moodBadge.textContent = capitalize(state.pet.mood);
+      moodBadge.className = 'mood-badge ' + state.pet.mood;
+
+      // Update avatar based on mood
+      const avatarEmojis = {
+        happy: '&#x1F60A;',
+        sad: '&#x1F622;',
+        hungry: '&#x1F60B;',
+        tired: '&#x1F634;',
+        sick: '&#x1F915;',
+        celebrating: '&#x1F389;',
+        neutral: '&#x1F43E;'
+      };
+      document.getElementById('petAvatar').innerHTML = avatarEmojis[state.pet.mood] || avatarEmojis.neutral;
+    }
+
+    function updateMoodletDisplay() {
+      const grid = document.getElementById('moodletGrid');
+      grid.innerHTML = '';
+
+      for (const [category, config] of Object.entries(moodletConfig)) {
+        const moodlet = state.moodlets[category];
+        const value = moodlet?.value || 0;
+        const label = getValueLabel(value);
+        const className = value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+
+        grid.innerHTML += `
+          <div class="moodlet-item ${className}">
+            <span class="moodlet-icon">${config.icon}</span>
+            <div class="moodlet-info">
+              <div class="moodlet-name">${config.name}</div>
+              <div class="moodlet-value">${label}</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function getValueLabel(value) {
+      if (value > 0.5) return 'Great!';
+      if (value > 0) return 'Good';
+      if (value < -0.5) return 'Poor';
+      if (value < 0) return 'Needs Work';
+      return 'Okay';
+    }
+
+    function updateTasksDisplay() {
+      const { total, completed, streak, byCategory } = state.tasks;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      // Update ring
+      const circumference = 2 * Math.PI * 32; // 32 is radius
+      const offset = circumference - (percent / 100) * circumference;
+      document.getElementById('progressRing').style.strokeDashoffset = offset;
+
+      document.getElementById('taskPercent').textContent = percent + '%';
+      document.getElementById('tasksCount').textContent = `${completed} of ${total} tasks`;
+      document.getElementById('streakDays').textContent = streak;
+
+      // Update category bars
+      const barsContainer = document.getElementById('categoryBars');
+      barsContainer.innerHTML = '';
+
+      const categories = ['hygiene', 'nutrition', 'health', 'productivity', 'financial'];
+      for (const cat of categories) {
+        const catData = byCategory[cat] || { total: 0, completed: 0 };
+        const catPercent = catData.total > 0 ? Math.round((catData.completed / catData.total) * 100) : 0;
+
+        if (catData.total > 0) {
+          barsContainer.innerHTML += `
+            <div class="category-bar">
+              <span class="cat-icon">${moodletConfig[cat]?.icon || ''}</span>
+              <div class="cat-progress">
+                <div class="cat-fill ${cat}" style="width: ${catPercent}%"></div>
+              </div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function addActivity(icon, text) {
+      state.activities.unshift({
+        icon,
+        text,
+        time: Date.now()
+      });
+
+      // Keep only last 20 activities
+      if (state.activities.length > 20) {
+        state.activities.pop();
+      }
+
+      updateActivityDisplay();
+    }
+
+    function updateActivityDisplay() {
+      const list = document.getElementById('activityList');
+      list.innerHTML = state.activities.slice(0, 10).map(a => `
+        <div class="activity-item">
+          <span class="activity-icon">${a.icon}</span>
+          <span class="activity-text">${a.text}</span>
+          <span class="activity-time">${formatTime(a.time)}</span>
+        </div>
+      `).join('');
+    }
+
+    function formatTime(timestamp) {
+      const diff = Date.now() - timestamp;
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+      return new Date(timestamp).toLocaleDateString();
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // ===== EMIT FUNCTIONS =====
+    function emit(type, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type, payload }
+      }, '*');
+    }
+
+    function syncAll() {
+      emit('syncAll', {
+        pet: state.pet,
+        moodlets: state.moodlets,
+        tasks: state.tasks,
+        syncedAt: Date.now()
+      });
+      state.lastSync = Date.now();
+      document.getElementById('connectionText').textContent = 'Synced';
+      addActivity('&#x1F504;', 'Synced all widgets');
+    }
+
+    function triggerPetAction(action) {
+      emit('triggerAnimation', action);
+      addActivity('&#x1F43E;', `Triggered pet ${action}`);
+    }
+
+    // ===== EVENT HANDLERS =====
+    document.getElementById('btnFeedPet').onclick = () => triggerPetAction('eating');
+    document.getElementById('btnPlayPet').onclick = () => triggerPetAction('celebrating');
+    document.getElementById('btnSleepPet').onclick = () => triggerPetAction('sleeping');
+    document.getElementById('btnSync').onclick = syncAll;
+    document.getElementById('btnSyncAll').onclick = syncAll;
+
+    document.getElementById('btnExport').onclick = () => {
+      emit('stateExport', {
+        pet: state.pet,
+        moodlets: state.moodlets,
+        tasks: state.tasks,
+        activities: state.activities,
+        exportedAt: Date.now()
+      });
+      addActivity('&#x1F4BE;', 'Exported state');
+    };
+
+    // ===== MESSAGE HANDLING =====
+    window.addEventListener('message', (event) => {
+      const { type, portName, value } = event.data;
+
+      if (type === 'pipeline:input') {
+        switch (portName) {
+          case 'petStatus':
+            state.pet = { ...state.pet, ...value };
+            updatePetDisplay();
+            addActivity('&#x1F43E;', `Pet ${value.name || ''} status updated`);
+            break;
+
+          case 'moodChanged':
+            if (value.moodlets) {
+              for (const [cat, data] of Object.entries(value.moodlets)) {
+                if (state.moodlets[cat]) {
+                  state.moodlets[cat] = {
+                    value: data.value,
+                    label: getValueLabel(data.value)
+                  };
+                }
+              }
+            }
+            if (value.mood) {
+              state.pet.mood = value.mood;
+              updatePetDisplay();
+            }
+            updateMoodletDisplay();
+
+            // Relay to pet
+            emit('setMood', value);
+            addActivity('&#x1F3AF;', `Mood changed to ${value.mood || 'updated'}`);
+            break;
+
+          case 'taskCompleted':
+            addActivity('&#x2705;', `Task completed: ${value.title || 'Unknown'}`);
+            // Relay to moodlet widget
+            emit('taskCompletedRelay', value);
+            break;
+
+          case 'dailyProgress':
+            state.tasks = {
+              total: value.total || 0,
+              completed: value.completed || 0,
+              streak: value.streak || state.tasks.streak,
+              byCategory: value.byCategory || {}
+            };
+            updateTasksDisplay();
+            break;
+
+          case 'importState':
+            if (value.pet) state.pet = value.pet;
+            if (value.moodlets) state.moodlets = value.moodlets;
+            if (value.tasks) state.tasks = value.tasks;
+            if (value.activities) state.activities = value.activities;
+            updatePetDisplay();
+            updateMoodletDisplay();
+            updateTasksDisplay();
+            updateActivityDisplay();
+            addActivity('&#x1F4E5;', 'State imported');
+            break;
+        }
+      }
+    });
+
+    // ===== INIT =====
+    updatePetDisplay();
+    updateMoodletDisplay();
+    updateTasksDisplay();
+    addActivity('&#x2728;', 'Hub initialized');
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

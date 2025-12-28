@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-text-muted: #64748b;
+      --sn-accent-primary: #8b5cf6;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-border-hover: rgba(139, 92, 246, 0.4);
+      --sn-radius-sm: 4px;
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+
+      --widget-bg: var(--sn-bg-primary);
+      --controls-bg: var(--sn-bg-secondary);
+      --accent-color: var(--sn-accent-primary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--widget-bg);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Preview Area */
+    .preview-area {
+      flex: 0 0 160px;
+      position: relative;
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .gradient-preview {
+      width: 100%;
+      height: 100%;
+      transition: background 0.3s ease;
+    }
+
+    .preview-actions {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: var(--sn-radius-sm);
+      color: white;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .action-btn:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--controls-bg);
+      padding: 12px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sn-text-secondary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .control-value {
+      color: var(--accent-color);
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    /* Type Selector */
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .type-btn {
+      padding: 10px 8px;
+      background: var(--sn-bg-primary);
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      text-align: center;
+    }
+
+    .type-btn:hover {
+      border-color: var(--sn-border-hover);
+    }
+
+    .type-btn.active {
+      border-color: var(--accent-color);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .type-btn .icon {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .type-btn .label {
+      font-size: 10px;
+      color: var(--sn-text-secondary);
+    }
+
+    .type-btn.active .label {
+      color: var(--accent-color);
+    }
+
+    /* Color Stops */
+    .stops-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .color-stop {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--sn-bg-primary);
+      border-radius: var(--sn-radius-sm);
+      border: 1px solid var(--sn-border-primary);
+    }
+
+    .color-stop input[type="color"] {
+      width: 36px;
+      height: 32px;
+      padding: 0;
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      background: none;
+    }
+
+    .color-stop input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+    .color-stop input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+    .color-stop input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--sn-bg-tertiary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .color-stop input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .color-stop .position {
+      width: 40px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--sn-text-secondary);
+    }
+
+    .color-stop .remove-btn {
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: var(--sn-radius-sm);
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .color-stop .remove-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .add-stop-btn {
+      width: 100%;
+      padding: 8px;
+      background: transparent;
+      border: 1px dashed var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .add-stop-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    /* Angle Control */
+    .angle-wheel {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid var(--sn-border-primary);
+      position: relative;
+      margin: 0 auto;
+      background: var(--sn-bg-primary);
+      cursor: pointer;
+    }
+
+    .angle-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 35px;
+      height: 4px;
+      background: var(--accent-color);
+      transform-origin: left center;
+      border-radius: 2px;
+    }
+
+    .angle-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--sn-bg-primary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Presets */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .preset-btn {
+      aspect-ratio: 1;
+      border-radius: var(--sn-radius-sm);
+      border: 2px solid var(--sn-border-primary);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .preset-btn:hover {
+      transform: scale(1.05);
+      border-color: var(--sn-border-hover);
+    }
+
+    /* CSS Output */
+    .css-output {
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      padding: 10px;
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--sn-text-secondary);
+      max-height: 80px;
+      overflow-y: auto;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    .copy-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    /* Apply Button */
+    .apply-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent-color);
+      border: none;
+      border-radius: var(--sn-radius-md);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .apply-btn:hover { opacity: 0.9; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--sn-bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--sn-bg-tertiary); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <!-- Preview Area -->
+  <div class="preview-area">
+    <div class="gradient-preview" id="gradientPreview"></div>
+    <div class="preview-actions">
+      <button class="action-btn" id="randomBtn">Random</button>
+      <button class="action-btn" id="reverseBtn">Reverse</button>
+    </div>
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <!-- Gradient Type -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Gradient Type</span>
+      </div>
+      <div class="type-grid">
+        <button class="type-btn active" data-type="linear">
+          <div class="icon">↗</div>
+          <div class="label">Linear</div>
+        </button>
+        <button class="type-btn" data-type="radial">
+          <div class="icon">◎</div>
+          <div class="label">Radial</div>
+        </button>
+        <button class="type-btn" data-type="conic">
+          <div class="icon">◐</div>
+          <div class="label">Conic</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Color Stops -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Color Stops</span>
+      </div>
+      <div class="stops-container" id="stopsContainer"></div>
+      <button class="add-stop-btn" id="addStopBtn">+ Add Color Stop</button>
+    </div>
+
+    <!-- Angle/Position Control -->
+    <div class="control-section" id="angleSection">
+      <div class="section-header">
+        <span>Angle</span>
+      </div>
+      <div class="control-row" style="justify-content: center;">
+        <div class="angle-wheel" id="angleWheel">
+          <div class="angle-indicator" id="angleIndicator"></div>
+          <div class="angle-center"></div>
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Angle</span>
+            <span class="control-value" id="angleValue">135°</span>
+          </div>
+          <input type="range" id="angle" min="0" max="360" value="135">
+        </div>
+      </div>
+    </div>
+
+    <div class="control-section" id="positionSection" style="display: none;">
+      <div class="section-header">
+        <span>Position</span>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Position X</span>
+            <span class="control-value" id="posXValue">50%</span>
+          </div>
+          <input type="range" id="posX" min="0" max="100" value="50">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Position Y</span>
+            <span class="control-value" id="posYValue">50%</span>
+          </div>
+          <input type="range" id="posY" min="0" max="100" value="50">
+        </div>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>Presets</span>
+      </div>
+      <div class="preset-grid" id="presetGrid"></div>
+    </div>
+
+    <!-- CSS Output -->
+    <div class="control-section">
+      <div class="section-header">
+        <span>CSS Output</span>
+      </div>
+      <div class="css-output" id="cssOutput">background: linear-gradient(135deg, #8b5cf6, #ec4899);</div>
+      <button class="copy-btn" id="copyBtn">Copy CSS</button>
+    </div>
+
+    <!-- Apply Button -->
+    <button class="apply-btn" id="applyBtn">Apply to Canvas Background</button>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE
+    // ========================================
+    const state = {
+      type: 'linear',
+      angle: 135,
+      posX: 50,
+      posY: 50,
+      stops: [
+        { color: '#8b5cf6', position: 0 },
+        { color: '#ec4899', position: 100 }
+      ]
+    };
+
+    // Presets
+    const presets = [
+      { name: 'Violet Pink', stops: [{ color: '#8b5cf6', position: 0 }, { color: '#ec4899', position: 100 }] },
+      { name: 'Ocean', stops: [{ color: '#667eea', position: 0 }, { color: '#764ba2', position: 100 }] },
+      { name: 'Sunset', stops: [{ color: '#f97316', position: 0 }, { color: '#ec4899', position: 50 }, { color: '#8b5cf6', position: 100 }] },
+      { name: 'Mint', stops: [{ color: '#06b6d4', position: 0 }, { color: '#22c55e', position: 100 }] },
+      { name: 'Fire', stops: [{ color: '#fbbf24', position: 0 }, { color: '#f97316', position: 50 }, { color: '#ef4444', position: 100 }] },
+      { name: 'Purple Blue', stops: [{ color: '#6366f1', position: 0 }, { color: '#8b5cf6', position: 50 }, { color: '#d946ef', position: 100 }] },
+      { name: 'Deep Ocean', stops: [{ color: '#0f172a', position: 0 }, { color: '#1e3a5f', position: 50 }, { color: '#0891b2', position: 100 }] },
+      { name: 'Rose Gold', stops: [{ color: '#be185d', position: 0 }, { color: '#f472b6', position: 50 }, { color: '#fbbf24', position: 100 }] },
+      { name: 'Nordic', stops: [{ color: '#e2e8f0', position: 0 }, { color: '#94a3b8', position: 100 }] },
+      { name: 'Night Sky', stops: [{ color: '#0f0f19', position: 0 }, { color: '#1e1b4b', position: 50 }, { color: '#312e81', position: 100 }] },
+      { name: 'Forest', stops: [{ color: '#14532d', position: 0 }, { color: '#22c55e', position: 100 }] },
+      { name: 'Rainbow', stops: [{ color: '#ef4444', position: 0 }, { color: '#f97316', position: 17 }, { color: '#fbbf24', position: 33 }, { color: '#22c55e', position: 50 }, { color: '#3b82f6', position: 67 }, { color: '#8b5cf6', position: 83 }, { color: '#ec4899', position: 100 }] }
+    ];
+
+    // ========================================
+    // DOM
+    // ========================================
+    const gradientPreview = document.getElementById('gradientPreview');
+    const stopsContainer = document.getElementById('stopsContainer');
+    const cssOutput = document.getElementById('cssOutput');
+    const angleIndicator = document.getElementById('angleIndicator');
+    const angleSection = document.getElementById('angleSection');
+    const positionSection = document.getElementById('positionSection');
+
+    // ========================================
+    // HELPERS
+    // ========================================
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function broadcast(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload, broadcast: true });
+      }
+    }
+
+    function log(msg) {
+      console.log('[GradientMaker]', msg);
+      if (window.WidgetAPI) window.WidgetAPI.log(msg);
+    }
+
+    // ========================================
+    // GRADIENT BUILDING
+    // ========================================
+    function buildGradientCSS() {
+      const sortedStops = [...state.stops].sort((a, b) => a.position - b.position);
+      const stopsStr = sortedStops.map(s => `${s.color} ${s.position}%`).join(', ');
+
+      switch (state.type) {
+        case 'linear':
+          return `linear-gradient(${state.angle}deg, ${stopsStr})`;
+        case 'radial':
+          return `radial-gradient(circle at ${state.posX}% ${state.posY}%, ${stopsStr})`;
+        case 'conic':
+          return `conic-gradient(from ${state.angle}deg at ${state.posX}% ${state.posY}%, ${stopsStr})`;
+        default:
+          return `linear-gradient(${state.angle}deg, ${stopsStr})`;
+      }
+    }
+
+    function updatePreview() {
+      const css = buildGradientCSS();
+      gradientPreview.style.background = css;
+      cssOutput.textContent = `background: ${css};`;
+
+      // Update angle indicator
+      angleIndicator.style.transform = `rotate(${state.angle}deg)`;
+
+      emitChange();
+    }
+
+    function emitChange() {
+      const css = buildGradientCSS();
+      emit('gradient.changed', {
+        type: state.type,
+        angle: state.angle,
+        posX: state.posX,
+        posY: state.posY,
+        stops: state.stops,
+        css: css
+      });
+    }
+
+    // ========================================
+    // RENDER COLOR STOPS
+    // ========================================
+    function renderStops() {
+      stopsContainer.innerHTML = '';
+
+      state.stops.forEach((stop, index) => {
+        const div = document.createElement('div');
+        div.className = 'color-stop';
+        div.innerHTML = `
+          <input type="color" value="${stop.color}" data-index="${index}">
+          <input type="range" min="0" max="100" value="${stop.position}" data-index="${index}">
+          <span class="position">${stop.position}%</span>
+          ${state.stops.length > 2 ? `<button class="remove-btn" data-index="${index}">×</button>` : ''}
+        `;
+        stopsContainer.appendChild(div);
+      });
+
+      // Attach events
+      stopsContainer.querySelectorAll('input[type="color"]').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.dataset.index);
+          state.stops[idx].color = e.target.value;
+          updatePreview();
+        });
+      });
+
+      stopsContainer.querySelectorAll('input[type="range"]').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.dataset.index);
+          state.stops[idx].position = parseInt(e.target.value);
+          e.target.nextElementSibling.textContent = `${state.stops[idx].position}%`;
+          updatePreview();
+        });
+      });
+
+      stopsContainer.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.dataset.index);
+          state.stops.splice(idx, 1);
+          renderStops();
+          updatePreview();
+        });
+      });
+    }
+
+    // ========================================
+    // RENDER PRESETS
+    // ========================================
+    function renderPresets() {
+      const grid = document.getElementById('presetGrid');
+      grid.innerHTML = '';
+
+      presets.forEach((preset, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.title = preset.name;
+
+        const stopsStr = preset.stops.map(s => `${s.color} ${s.position}%`).join(', ');
+        btn.style.background = `linear-gradient(135deg, ${stopsStr})`;
+
+        btn.addEventListener('click', () => {
+          state.stops = preset.stops.map(s => ({ ...s }));
+          renderStops();
+          updatePreview();
+          log(`Applied preset: ${preset.name}`);
+        });
+
+        grid.appendChild(btn);
+      });
+    }
+
+    // ========================================
+    // EVENT HANDLERS
+    // ========================================
+
+    // Type selection
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.type = btn.dataset.type;
+
+        // Show/hide relevant controls
+        if (state.type === 'linear') {
+          angleSection.style.display = 'block';
+          positionSection.style.display = 'none';
+        } else if (state.type === 'radial') {
+          angleSection.style.display = 'none';
+          positionSection.style.display = 'block';
+        } else {
+          angleSection.style.display = 'block';
+          positionSection.style.display = 'block';
+        }
+
+        updatePreview();
+        log(`Type: ${state.type}`);
+      });
+    });
+
+    // Angle slider
+    document.getElementById('angle').addEventListener('input', (e) => {
+      state.angle = parseInt(e.target.value);
+      document.getElementById('angleValue').textContent = `${state.angle}°`;
+      updatePreview();
+    });
+
+    // Position sliders
+    document.getElementById('posX').addEventListener('input', (e) => {
+      state.posX = parseInt(e.target.value);
+      document.getElementById('posXValue').textContent = `${state.posX}%`;
+      updatePreview();
+    });
+
+    document.getElementById('posY').addEventListener('input', (e) => {
+      state.posY = parseInt(e.target.value);
+      document.getElementById('posYValue').textContent = `${state.posY}%`;
+      updatePreview();
+    });
+
+    // Angle wheel interaction
+    const angleWheel = document.getElementById('angleWheel');
+    let isDragging = false;
+
+    function updateAngleFromMouse(e) {
+      const rect = angleWheel.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+      state.angle = Math.round((angle + 360) % 360);
+      document.getElementById('angle').value = state.angle;
+      document.getElementById('angleValue').textContent = `${state.angle}°`;
+      updatePreview();
+    }
+
+    angleWheel.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      updateAngleFromMouse(e);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (isDragging) updateAngleFromMouse(e);
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Add stop
+    document.getElementById('addStopBtn').addEventListener('click', () => {
+      if (state.stops.length >= 8) {
+        log('Maximum 8 color stops');
+        return;
+      }
+
+      // Find a position between existing stops
+      const positions = state.stops.map(s => s.position).sort((a, b) => a - b);
+      let newPos = 50;
+
+      for (let i = 0; i < positions.length - 1; i++) {
+        const gap = positions[i + 1] - positions[i];
+        if (gap > 20) {
+          newPos = positions[i] + Math.floor(gap / 2);
+          break;
+        }
+      }
+
+      // Random color
+      const colors = ['#ef4444', '#f97316', '#fbbf24', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+      const newColor = colors[Math.floor(Math.random() * colors.length)];
+
+      state.stops.push({ color: newColor, position: newPos });
+      renderStops();
+      updatePreview();
+    });
+
+    // Random
+    document.getElementById('randomBtn').addEventListener('click', () => {
+      const colors = ['#ef4444', '#f97316', '#fbbf24', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#a855f7'];
+      const numStops = 2 + Math.floor(Math.random() * 3);
+
+      state.stops = [];
+      for (let i = 0; i < numStops; i++) {
+        state.stops.push({
+          color: colors[Math.floor(Math.random() * colors.length)],
+          position: Math.round(i * 100 / (numStops - 1))
+        });
+      }
+
+      state.angle = Math.floor(Math.random() * 360);
+      document.getElementById('angle').value = state.angle;
+      document.getElementById('angleValue').textContent = `${state.angle}°`;
+
+      renderStops();
+      updatePreview();
+      log('Randomized gradient');
+    });
+
+    // Reverse
+    document.getElementById('reverseBtn').addEventListener('click', () => {
+      state.stops = state.stops.map(s => ({
+        color: s.color,
+        position: 100 - s.position
+      }));
+      renderStops();
+      updatePreview();
+      log('Reversed gradient');
+    });
+
+    // Copy CSS
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(cssOutput.textContent).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy CSS', 1500);
+      });
+    });
+
+    // Apply to Canvas
+    document.getElementById('applyBtn').addEventListener('click', () => {
+      const css = buildGradientCSS();
+      emit('gradient.apply', {
+        type: state.type,
+        css: css,
+        stops: state.stops
+      });
+      broadcast('background:gradient-changed', { css });
+      broadcast('brand:gradient-set', {
+        type: state.type,
+        stops: state.stops,
+        css: css
+      });
+      log('Applied gradient to canvas');
+    });
+
+    // ========================================
+    // WIDGET API
+    // ========================================
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Gradient Maker widget');
+
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'type.set':
+            const type = typeof event.payload === 'string' ? event.payload : event.payload?.type;
+            if (['linear', 'radial', 'conic'].includes(type)) {
+              state.type = type;
+              document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+              document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+              updatePreview();
+            }
+            break;
+
+          case 'colors.set':
+            if (Array.isArray(event.payload)) {
+              state.stops = event.payload;
+              renderStops();
+              updatePreview();
+            }
+            break;
+
+          case 'angle.set':
+            const angle = typeof event.payload === 'number' ? event.payload : event.payload?.angle;
+            if (typeof angle === 'number') {
+              state.angle = angle;
+              document.getElementById('angle').value = angle;
+              document.getElementById('angleValue').textContent = `${angle}°`;
+              updatePreview();
+            }
+            break;
+
+          case 'preset.apply':
+            const presetName = typeof event.payload === 'string' ? event.payload : event.payload?.preset;
+            const preset = presets.find(p => p.name.toLowerCase() === presetName?.toLowerCase());
+            if (preset) {
+              state.stops = preset.stops.map(s => ({ ...s }));
+              renderStops();
+              updatePreview();
+            }
+            break;
+
+          case 'gradient.export':
+            emit('gradient.exported', {
+              css: buildGradientCSS(),
+              config: { ...state }
+            });
+            break;
+
+          case 'brand:color-changed':
+            if (event.payload?.color && state.stops.length > 0) {
+              state.stops[0].color = event.payload.color;
+              renderStops();
+              updatePreview();
+            }
+            break;
+        }
+      });
+
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['color', 'background'],
+          canNest: false,
+          canBeNested: true
+        });
+      }
+
+      // Initialize
+      renderStops();
+      renderPresets();
+      updatePreview();
+
+      emit('widget.ready', { capabilities: ['gradient', 'background'] });
+      log('Gradient Maker widget ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

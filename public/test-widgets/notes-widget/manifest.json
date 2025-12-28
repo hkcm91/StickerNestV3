@@ -1,0 +1,31 @@
+{
+    "id": "notes-widget",
+    "name": "Task Notes",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "task-selected": {
+            "type": "event",
+            "description": "Receives selected task from project tracker"
+        },
+        "tasks-sync": {
+            "type": "event",
+            "description": "Receives task list sync"
+        }
+    },
+    "outputs": {
+        "task-note-added": {
+            "type": "event",
+            "description": "Emits when a note is added to a task"
+        },
+        "note-created": {
+            "type": "event",
+            "description": "Emits when any note is created"
+        }
+    }
+}

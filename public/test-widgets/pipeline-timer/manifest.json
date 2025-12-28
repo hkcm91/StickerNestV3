@@ -1,0 +1,22 @@
+{
+    "id": "pipeline-test-timer",
+    "name": "Pipeline Timer",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "description": "Test timer for multi-event pipeline validation - emits tick events",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "outputs": {
+        "tick": {
+            "type": "number",
+            "description": "Current tick count (0-100, loops)"
+        },
+        "tickEvent": {
+            "type": "event",
+            "description": "Tick event with full data"
+        }
+    }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "image-tool",
+  "name": "Image Tool",
+  "version": "1.0.0",
+  "description": "Adobe-style image tool for adding and editing images on the canvas in real-time with masks, filters, and adjustments",
+  "author": "StickerNest",
+  "category": "design",
+  "kind": "2d",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["image"],
+    "canCreate": ["image"],
+    "isDesignTool": true
+  },
+  "size": {
+    "width": 320,
+    "height": 700,
+    "minWidth": 280,
+    "maxWidth": 400
+  },
+  "inputs": {
+    "image.load": {
+      "type": "object",
+      "description": "Load an image from URL or data"
+    },
+    "entity:selected": {
+      "type": "object",
+      "description": "Entity selected on canvas"
+    },
+    "asset:image-selected": {
+      "type": "object",
+      "description": "Image selected from asset library"
+    }
+  },
+  "outputs": {
+    "image.style-changed": {
+      "type": "object",
+      "description": "Image style changed"
+    }
+  },
+  "broadcasts": {
+    "listens": [
+      "widget:selected",
+      "widget:deselected",
+      "entity:selected",
+      "selection:cleared",
+      "asset:image-selected"
+    ],
+    "emits": [
+      "canvas:add-image",
+      "canvas:style-changed"
+    ]
+  },
+  "tags": ["image", "photo", "design", "tool", "editor", "filter", "mask"]
+}

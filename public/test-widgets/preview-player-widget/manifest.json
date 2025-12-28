@@ -1,0 +1,52 @@
+{
+  "id": "preview-player-widget",
+  "name": "Preview Player",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Universal preview player for YouTube, images, and other widget content",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "preview": {
+      "type": "object",
+      "description": "Preview data from source widgets"
+    },
+    "imageSelected": {
+      "type": "object",
+      "description": "Image selection from gallery widget"
+    },
+    "videoChanged": {
+      "type": "object",
+      "description": "Video change from YouTube playlist"
+    },
+    "clear": {
+      "type": "trigger",
+      "description": "Clear current preview"
+    }
+  },
+  "outputs": {
+    "sourceChanged": {
+      "type": "object",
+      "description": "Emitted when preview source changes"
+    },
+    "previewLoaded": {
+      "type": "object",
+      "description": "Emitted when preview content is loaded"
+    }
+  },
+  "events": {
+    "listens": ["preview:set", "gallery:selected"],
+    "emits": ["preview:loaded"]
+  },
+  "size": {
+    "width": 400,
+    "height": 300,
+    "minWidth": 200,
+    "minHeight": 150,
+    "maxWidth": 1200,
+    "maxHeight": 900
+  }
+}

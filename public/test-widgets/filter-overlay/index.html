@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        /* The main container for effects */
+        #effect-container {
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through */
+            transition: backdrop-filter 0.1s ease;
+        }
+
+        /* Glitch animation keyframes */
+        @keyframes glitch-anim-1 {
+            0% { clip-path: inset(20% 0 80% 0); transform: translate(-2px, 1px); }
+            20% { clip-path: inset(60% 0 10% 0); transform: translate(2px, -1px); }
+            40% { clip-path: inset(40% 0 50% 0); transform: translate(-2px, 2px); }
+            60% { clip-path: inset(80% 0 5% 0); transform: translate(2px, -2px); }
+            80% { clip-path: inset(10% 0 70% 0); transform: translate(-1px, 1px); }
+            100% { clip-path: inset(30% 0 50% 0); transform: translate(1px, -1px); }
+        }
+
+        @keyframes glitch-anim-2 {
+            0% { clip-path: inset(10% 0 60% 0); transform: translate(2px, -1px); }
+            20% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, 2px); }
+            40% { clip-path: inset(30% 0 20% 0); transform: translate(2px, 1px); }
+            60% { clip-path: inset(10% 0 80% 0); transform: translate(-1px, -2px); }
+            80% { clip-path: inset(50% 0 30% 0); transform: translate(1px, 2px); }
+            100% { clip-path: inset(70% 0 10% 0); transform: translate(-2px, 1px); }
+        }
+
+        /* Glitch overlay layers */
+        .glitch-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            mix-blend-mode: hard-light;
+            background: transparent;
+        }
+
+        .glitch-active .glitch-layer {
+            display: block;
+        }
+
+        .glitch-layer::before,
+        .glitch-layer::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+        }
+
+        .glitch-active .glitch-layer::before {
+            background: rgba(255, 0, 0, 0.2);
+            animation: glitch-anim-1 0.3s infinite linear alternate-reverse;
+        }
+
+        .glitch-active .glitch-layer::after {
+            background: rgba(0, 0, 255, 0.2);
+            animation: glitch-anim-2 0.3s infinite linear alternate-reverse;
+        }
+
+        /* Scanlines */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.1) 50%,
+                rgba(0,0,0,0.1)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            display: none;
+        }
+
+        .scanlines-active .scanlines {
+            display: block;
+        }
+
+        /* Debug info (visible only when hovered or selected in edit mode) */
+        #debug-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: #0f0;
+            font-family: monospace;
+            padding: 5px;
+            font-size: 10px;
+            pointer-events: auto; /* Allow clicking debug info */
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="effect-container">
+        <div class="glitch-layer"></div>
+        <div class="scanlines"></div>
+    </div>
+    <div id="debug-info">Filter Overlay Ready</div>
+
+    <script>
+        const container = document.getElementById('effect-container');
+        const debug = document.getElementById('debug-info');
+
+        // Default state
+        let state = {
+            blur: 0,
+            brightness: 100,
+            contrast: 100,
+            hueRotate: 0,
+            invert: 0,
+            saturate: 100,
+            sepia: 0,
+            glitch: false,
+            scanlines: false
+        };
+
+        function updateFilters() {
+            // Apply backdrop-filter
+            const filters = [
+                `blur(${state.blur}px)`,
+                `brightness(${state.brightness}%)`,
+                `contrast(${state.contrast}%)`,
+                `hue-rotate(${state.hueRotate}deg)`,
+                `invert(${state.invert}%)`,
+                `saturate(${state.saturate}%)`,
+                `sepia(${state.sepia}%)`
+            ];
+            
+            container.style.backdropFilter = filters.join(' ');
+            container.style.webkitBackdropFilter = filters.join(' '); // Safari support
+
+            // Toggle classes
+            if (state.glitch) {
+                container.classList.add('glitch-active');
+            } else {
+                container.classList.remove('glitch-active');
+            }
+
+            if (state.scanlines) {
+                container.classList.add('scanlines-active');
+            } else {
+                container.classList.remove('scanlines-active');
+            }
+
+            // Update debug text
+            debug.textContent = JSON.stringify(state, null, 2);
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            window.WidgetAPI.log('Filter Overlay initialized');
+
+            // Listen for effect updates
+            // Expected payload: { blur: 5, glitch: true, ... } (partial updates allowed)
+            window.WidgetAPI.onEvent('effect:update', (event) => {
+                const params = event.payload;
+                if (!params) return;
+
+                // Merge params into state
+                Object.keys(params).forEach(key => {
+                    if (key in state) {
+                        state[key] = params[key];
+                    }
+                });
+
+                updateFilters();
+            });
+
+            // Also listen for generic 'modulate' events from synths
+            window.WidgetAPI.onEvent('modulate', (event) => {
+                // Example: map 'value' (0-1) to blur (0-20px)
+                if (event.payload.target === 'blur') {
+                    state.blur = event.payload.value * 20;
+                    updateFilters();
+                }
+            });
+            
+            // Initial update
+            updateFilters();
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

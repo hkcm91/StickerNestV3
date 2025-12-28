@@ -1,0 +1,41 @@
+{
+  "id": "buttonpad",
+  "name": "ButtonPad",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Configurable multi-button grid widget for triggering actions",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "io": {
+    "inputs": ["data.set", "ui.show", "ui.hide"],
+    "outputs": ["button.pressed", "ready"],
+    "entityTypes": []
+  },
+  "inputs": {
+    "config": {
+      "type": "object",
+      "description": "Button configuration: { buttons: [{ id, label, icon, color }], columns: number }"
+    },
+    "setButtons": {
+      "type": "array",
+      "description": "Array of button configurations"
+    }
+  },
+  "outputs": {
+    "buttonPressed": {
+      "type": "object",
+      "description": "Emitted when a button is pressed: { buttonId, label, index }"
+    },
+    "buttonReleased": {
+      "type": "object",
+      "description": "Emitted when a button is released"
+    }
+  },
+  "tags": ["control", "input", "streamdeck", "buttons"],
+  "author": "StickerNest"
+}
+

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprite Manager</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-tertiary: #0f3460;
+      --accent: #e94560;
+      --accent-hover: #ff6b6b;
+      --text-primary: #eee;
+      --text-secondary: #aaa;
+      --border: #333;
+      --success: #4ade80;
+      --warning: #fbbf24;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .btn {
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent);
+    }
+
+    .btn.active {
+      background: var(--accent);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-icon {
+      padding: 6px 8px;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel-header {
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow: auto;
+      padding: 8px;
+    }
+
+    /* Left panel - Sprite Sheet */
+    .left-panel {
+      width: 55%;
+    }
+
+    .sprite-canvas-container {
+      position: relative;
+      background: repeating-conic-gradient(#222 0% 25%, #333 0% 50%) 50% / 20px 20px;
+      border-radius: 4px;
+      overflow: hidden;
+      height: 200px;
+    }
+
+    .sprite-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      margin: auto;
+    }
+
+    .upload-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .upload-zone .icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone .text {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Frame config */
+    .config-section {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+    }
+
+    .config-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .config-row label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      width: 60px;
+    }
+
+    .config-row input {
+      flex: 1;
+      padding: 4px 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    /* Right panel - Animations */
+    .right-panel {
+      flex: 1;
+    }
+
+    .animation-list {
+      margin-bottom: 12px;
+    }
+
+    .animation-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .animation-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .animation-item.active {
+      background: var(--accent);
+    }
+
+    .animation-item .name {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .animation-item .frames {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    /* Preview */
+    .preview-section {
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .preview-canvas-container {
+      background: repeating-conic-gradient(#222 0% 25%, #333 0% 50%) 50% / 10px 10px;
+      border-radius: 4px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .preview-canvas {
+      max-width: 80px;
+      max-height: 80px;
+      image-rendering: pixelated;
+    }
+
+    .preview-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .preview-controls input[type="range"] {
+      width: 80px;
+    }
+
+    /* Frame grid */
+    .frame-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+      gap: 4px;
+      margin-top: 12px;
+    }
+
+    .frame-cell {
+      aspect-ratio: 1;
+      background: var(--bg-secondary);
+      border: 2px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .frame-cell:hover {
+      border-color: var(--accent-hover);
+    }
+
+    .frame-cell.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .frame-cell img {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+
+    .frame-cell .index {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    /* Create animation modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      width: 300px;
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .modal-row {
+      margin-bottom: 10px;
+    }
+
+    .modal-row label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .modal-row input, .modal-row select {
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    /* Status */
+    .status-bar {
+      padding: 4px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-title">🎨 Sprite Manager</span>
+    <button class="btn btn-icon" id="btnUpload" title="Upload Sprite Sheet">📤</button>
+    <button class="btn btn-icon" id="btnExport" title="Export Sprite Data">💾</button>
+    <button class="btn btn-icon" id="btnClear" title="Clear">🗑️</button>
+  </div>
+
+  <div class="main-content">
+    <div class="panel left-panel">
+      <div class="panel-header">Sprite Sheet</div>
+      <div class="panel-content">
+        <div class="upload-zone" id="uploadZone">
+          <div class="icon">📁</div>
+          <div class="text">Drop sprite sheet here or click to upload</div>
+        </div>
+        <div class="sprite-canvas-container" id="spriteContainer" style="display: none;">
+          <canvas id="spriteCanvas" class="sprite-canvas"></canvas>
+        </div>
+
+        <div class="config-section">
+          <div class="config-title">Frame Configuration</div>
+          <div class="config-grid">
+            <div class="config-row">
+              <label>Columns:</label>
+              <input type="number" id="frameCols" value="4" min="1" max="50">
+            </div>
+            <div class="config-row">
+              <label>Rows:</label>
+              <input type="number" id="frameRows" value="4" min="1" max="50">
+            </div>
+            <div class="config-row">
+              <label>Frame W:</label>
+              <input type="number" id="frameWidth" value="32" min="1">
+            </div>
+            <div class="config-row">
+              <label>Frame H:</label>
+              <input type="number" id="frameHeight" value="32" min="1">
+            </div>
+          </div>
+          <button class="btn" id="btnApplyConfig" style="width: 100%; margin-top: 8px;">Apply</button>
+        </div>
+
+        <div class="frame-grid" id="frameGrid"></div>
+      </div>
+    </div>
+
+    <div class="panel right-panel">
+      <div class="panel-header">Animations</div>
+      <div class="panel-content">
+        <button class="btn" id="btnNewAnimation" style="width: 100%; margin-bottom: 8px;">➕ New Animation</button>
+        <div class="animation-list" id="animationList"></div>
+
+        <div class="preview-section">
+          <div class="config-title">Preview</div>
+          <div class="preview-canvas-container">
+            <canvas id="previewCanvas" class="preview-canvas" width="64" height="64"></canvas>
+          </div>
+          <div class="preview-controls">
+            <button class="btn btn-icon" id="btnPrevFrame">⏮</button>
+            <button class="btn btn-icon" id="btnPlay">▶️</button>
+            <button class="btn btn-icon" id="btnNextFrame">⏭</button>
+            <span style="font-size: 11px; margin-left: 8px;">FPS:</span>
+            <input type="range" id="fpsSlider" min="1" max="30" value="12">
+            <span id="fpsValue" style="font-size: 11px; width: 20px;">12</span>
+          </div>
+        </div>
+
+        <div class="config-section" style="margin-top: 12px;">
+          <div class="config-title">Quick Presets</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            <button class="btn" data-preset="walk-4dir">Walk 4-Dir</button>
+            <button class="btn" data-preset="walk-8dir">Walk 8-Dir</button>
+            <button class="btn" data-preset="idle">Idle</button>
+            <button class="btn" data-preset="action">Action</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span id="statusLeft">No sprite loaded</span>
+    <span id="statusRight">Frames: 0</span>
+  </div>
+
+  <!-- Create Animation Modal -->
+  <div class="modal" id="animationModal">
+    <div class="modal-content">
+      <div class="modal-title">Create Animation</div>
+      <div class="modal-row">
+        <label>Name:</label>
+        <input type="text" id="animName" placeholder="e.g., walk_south">
+      </div>
+      <div class="modal-row">
+        <label>Frames (comma-separated indices):</label>
+        <input type="text" id="animFrames" placeholder="e.g., 0,1,2,3">
+      </div>
+      <div class="modal-row">
+        <label>FPS:</label>
+        <input type="number" id="animFPS" value="12" min="1" max="60">
+      </div>
+      <div class="modal-row">
+        <label>
+          <input type="checkbox" id="animLoop" checked> Loop
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="btnCancelAnim">Cancel</button>
+        <button class="btn" id="btnCreateAnim" style="background: var(--accent);">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*">
+
+  <script>
+    // ===== STATE =====
+    const state = {
+      spriteSheet: null, // Image element
+      spriteData: null,  // Base64 data
+      name: '',
+
+      // Frame config
+      cols: 4,
+      rows: 4,
+      frameWidth: 32,
+      frameHeight: 32,
+
+      // Frames
+      frames: [], // Array of canvas elements for each frame
+
+      // Animations
+      animations: new Map(),
+      currentAnimation: null,
+
+      // Preview
+      isPlaying: false,
+      currentFrameIndex: 0,
+      fps: 12,
+      playInterval: null,
+
+      // Selection
+      selectedFrames: new Set()
+    };
+
+    // ===== ELEMENTS =====
+    const uploadZone = document.getElementById('uploadZone');
+    const spriteContainer = document.getElementById('spriteContainer');
+    const spriteCanvas = document.getElementById('spriteCanvas');
+    const spriteCtx = spriteCanvas.getContext('2d');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const previewCtx = previewCanvas.getContext('2d');
+    const frameGrid = document.getElementById('frameGrid');
+    const animationList = document.getElementById('animationList');
+    const fileInput = document.getElementById('fileInput');
+
+    // ===== SPRITE LOADING =====
+    function loadSpriteSheet(imgSrc, name = 'sprite') {
+      const img = new Image();
+      img.onload = () => {
+        state.spriteSheet = img;
+        state.name = name;
+
+        // Auto-detect frame size if possible
+        if (img.width % state.cols === 0) {
+          state.frameWidth = Math.floor(img.width / state.cols);
+        }
+        if (img.height % state.rows === 0) {
+          state.frameHeight = Math.floor(img.height / state.rows);
+        }
+
+        // Update config inputs
+        document.getElementById('frameWidth').value = state.frameWidth;
+        document.getElementById('frameHeight').value = state.frameHeight;
+
+        // Show sprite
+        uploadZone.style.display = 'none';
+        spriteContainer.style.display = 'block';
+
+        renderSpriteSheet();
+        extractFrames();
+        updateStatus();
+
+        emit('spriteReady', getSpriteData());
+      };
+      img.src = imgSrc;
+      state.spriteData = imgSrc;
+    }
+
+    function renderSpriteSheet() {
+      if (!state.spriteSheet) return;
+
+      spriteCanvas.width = state.spriteSheet.width;
+      spriteCanvas.height = state.spriteSheet.height;
+      spriteCtx.drawImage(state.spriteSheet, 0, 0);
+
+      // Draw grid overlay
+      spriteCtx.strokeStyle = 'rgba(233, 69, 96, 0.5)';
+      spriteCtx.lineWidth = 1;
+
+      for (let col = 0; col <= state.cols; col++) {
+        const x = col * state.frameWidth;
+        spriteCtx.beginPath();
+        spriteCtx.moveTo(x, 0);
+        spriteCtx.lineTo(x, spriteCanvas.height);
+        spriteCtx.stroke();
+      }
+
+      for (let row = 0; row <= state.rows; row++) {
+        const y = row * state.frameHeight;
+        spriteCtx.beginPath();
+        spriteCtx.moveTo(0, y);
+        spriteCtx.lineTo(spriteCanvas.width, y);
+        spriteCtx.stroke();
+      }
+    }
+
+    function extractFrames() {
+      if (!state.spriteSheet) return;
+
+      state.frames = [];
+      frameGrid.innerHTML = '';
+
+      for (let row = 0; row < state.rows; row++) {
+        for (let col = 0; col < state.cols; col++) {
+          const index = row * state.cols + col;
+          const x = col * state.frameWidth;
+          const y = row * state.frameHeight;
+
+          // Create frame canvas
+          const frameCanvas = document.createElement('canvas');
+          frameCanvas.width = state.frameWidth;
+          frameCanvas.height = state.frameHeight;
+          const frameCtx = frameCanvas.getContext('2d');
+          frameCtx.drawImage(state.spriteSheet, x, y, state.frameWidth, state.frameHeight, 0, 0, state.frameWidth, state.frameHeight);
+
+          state.frames.push({
+            canvas: frameCanvas,
+            x, y,
+            width: state.frameWidth,
+            height: state.frameHeight,
+            index
+          });
+
+          // Create grid cell
+          const cell = document.createElement('div');
+          cell.className = 'frame-cell';
+          cell.dataset.index = index;
+          cell.title = `Frame ${index} (${col}, ${row})`;
+
+          const img = document.createElement('img');
+          img.src = frameCanvas.toDataURL();
+          cell.appendChild(img);
+
+          cell.onclick = (e) => toggleFrameSelection(index, e.shiftKey);
+          frameGrid.appendChild(cell);
+        }
+      }
+
+      updateStatus();
+    }
+
+    function toggleFrameSelection(index, additive) {
+      if (!additive) {
+        state.selectedFrames.clear();
+      }
+
+      if (state.selectedFrames.has(index)) {
+        state.selectedFrames.delete(index);
+      } else {
+        state.selectedFrames.add(index);
+      }
+
+      // Update visual selection
+      document.querySelectorAll('.frame-cell').forEach((cell, i) => {
+        cell.classList.toggle('selected', state.selectedFrames.has(i));
+      });
+
+      // Preview selected frame
+      if (state.selectedFrames.size === 1) {
+        renderPreviewFrame(Array.from(state.selectedFrames)[0]);
+      }
+
+      emit('frameSelected', {
+        indices: Array.from(state.selectedFrames),
+        frames: Array.from(state.selectedFrames).map(i => state.frames[i])
+      });
+    }
+
+    // ===== ANIMATION MANAGEMENT =====
+    function createAnimation(name, frameIndices, fps = 12, loop = true) {
+      const anim = {
+        name,
+        frames: frameIndices,
+        fps,
+        loop
+      };
+
+      state.animations.set(name, anim);
+      renderAnimationList();
+      emit('animationCreated', anim);
+
+      return anim;
+    }
+
+    function renderAnimationList() {
+      animationList.innerHTML = '';
+
+      for (const [name, anim] of state.animations) {
+        const item = document.createElement('div');
+        item.className = 'animation-item' + (state.currentAnimation === name ? ' active' : '');
+        item.innerHTML = `
+          <span class="name">${name}</span>
+          <span class="frames">${anim.frames.length} frames @ ${anim.fps}fps</span>
+          <button class="btn btn-icon" data-delete="${name}" style="padding: 2px 6px; margin-left: 4px;">🗑️</button>
+        `;
+        item.onclick = (e) => {
+          if (e.target.dataset.delete) {
+            state.animations.delete(e.target.dataset.delete);
+            renderAnimationList();
+          } else {
+            selectAnimation(name);
+          }
+        };
+        animationList.appendChild(item);
+      }
+    }
+
+    function selectAnimation(name) {
+      state.currentAnimation = name;
+      state.currentFrameIndex = 0;
+
+      const anim = state.animations.get(name);
+      if (anim) {
+        state.fps = anim.fps;
+        document.getElementById('fpsSlider').value = anim.fps;
+        document.getElementById('fpsValue').textContent = anim.fps;
+
+        // Highlight frames
+        state.selectedFrames = new Set(anim.frames);
+        document.querySelectorAll('.frame-cell').forEach((cell, i) => {
+          cell.classList.toggle('selected', anim.frames.includes(i));
+        });
+
+        renderPreviewFrame(anim.frames[0]);
+      }
+
+      renderAnimationList();
+    }
+
+    // ===== PREVIEW =====
+    function renderPreviewFrame(frameIndex) {
+      if (!state.frames[frameIndex]) return;
+
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+      const frame = state.frames[frameIndex];
+      const scale = Math.min(64 / frame.width, 64 / frame.height);
+
+      previewCtx.imageSmoothingEnabled = false;
+      previewCtx.drawImage(
+        frame.canvas,
+        (64 - frame.width * scale) / 2,
+        (64 - frame.height * scale) / 2,
+        frame.width * scale,
+        frame.height * scale
+      );
+    }
+
+    function playAnimation() {
+      if (!state.currentAnimation) return;
+
+      const anim = state.animations.get(state.currentAnimation);
+      if (!anim || anim.frames.length === 0) return;
+
+      state.isPlaying = true;
+      document.getElementById('btnPlay').textContent = '⏸';
+
+      clearInterval(state.playInterval);
+      state.playInterval = setInterval(() => {
+        state.currentFrameIndex = (state.currentFrameIndex + 1) % anim.frames.length;
+
+        if (!anim.loop && state.currentFrameIndex === 0) {
+          stopAnimation();
+          return;
+        }
+
+        renderPreviewFrame(anim.frames[state.currentFrameIndex]);
+      }, 1000 / state.fps);
+    }
+
+    function stopAnimation() {
+      state.isPlaying = false;
+      document.getElementById('btnPlay').textContent = '▶️';
+      clearInterval(state.playInterval);
+    }
+
+    function prevFrame() {
+      if (!state.currentAnimation) return;
+      const anim = state.animations.get(state.currentAnimation);
+      if (!anim) return;
+
+      state.currentFrameIndex = (state.currentFrameIndex - 1 + anim.frames.length) % anim.frames.length;
+      renderPreviewFrame(anim.frames[state.currentFrameIndex]);
+    }
+
+    function nextFrame() {
+      if (!state.currentAnimation) return;
+      const anim = state.animations.get(state.currentAnimation);
+      if (!anim) return;
+
+      state.currentFrameIndex = (state.currentFrameIndex + 1) % anim.frames.length;
+      renderPreviewFrame(anim.frames[state.currentFrameIndex]);
+    }
+
+    // ===== DATA EXPORT =====
+    function getSpriteData() {
+      return {
+        name: state.name,
+        spriteData: state.spriteData,
+        config: {
+          cols: state.cols,
+          rows: state.rows,
+          frameWidth: state.frameWidth,
+          frameHeight: state.frameHeight
+        },
+        animations: Object.fromEntries(state.animations),
+        totalFrames: state.frames.length
+      };
+    }
+
+    // ===== PRESETS =====
+    const presets = {
+      'walk-4dir': () => {
+        if (state.frames.length < 16) return;
+        createAnimation('walk_south', [0, 1, 2, 3], 8);
+        createAnimation('walk_west', [4, 5, 6, 7], 8);
+        createAnimation('walk_east', [8, 9, 10, 11], 8);
+        createAnimation('walk_north', [12, 13, 14, 15], 8);
+      },
+      'walk-8dir': () => {
+        if (state.frames.length < 32) return;
+        createAnimation('walk_s', [0, 1, 2, 3], 8);
+        createAnimation('walk_sw', [4, 5, 6, 7], 8);
+        createAnimation('walk_w', [8, 9, 10, 11], 8);
+        createAnimation('walk_nw', [12, 13, 14, 15], 8);
+        createAnimation('walk_n', [16, 17, 18, 19], 8);
+        createAnimation('walk_ne', [20, 21, 22, 23], 8);
+        createAnimation('walk_e', [24, 25, 26, 27], 8);
+        createAnimation('walk_se', [28, 29, 30, 31], 8);
+      },
+      'idle': () => {
+        createAnimation('idle', [0], 1);
+      },
+      'action': () => {
+        if (state.frames.length < 4) return;
+        createAnimation('action', [0, 1, 2, 3], 12, false);
+      }
+    };
+
+    // ===== EVENT HANDLERS =====
+    uploadZone.onclick = () => fileInput.click();
+
+    uploadZone.ondragover = (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    };
+
+    uploadZone.ondragleave = () => {
+      uploadZone.classList.remove('dragover');
+    };
+
+    uploadZone.ondrop = (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        loadFile(file);
+      }
+    };
+
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) loadFile(file);
+    };
+
+    function loadFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        loadSpriteSheet(e.target.result, file.name.replace(/\.[^/.]+$/, ''));
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById('btnUpload').onclick = () => fileInput.click();
+
+    document.getElementById('btnExport').onclick = () => {
+      const data = getSpriteData();
+      emit('spriteData', data);
+
+      // Download JSON
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.name || 'sprite'}-data.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    document.getElementById('btnClear').onclick = () => {
+      if (confirm('Clear sprite sheet?')) {
+        state.spriteSheet = null;
+        state.spriteData = null;
+        state.frames = [];
+        state.animations.clear();
+        frameGrid.innerHTML = '';
+        animationList.innerHTML = '';
+        previewCtx.clearRect(0, 0, 64, 64);
+
+        uploadZone.style.display = 'flex';
+        spriteContainer.style.display = 'none';
+
+        updateStatus();
+      }
+    };
+
+    document.getElementById('btnApplyConfig').onclick = () => {
+      state.cols = parseInt(document.getElementById('frameCols').value) || 4;
+      state.rows = parseInt(document.getElementById('frameRows').value) || 4;
+      state.frameWidth = parseInt(document.getElementById('frameWidth').value) || 32;
+      state.frameHeight = parseInt(document.getElementById('frameHeight').value) || 32;
+
+      renderSpriteSheet();
+      extractFrames();
+    };
+
+    document.getElementById('btnNewAnimation').onclick = () => {
+      // Pre-fill with selected frames
+      const selectedIndices = Array.from(state.selectedFrames).sort((a, b) => a - b);
+      document.getElementById('animFrames').value = selectedIndices.join(',');
+      document.getElementById('animationModal').classList.add('visible');
+    };
+
+    document.getElementById('btnCancelAnim').onclick = () => {
+      document.getElementById('animationModal').classList.remove('visible');
+    };
+
+    document.getElementById('btnCreateAnim').onclick = () => {
+      const name = document.getElementById('animName').value.trim();
+      const framesStr = document.getElementById('animFrames').value.trim();
+      const fps = parseInt(document.getElementById('animFPS').value) || 12;
+      const loop = document.getElementById('animLoop').checked;
+
+      if (!name) {
+        alert('Please enter an animation name');
+        return;
+      }
+
+      const frames = framesStr.split(',')
+        .map(s => parseInt(s.trim()))
+        .filter(n => !isNaN(n) && n >= 0 && n < state.frames.length);
+
+      if (frames.length === 0) {
+        alert('Please enter valid frame indices');
+        return;
+      }
+
+      createAnimation(name, frames, fps, loop);
+      selectAnimation(name);
+
+      document.getElementById('animationModal').classList.remove('visible');
+      document.getElementById('animName').value = '';
+      document.getElementById('animFrames').value = '';
+    };
+
+    document.getElementById('btnPlay').onclick = () => {
+      if (state.isPlaying) {
+        stopAnimation();
+      } else {
+        playAnimation();
+      }
+    };
+
+    document.getElementById('btnPrevFrame').onclick = prevFrame;
+    document.getElementById('btnNextFrame').onclick = nextFrame;
+
+    document.getElementById('fpsSlider').oninput = (e) => {
+      state.fps = parseInt(e.target.value);
+      document.getElementById('fpsValue').textContent = state.fps;
+
+      if (state.isPlaying) {
+        stopAnimation();
+        playAnimation();
+      }
+    };
+
+    // Preset buttons
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.onclick = () => {
+        const preset = btn.dataset.preset;
+        if (presets[preset]) presets[preset]();
+      };
+    });
+
+    // ===== STATUS =====
+    function updateStatus() {
+      const hasSprite = state.spriteSheet !== null;
+      document.getElementById('statusLeft').textContent = hasSprite
+        ? `${state.name} (${state.spriteSheet.width}×${state.spriteSheet.height})`
+        : 'No sprite loaded';
+      document.getElementById('statusRight').textContent = `Frames: ${state.frames.length} | Animations: ${state.animations.size}`;
+    }
+
+    // ===== MESSAGE HANDLING =====
+    function emit(type, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type, payload }
+      }, '*');
+    }
+
+    window.addEventListener('message', (event) => {
+      const { type, portName, value } = event.data;
+
+      if (type === 'pipeline:input') {
+        switch (portName) {
+          case 'loadSpriteSheet':
+            if (value.imageData) {
+              loadSpriteSheet(value.imageData, value.name || 'imported');
+              if (value.config) {
+                state.cols = value.config.cols || 4;
+                state.rows = value.config.rows || 4;
+                state.frameWidth = value.config.frameWidth || 32;
+                state.frameHeight = value.config.frameHeight || 32;
+                document.getElementById('frameCols').value = state.cols;
+                document.getElementById('frameRows').value = state.rows;
+                document.getElementById('frameWidth').value = state.frameWidth;
+                document.getElementById('frameHeight').value = state.frameHeight;
+              }
+            }
+            break;
+
+          case 'setFrameConfig':
+            state.cols = value.cols || state.cols;
+            state.rows = value.rows || state.rows;
+            state.frameWidth = value.frameWidth || state.frameWidth;
+            state.frameHeight = value.frameHeight || state.frameHeight;
+            document.getElementById('frameCols').value = state.cols;
+            document.getElementById('frameRows').value = state.rows;
+            document.getElementById('frameWidth').value = state.frameWidth;
+            document.getElementById('frameHeight').value = state.frameHeight;
+            renderSpriteSheet();
+            extractFrames();
+            break;
+
+          case 'addAnimation':
+            createAnimation(value.name, value.frames, value.fps || 12, value.loop !== false);
+            break;
+
+          case 'playAnimation':
+            selectAnimation(value);
+            playAnimation();
+            break;
+
+          case 'stopAnimation':
+            stopAnimation();
+            break;
+
+          case 'importFromGenerator':
+            if (value.imageData) {
+              loadSpriteSheet(value.imageData, value.name || 'generated');
+              if (value.animations) {
+                for (const [name, anim] of Object.entries(value.animations)) {
+                  createAnimation(name, anim.frames, anim.fps, anim.loop);
+                }
+              }
+            }
+            break;
+        }
+      }
+    });
+
+    // ===== INIT =====
+    window.parent.postMessage({ type: 'READY' }, '*');
+    updateStatus();
+  </script>
+</body>
+</html>

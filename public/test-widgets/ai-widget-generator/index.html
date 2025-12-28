@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        :root {
+            --bg-primary: #0f0f19;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #252542;
+            --bg-surface: #16162a;
+            --bg-elevated: #1e1e38;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --text-muted: #475569;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-muted: rgba(59, 130, 246, 0.15);
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --radius: 6px;
+            --radius-lg: 8px;
+            --font: system-ui, -apple-system, sans-serif;
+            --mono: 'SF Mono', Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 13px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+        .status-dot.error { background: var(--error); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: var(--radius);
+            transition: all 0.15s;
+        }
+
+        .tab:hover {
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+        }
+
+        .tab.active {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .panel {
+            display: none;
+        }
+        .panel.active {
+            display: block;
+        }
+
+        /* Form Elements */
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        textarea, input[type="text"], select {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 10px 12px;
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 13px;
+            transition: border-color 0.15s;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea::placeholder, input::placeholder {
+            color: var(--text-muted);
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        select option {
+            background: var(--bg-tertiary);
+        }
+
+        /* Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+        }
+
+        .card-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Chips */
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            padding: 6px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .chip.selected {
+            background: var(--accent-muted);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Event List */
+        .event-list {
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .event-item:hover {
+            background: var(--bg-elevated);
+        }
+
+        .event-item.selected {
+            background: var(--accent-muted);
+        }
+
+        .event-name {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .event-desc {
+            font-size: 10px;
+            color: var(--text-tertiary);
+        }
+
+        .event-type {
+            font-size: 9px;
+            padding: 2px 6px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            color: var(--text-tertiary);
+        }
+
+        /* Templates */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .template-item {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .template-item:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-elevated);
+        }
+
+        .template-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .template-desc {
+            font-size: 10px;
+            color: var(--text-tertiary);
+        }
+
+        .template-tag {
+            display: inline-block;
+            font-size: 9px;
+            padding: 2px 6px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-lg {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 13px;
+        }
+
+        /* Code Editor */
+        .code-editor {
+            width: 100%;
+            min-height: 200px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            color: var(--text-primary);
+            font-family: var(--mono);
+            font-size: 11px;
+            line-height: 1.6;
+            resize: vertical;
+            white-space: pre;
+        }
+
+        /* Preview */
+        .preview-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .preview-header {
+            padding: 10px 14px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .preview-frame {
+            width: 100%;
+            height: 280px;
+            border: none;
+            background: #fff;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+        }
+
+        /* Settings */
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        .setting-desc {
+            font-size: 10px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        /* Range input */
+        input[type="range"] {
+            width: 120px;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .alert-info {
+            background: var(--accent-muted);
+            color: var(--accent);
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+        /* Section */
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        /* Mini tabs */
+        .mini-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 12px;
+        }
+
+        .mini-tab {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: var(--radius);
+        }
+
+        .mini-tab:hover {
+            color: var(--text-secondary);
+        }
+
+        .mini-tab.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* Empty state */
+        .empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-tertiary);
+        }
+
+        .empty-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <div class="header-title">Widget Generator</div>
+                <div class="header-subtitle">Sticker Lab</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="status-dot" id="status-dot"></div>
+                <span style="font-size: 11px; color: var(--text-tertiary);" id="status-text">Ready</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="create" onclick="showTab('create')">Create</button>
+            <button class="tab" data-tab="templates" onclick="showTab('templates')">Templates</button>
+            <button class="tab" data-tab="events" onclick="showTab('events')">Events</button>
+            <button class="tab" data-tab="preview" onclick="showTab('preview')">Preview</button>
+            <button class="tab" data-tab="code" onclick="showTab('code')">Code</button>
+            <button class="tab" data-tab="settings" onclick="showTab('settings')">Settings</button>
+        </div>
+
+        <div class="content">
+            <!-- Create Panel -->
+            <div class="panel active" id="panel-create">
+                <div class="field">
+                    <label class="label">Description</label>
+                    <textarea id="description" placeholder="Describe what your widget should do...
+
+Example: A shadow controller with sliders for offset, blur, and color that applies to selected vector shapes"></textarea>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Entity Type</div>
+                    <div class="chip-group" id="category-chips"></div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="field">
+                        <label class="label">Complexity</label>
+                        <select id="quality">
+                            <option value="basic">Basic</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="label">Style</label>
+                        <select id="style">
+                            <option value="minimal">Minimal</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="detailed">Detailed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg" id="generate-btn" onclick="generateWidget()">
+                    Generate Widget
+                </button>
+            </div>
+
+            <!-- Templates Panel -->
+            <div class="panel" id="panel-templates">
+                <div class="section">
+                    <div class="section-title">Vector</div>
+                    <div class="template-grid">
+                        <div class="template-item" onclick="useTemplate('shadow')">
+                            <div class="template-name">Drop Shadow</div>
+                            <div class="template-desc">Shadow offset, blur, color controls</div>
+                            <span class="template-tag">vector</span>
+                        </div>
+                        <div class="template-item" onclick="useTemplate('gradient')">
+                            <div class="template-name">Gradient Fill</div>
+                            <div class="template-desc">Linear/radial gradient editor</div>
+                            <span class="template-tag">vector</span>
+                        </div>
+                        <div class="template-item" onclick="useTemplate('stroke')">
+                            <div class="template-name">Stroke Style</div>
+                            <div class="template-desc">Width, dash, cap controls</div>
+                            <span class="template-tag">vector</span>
+                        </div>
+                        <div class="template-item" onclick="useTemplate('transform')">
+                            <div class="template-name">Transform</div>
+                            <div class="template-desc">Scale, rotate, translate</div>
+                            <span class="template-tag">vector</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">3D</div>
+                    <div class="template-grid">
+                        <div class="template-item" onclick="useTemplate('3d-material')">
+                            <div class="template-name">Material Editor</div>
+                            <div class="template-desc">PBR material properties</div>
+                            <span class="template-tag">3d</span>
+                        </div>
+                        <div class="template-item" onclick="useTemplate('3d-light')">
+                            <div class="template-name">Light Control</div>
+                            <div class="template-desc">Type, color, intensity</div>
+                            <span class="template-tag">3d</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Audio</div>
+                    <div class="template-grid">
+                        <div class="template-item" onclick="useTemplate('audio-player')">
+                            <div class="template-name">Audio Player</div>
+                            <div class="template-desc">Play, pause, volume, progress</div>
+                            <span class="template-tag">audio</span>
+                        </div>
+                        <div class="template-item" onclick="useTemplate('audio-viz')">
+                            <div class="template-name">Visualizer</div>
+                            <div class="template-desc">Frequency spectrum display</div>
+                            <span class="template-tag">audio</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Data</div>
+                    <div class="template-grid">
+                        <div class="template-item" onclick="useTemplate('data-display')">
+                            <div class="template-name">Data Display</div>
+                            <div class="template-desc">JSON/value viewer</div>
+                            <span class="template-tag">data</span>
+                        </div>
+                        <div class="template-item" onclick="useTemplate('data-chart')">
+                            <div class="template-name">Chart</div>
+                            <div class="template-desc">Line, bar, pie charts</div>
+                            <span class="template-tag">data</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events Panel -->
+            <div class="panel" id="panel-events">
+                <div class="mini-tabs">
+                    <button class="mini-tab active" onclick="showEventTab('emit')">Emits</button>
+                    <button class="mini-tab" onclick="showEventTab('listen')">Listens</button>
+                </div>
+
+                <div class="alert alert-info" id="events-info">
+                    Select events your widget should emit or listen to
+                </div>
+
+                <div class="event-list" id="event-list"></div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="panel" id="panel-preview">
+                <div class="preview-container">
+                    <div class="preview-header">
+                        <span class="preview-title" id="preview-name">No widget generated</span>
+                        <button class="btn btn-secondary" onclick="refreshPreview()" style="padding: 6px 10px; font-size: 11px;">Refresh</button>
+                    </div>
+                    <iframe class="preview-frame" id="preview-frame" sandbox="allow-scripts"></iframe>
+                    <div class="preview-actions">
+                        <button class="btn btn-primary" onclick="addToCanvas()" id="add-btn" disabled>Add to Canvas</button>
+                        <button class="btn btn-success" onclick="saveToLibrary()" id="save-btn" disabled>Save to Library</button>
+                        <button class="btn btn-secondary" onclick="downloadWidget()" id="download-btn" disabled>Download</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Panel -->
+            <div class="panel" id="panel-code">
+                <div class="mini-tabs">
+                    <button class="mini-tab active" onclick="showCodeTab('html')">HTML</button>
+                    <button class="mini-tab" onclick="showCodeTab('manifest')">Manifest</button>
+                </div>
+
+                <textarea class="code-editor" id="code-editor" placeholder="Generate a widget first..."></textarea>
+
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="btn btn-primary" onclick="applyCode()">Apply Changes</button>
+                    <button class="btn btn-secondary" onclick="showTab('preview')">Preview</button>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div class="panel" id="panel-settings">
+                <div class="card">
+                    <div class="card-header">AI Model</div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Model</div>
+                            <div class="setting-desc">Choose the AI model for generation</div>
+                        </div>
+                        <select id="model-select" style="width: 160px;">
+                            <option value="llama-70b" selected>Llama 3.1 70B</option>
+                            <option value="llama-405b">Llama 3.1 405B</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Temperature</div>
+                            <div class="setting-desc">Higher = more creative</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" id="temperature" min="0" max="100" value="60">
+                            <span style="font-size: 11px; color: var(--text-tertiary); width: 30px;" id="temp-value">0.6</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Max Tokens</div>
+                            <div class="setting-desc">Output length limit</div>
+                        </div>
+                        <select id="max-tokens" style="width: 120px;">
+                            <option value="4000">4,000</option>
+                            <option value="8000" selected>8,000</option>
+                            <option value="16000">16,000</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        const state = {
+            currentTab: 'create',
+            selectedCategory: 'vector',
+            selectedEvents: { emit: [], listen: [] },
+            eventTab: 'emit',
+            codeTab: 'html',
+            currentWidget: null,
+            model: 'llama-70b'
+        };
+
+        // Categories
+        const CATEGORIES = [
+            { id: 'vector', name: 'Vector' },
+            { id: '3d', name: '3D' },
+            { id: 'audio', name: 'Audio' },
+            { id: 'video', name: 'Video' },
+            { id: 'data', name: 'Data' },
+            { id: 'ui', name: 'UI' }
+        ];
+
+        // Events by category
+        const EVENTS = {
+            vector: {
+                emit: [
+                    { name: 'vector:spawn-shape', desc: 'Create shape' },
+                    { name: 'vector:set-fill', desc: 'Set fill color' },
+                    { name: 'vector:set-stroke', desc: 'Set stroke' },
+                    { name: 'vector:set-shadow', desc: 'Apply shadow' },
+                    { name: 'vector:transform', desc: 'Transform shape' },
+                    { name: 'vector:delete-selected', desc: 'Delete selected' }
+                ],
+                listen: [
+                    { name: 'vector:selection-changed', desc: 'Selection changed' },
+                    { name: 'vector:entity-added', desc: 'Entity added' },
+                    { name: 'vector:entity-updated', desc: 'Entity updated' }
+                ]
+            },
+            '3d': {
+                emit: [
+                    { name: '3d:spawn-mesh', desc: 'Create mesh' },
+                    { name: '3d:set-material', desc: 'Set material' },
+                    { name: '3d:transform', desc: 'Transform mesh' }
+                ],
+                listen: [
+                    { name: '3d:selection-changed', desc: 'Selection changed' },
+                    { name: '3d:mesh-added', desc: 'Mesh added' }
+                ]
+            },
+            audio: {
+                emit: [
+                    { name: 'audio:play', desc: 'Play' },
+                    { name: 'audio:pause', desc: 'Pause' },
+                    { name: 'audio:set-volume', desc: 'Set volume' }
+                ],
+                listen: [
+                    { name: 'audio:time-update', desc: 'Time changed' },
+                    { name: 'audio:frequency-data', desc: 'Frequency data' }
+                ]
+            },
+            video: {
+                emit: [
+                    { name: 'video:play', desc: 'Play' },
+                    { name: 'video:pause', desc: 'Pause' },
+                    { name: 'video:set-filter', desc: 'Apply filter' }
+                ],
+                listen: [
+                    { name: 'video:time-update', desc: 'Time changed' },
+                    { name: 'video:frame', desc: 'New frame' }
+                ]
+            },
+            data: {
+                emit: [
+                    { name: 'pipeline:data', desc: 'Send data' },
+                    { name: 'store:set', desc: 'Store value' }
+                ],
+                listen: [
+                    { name: 'pipeline:data', desc: 'Receive data' },
+                    { name: 'store:value', desc: 'Value retrieved' }
+                ]
+            },
+            ui: {
+                emit: [
+                    { name: 'ui:click', desc: 'Click' },
+                    { name: 'ui:value-changed', desc: 'Value changed' }
+                ],
+                listen: [
+                    { name: 'ui:set-value', desc: 'Set value' }
+                ]
+            }
+        };
+
+        // Templates
+        const TEMPLATES = {
+            shadow: {
+                description: 'A drop shadow controller with sliders for offset X, offset Y, blur radius, and a color picker. Applies shadow to selected vector shapes.',
+                category: 'vector',
+                events: { emit: ['vector:set-shadow'], listen: ['vector:selection-changed'] }
+            },
+            gradient: {
+                description: 'A gradient editor with linear/radial toggle, angle control, and color stop pickers. Applies gradient fills to selected shapes.',
+                category: 'vector',
+                events: { emit: ['vector:set-gradient'], listen: ['vector:selection-changed'] }
+            },
+            stroke: {
+                description: 'Stroke style controls with width slider, dash array input, line cap selector (butt/round/square), and color picker.',
+                category: 'vector',
+                events: { emit: ['vector:set-stroke'], listen: ['vector:selection-changed'] }
+            },
+            transform: {
+                description: 'Transform controls with numeric inputs for scale X/Y, rotation degrees, and translate X/Y.',
+                category: 'vector',
+                events: { emit: ['vector:transform'], listen: ['vector:selection-changed'] }
+            },
+            '3d-material': {
+                description: 'PBR material editor with color picker, metalness slider (0-1), and roughness slider (0-1).',
+                category: '3d',
+                events: { emit: ['3d:set-material'], listen: ['3d:selection-changed'] }
+            },
+            '3d-light': {
+                description: 'Light controller with type selector (point/directional/spot), color picker, and intensity slider.',
+                category: '3d',
+                events: { emit: ['3d:set-light-intensity', '3d:set-light-color'], listen: ['3d:selection-changed'] }
+            },
+            'audio-player': {
+                description: 'Audio player with play/pause button, progress bar, volume slider, and time display.',
+                category: 'audio',
+                events: { emit: ['audio:play', 'audio:pause', 'audio:set-volume'], listen: ['audio:time-update'] }
+            },
+            'audio-viz': {
+                description: 'Audio visualizer showing frequency bars with color and sensitivity controls.',
+                category: 'audio',
+                events: { emit: [], listen: ['audio:frequency-data'] }
+            },
+            'data-display': {
+                description: 'Data display widget showing incoming pipeline data with JSON formatting.',
+                category: 'data',
+                events: { emit: [], listen: ['pipeline:data'] }
+            },
+            'data-chart': {
+                description: 'Chart widget with type selector (line/bar/pie) displaying pipeline data.',
+                category: 'data',
+                events: { emit: [], listen: ['pipeline:data'] }
+            }
+        };
+
+        // Initialize
+        function init() {
+            renderCategories();
+            renderEvents();
+
+            // Temperature display
+            document.getElementById('temperature').addEventListener('input', (e) => {
+                document.getElementById('temp-value').textContent = (e.target.value / 100).toFixed(1);
+            });
+        }
+
+        // Navigation
+        function showTab(tabId) {
+            state.currentTab = tabId;
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+            document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
+        }
+
+        // Categories
+        function renderCategories() {
+            const container = document.getElementById('category-chips');
+            container.innerHTML = CATEGORIES.map(cat =>
+                `<div class="chip ${state.selectedCategory === cat.id ? 'selected' : ''}" onclick="selectCategory('${cat.id}')">${cat.name}</div>`
+            ).join('');
+        }
+
+        function selectCategory(catId) {
+            state.selectedCategory = catId;
+            renderCategories();
+            renderEvents();
+        }
+
+        // Events
+        function showEventTab(tab) {
+            state.eventTab = tab;
+            document.querySelectorAll('#panel-events .mini-tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'emit' && i === 0) || (tab === 'listen' && i === 1));
+            });
+            renderEvents();
+        }
+
+        function renderEvents() {
+            const events = EVENTS[state.selectedCategory]?.[state.eventTab] || [];
+            const container = document.getElementById('event-list');
+            container.innerHTML = events.map(evt => `
+                <div class="event-item ${state.selectedEvents[state.eventTab].includes(evt.name) ? 'selected' : ''}"
+                     onclick="toggleEvent('${evt.name}')">
+                    <span class="event-type">${state.eventTab}</span>
+                    <span class="event-name">${evt.name}</span>
+                    <span class="event-desc">${evt.desc}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleEvent(name) {
+            const list = state.selectedEvents[state.eventTab];
+            const idx = list.indexOf(name);
+            if (idx >= 0) list.splice(idx, 1);
+            else list.push(name);
+            renderEvents();
+        }
+
+        // Templates
+        function useTemplate(id) {
+            const template = TEMPLATES[id];
+            if (!template) return;
+            document.getElementById('description').value = template.description;
+            state.selectedCategory = template.category;
+            state.selectedEvents = { emit: [...(template.events.emit || [])], listen: [...(template.events.listen || [])] };
+            renderCategories();
+            showTab('create');
+        }
+
+        // Code editor
+        function showCodeTab(tab) {
+            state.codeTab = tab;
+            document.querySelectorAll('#panel-code .mini-tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'html' && i === 0) || (tab === 'manifest' && i === 1));
+            });
+            updateCodeEditor();
+        }
+
+        function updateCodeEditor() {
+            const editor = document.getElementById('code-editor');
+            if (!state.currentWidget) {
+                editor.value = '';
+                return;
+            }
+            editor.value = state.codeTab === 'html'
+                ? state.currentWidget.html || ''
+                : JSON.stringify(state.currentWidget.manifest || {}, null, 2);
+        }
+
+        function applyCode() {
+            if (!state.currentWidget) return;
+            const editor = document.getElementById('code-editor');
+            if (state.codeTab === 'html') {
+                state.currentWidget.html = editor.value;
+            } else {
+                try {
+                    state.currentWidget.manifest = JSON.parse(editor.value);
+                } catch (e) {
+                    alert('Invalid JSON');
+                    return;
+                }
+            }
+            refreshPreview();
+        }
+
+        // Preview
+        function refreshPreview() {
+            if (!state.currentWidget) return;
+            document.getElementById('preview-frame').srcdoc = state.currentWidget.html;
+            document.getElementById('preview-name').textContent = state.currentWidget.name || 'Generated Widget';
+        }
+
+        function loadPreview(widget) {
+            state.currentWidget = widget;
+            refreshPreview();
+            document.getElementById('add-btn').disabled = false;
+            document.getElementById('save-btn').disabled = false;
+            document.getElementById('download-btn').disabled = false;
+            showTab('preview');
+        }
+
+        // Actions
+        function addToCanvas() {
+            if (!state.currentWidget) return;
+            emit('widget:add-generated', state.currentWidget);
+        }
+
+        function saveToLibrary() {
+            if (!state.currentWidget) return;
+            emit('widget:save-to-library', state.currentWidget);
+        }
+
+        function downloadWidget() {
+            if (!state.currentWidget) return;
+            const id = state.currentWidget.id || 'widget';
+            downloadFile(`${id}.html`, state.currentWidget.html);
+            setTimeout(() => downloadFile(`${id}.manifest.json`, JSON.stringify(state.currentWidget.manifest, null, 2)), 100);
+        }
+
+        function downloadFile(name, content) {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        // Generate
+        async function generateWidget() {
+            const description = document.getElementById('description').value.trim();
+            if (!description) {
+                alert('Please enter a description');
+                return;
+            }
+
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Generating...';
+
+            document.getElementById('status-dot').classList.remove('error');
+            document.getElementById('status-text').textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/api/widget-generator', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requests: [{
+                            description,
+                            mode: 'new',
+                            quality: document.getElementById('quality').value,
+                            style: document.getElementById('style').value,
+                            context: {
+                                category: state.selectedCategory,
+                                events: state.selectedEvents
+                            }
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.errors?.length > 0) throw new Error(data.errors[0]);
+
+                if (data.widgets?.length > 0) {
+                    loadPreview(data.widgets[0]);
+                    document.getElementById('status-text').textContent = 'Generated';
+                }
+            } catch (error) {
+                document.getElementById('status-dot').classList.add('error');
+                document.getElementById('status-text').textContent = 'Error';
+                alert('Generation failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Widget';
+            }
+        }
+
+        // Communication
+        function emit(type, payload) {
+            window.parent.postMessage({ type: 'widget:emit', payload: { type, payload } }, '*');
+        }
+
+        window.addEventListener('message', (e) => {
+            console.log('[Widget Generator]', e.data);
+        });
+
+        // Ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+        init();
+    </script>
+</body>
+</html>
+<!-- Build trigger 1764478513 -->

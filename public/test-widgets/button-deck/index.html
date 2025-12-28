@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-accent-primary: #8b5cf6;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+
+      --deck-button-bg: var(--sn-bg-tertiary);
+      --deck-button-text: var(--sn-text-primary);
+      --deck-button-active: var(--sn-accent-primary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--sn-bg-primary);
+      color: var(--sn-text-primary);
+      min-height: 100vh;
+      padding: 12px;
+    }
+
+    .deck-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      height: 100%;
+    }
+
+    .deck-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: var(--sn-bg-secondary);
+      border-radius: var(--sn-radius-md);
+      font-size: 12px;
+    }
+
+    .deck-title {
+      font-weight: 600;
+      color: var(--sn-accent-primary);
+    }
+
+    .deck-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .control-btn {
+      padding: 4px 8px;
+      background: var(--sn-bg-tertiary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: 4px;
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .control-btn:hover {
+      background: var(--sn-accent-primary);
+      color: white;
+    }
+
+    .deck-grid {
+      display: grid;
+      gap: var(--deck-gap, 8px);
+      flex: 1;
+      padding: 8px;
+      background: var(--sn-bg-secondary);
+      border-radius: var(--sn-radius-md);
+      overflow: auto;
+    }
+
+    .deck-button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: var(--deck-button-bg);
+      border: 2px solid transparent;
+      border-radius: var(--sn-radius-md);
+      color: var(--deck-button-text);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      padding: 8px;
+      min-height: 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .deck-button:hover {
+      border-color: var(--deck-button-active);
+      transform: scale(1.02);
+    }
+
+    .deck-button:active {
+      background: var(--deck-button-active);
+      transform: scale(0.95);
+    }
+
+    .deck-button.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .deck-button.disabled:hover {
+      transform: none;
+      border-color: transparent;
+    }
+
+    .button-icon {
+      font-size: 20px;
+    }
+
+    .button-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-align: center;
+      word-break: break-word;
+      max-width: 100%;
+    }
+
+    .button-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: var(--sn-accent-primary);
+      color: white;
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 8px;
+      min-width: 14px;
+      text-align: center;
+    }
+
+    .add-button {
+      border: 2px dashed var(--sn-border-primary);
+      background: transparent;
+      color: var(--sn-text-tertiary);
+      font-size: 24px;
+    }
+
+    .add-button:hover {
+      border-color: var(--sn-accent-primary);
+      color: var(--sn-accent-primary);
+    }
+
+    /* Edit mode */
+    .edit-mode .deck-button::after {
+      content: '✎';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      font-size: 10px;
+      color: var(--sn-text-tertiary);
+    }
+
+    /* Status indicator */
+    .status {
+      font-size: 10px;
+      color: var(--sn-text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="deck-container">
+    <div class="deck-header">
+      <span class="deck-title">Button Deck</span>
+      <div class="deck-controls">
+        <button class="control-btn" onclick="toggleEditMode()">Edit</button>
+        <button class="control-btn" onclick="addButton()">+ Add</button>
+      </div>
+    </div>
+    <div id="deckGrid" class="deck-grid"></div>
+    <div class="status" id="status">Ready</div>
+  </div>
+
+  <script>
+    // State
+    let buttons = [];
+    let editMode = false;
+    let pressCount = 0;
+    let config = {
+      columns: 4,
+      rows: 3,
+      buttonSize: 60,
+      gap: 8
+    };
+
+    // Default button templates
+    const defaultButtons = [
+      { id: 'play', icon: '▶️', label: 'Play', eventTag: 'media.play', payload: {} },
+      { id: 'pause', icon: '⏸️', label: 'Pause', eventTag: 'media.pause', payload: {} },
+      { id: 'stop', icon: '⏹️', label: 'Stop', eventTag: 'media.stop', payload: {} },
+      { id: 'next', icon: '⏭️', label: 'Next', eventTag: 'media.next', payload: {} },
+      { id: 'alert', icon: '🔔', label: 'Alert', eventTag: 'notification.show', payload: { message: 'Alert!' } },
+      { id: 'save', icon: '💾', label: 'Save', eventTag: 'action.save', payload: {} },
+      { id: 'refresh', icon: '🔄', label: 'Refresh', eventTag: 'action.refresh', payload: {} },
+      { id: 'toggle', icon: '🔘', label: 'Toggle', eventTag: 'state.toggle', payload: { key: 'active' } },
+    ];
+
+    // DOM elements
+    const deckGrid = document.getElementById('deckGrid');
+    const statusEl = document.getElementById('status');
+
+    // Emit helper
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function log(msg) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.log(msg);
+      }
+      console.log('[ButtonDeck]', msg);
+    }
+
+    // Render the deck
+    function render() {
+      deckGrid.style.gridTemplateColumns = `repeat(${config.columns}, 1fr)`;
+      deckGrid.style.setProperty('--deck-gap', `${config.gap}px`);
+      deckGrid.innerHTML = '';
+
+      buttons.forEach((btn, index) => {
+        const el = document.createElement('button');
+        el.className = `deck-button ${btn.disabled ? 'disabled' : ''}`;
+        el.innerHTML = `
+          ${btn.icon ? `<span class="button-icon">${btn.icon}</span>` : ''}
+          <span class="button-label">${btn.label || btn.id}</span>
+          ${btn.badge ? `<span class="button-badge">${btn.badge}</span>` : ''}
+        `;
+
+        if (!btn.disabled) {
+          el.addEventListener('mousedown', () => handleButtonPress(btn, index));
+          el.addEventListener('mouseup', () => handleButtonRelease(btn, index));
+          el.addEventListener('mouseleave', () => handleButtonRelease(btn, index));
+        }
+
+        if (editMode) {
+          el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            editButton(index);
+          });
+        }
+
+        deckGrid.appendChild(el);
+      });
+
+      // Add "+" button if in edit mode
+      if (editMode || buttons.length < config.columns * config.rows) {
+        const addEl = document.createElement('button');
+        addEl.className = 'deck-button add-button';
+        addEl.innerHTML = '+';
+        addEl.onclick = addButton;
+        deckGrid.appendChild(addEl);
+      }
+    }
+
+    // Button handlers
+    function handleButtonPress(btn, index) {
+      if (btn.disabled) return;
+
+      pressCount++;
+      statusEl.textContent = `Press #${pressCount}: ${btn.label || btn.id}`;
+
+      emit('button.pressed', {
+        buttonId: btn.id,
+        label: btn.label,
+        eventTag: btn.eventTag,
+        payload: btn.payload || {},
+        index,
+        pressCount
+      });
+
+      // Also emit the custom event tag if defined
+      if (btn.eventTag) {
+        emit(btn.eventTag, btn.payload || {});
+      }
+
+      log(`Button pressed: ${btn.id} -> ${btn.eventTag}`);
+    }
+
+    function handleButtonRelease(btn, index) {
+      if (btn.disabled) return;
+
+      emit('button.released', {
+        buttonId: btn.id,
+        label: btn.label,
+        index
+      });
+    }
+
+    // Add a new button
+    function addButton() {
+      const id = `btn_${Date.now().toString(36)}`;
+      const newBtn = {
+        id,
+        icon: '🔘',
+        label: `Button ${buttons.length + 1}`,
+        eventTag: 'custom.event',
+        payload: {},
+        disabled: false
+      };
+
+      buttons.push(newBtn);
+      render();
+      log(`Added button: ${id}`);
+    }
+
+    // Edit a button
+    function editButton(index) {
+      const btn = buttons[index];
+      const newLabel = prompt('Button label:', btn.label);
+      if (newLabel !== null) {
+        btn.label = newLabel;
+      }
+      const newEventTag = prompt('Event tag:', btn.eventTag);
+      if (newEventTag !== null) {
+        btn.eventTag = newEventTag;
+      }
+      render();
+    }
+
+    // Toggle edit mode
+    function toggleEditMode() {
+      editMode = !editMode;
+      document.querySelector('.deck-container').classList.toggle('edit-mode', editMode);
+      statusEl.textContent = editMode ? 'Edit Mode - Right-click to edit buttons' : 'Ready';
+      render();
+    }
+
+    // Initialize
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Button Deck');
+
+      // Load default buttons
+      buttons = [...defaultButtons];
+      render();
+
+      // Listen for configuration events
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'config.setButtons':
+            if (Array.isArray(event.payload?.buttons)) {
+              buttons = event.payload.buttons;
+              render();
+              log(`Loaded ${buttons.length} buttons from config`);
+            }
+            break;
+
+          case 'button.trigger':
+            if (event.payload?.buttonId) {
+              const btn = buttons.find(b => b.id === event.payload.buttonId);
+              if (btn) {
+                handleButtonPress(btn, buttons.indexOf(btn));
+              }
+            }
+            break;
+
+          case 'button.setEnabled':
+            if (event.payload?.buttonId !== undefined) {
+              const btn = buttons.find(b => b.id === event.payload.buttonId);
+              if (btn) {
+                btn.disabled = !event.payload.enabled;
+                render();
+              }
+            }
+            break;
+
+          case 'button.setLabel':
+            if (event.payload?.buttonId && event.payload?.label) {
+              const btn = buttons.find(b => b.id === event.payload.buttonId);
+              if (btn) {
+                btn.label = event.payload.label;
+                render();
+              }
+            }
+            break;
+        }
+      });
+
+      // Emit ready
+      emit('deck.ready', { buttonCount: buttons.length });
+      log('Button Deck ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

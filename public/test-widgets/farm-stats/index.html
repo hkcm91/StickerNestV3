@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-align: center;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 10px;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+        .harvest-log {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .harvest-log h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .log-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 11px;
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-crop { display: flex; align-items: center; gap: 5px; }
+        .log-quality {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+        }
+        .log-quality.excellent { background: #22c55e; }
+        .log-quality.good { background: #eab308; }
+        .no-harvests {
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+            text-align: center;
+            padding: 20px;
+        }
+        .buy-section {
+            margin-top: 10px;
+            text-align: center;
+        }
+        .buy-btn {
+            padding: 8px 16px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .buy-btn:hover { background: #16a34a; transform: scale(1.05); }
+        .buy-btn:active { transform: scale(0.95); }
+        .coins { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <h3>Farm Stats</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="totalHarvests">0</div>
+            <div class="stat-label">Harvests</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value coins" id="coins">100</div>
+            <div class="stat-label">Coins</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="excellent">0</div>
+            <div class="stat-label">Excellent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="bestCrop">-</div>
+            <div class="stat-label">Best Crop</div>
+        </div>
+    </div>
+
+    <div class="harvest-log">
+        <h4>Recent Harvests</h4>
+        <div id="logEntries">
+            <div class="no-harvests">No harvests yet - start planting!</div>
+        </div>
+    </div>
+
+    <div class="buy-section">
+        <button class="buy-btn" onclick="buySeeds()">Buy Seeds (10 coins)</button>
+    </div>
+
+    <script>
+        let state = {
+            harvests: [],
+            coins: 100,
+            cropCounts: {}
+        };
+
+        const CROP_VALUES = {
+            tomato: 15,
+            carrot: 10,
+            corn: 20,
+            wheat: 8,
+            strawberry: 18
+        };
+
+        function updateDisplay() {
+            document.getElementById('totalHarvests').textContent = state.harvests.length;
+            document.getElementById('coins').textContent = state.coins;
+            document.getElementById('excellent').textContent = state.harvests.filter(h => h.quality === 'excellent').length;
+
+            // Find best crop
+            let bestCrop = '-';
+            let maxCount = 0;
+            for (const [crop, count] of Object.entries(state.cropCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    bestCrop = crop.charAt(0).toUpperCase() + crop.slice(1);
+                }
+            }
+            document.getElementById('bestCrop').textContent = bestCrop;
+
+            // Update log
+            const logEl = document.getElementById('logEntries');
+            if (state.harvests.length === 0) {
+                logEl.innerHTML = '<div class="no-harvests">No harvests yet - start planting!</div>';
+            } else {
+                logEl.innerHTML = state.harvests
+                    .slice(-5)
+                    .reverse()
+                    .map(h => `
+                        <div class="log-entry">
+                            <span class="log-crop">${h.emoji} ${h.crop}</span>
+                            <span class="log-quality ${h.quality}">${h.quality}</span>
+                        </div>
+                    `).join('');
+            }
+        }
+
+        function recordHarvest(data) {
+            const { crop, emoji, quality } = data;
+
+            state.harvests.push({ crop, emoji, quality, time: Date.now() });
+            state.cropCounts[crop] = (state.cropCounts[crop] || 0) + 1;
+
+            // Award coins
+            let baseValue = CROP_VALUES[crop] || 10;
+            if (quality === 'excellent') baseValue *= 1.5;
+            state.coins += Math.floor(baseValue);
+
+            updateDisplay();
+        }
+
+        function buySeeds() {
+            if (state.coins < 10) return;
+
+            state.coins -= 10;
+            updateDisplay();
+
+            // Random seed type
+            const types = ['tomato', 'carrot', 'corn', 'wheat', 'strawberry'];
+            const randomType = types[Math.floor(Math.random() * types.length)];
+
+            // Emit purchase event
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: 'farm:purchase-seeds',
+                    payload: {
+                        seedType: randomType,
+                        amount: 3
+                    }
+                }
+            }, '*');
+        }
+
+        // Listen for messages
+        window.addEventListener('message', (event) => {
+            const { type, payload } = event.data || {};
+            if (type === 'EVENT') {
+                if (payload?.type === 'farm:harvest') {
+                    recordHarvest(payload.payload);
+                }
+            }
+        });
+
+        // Send ready message
+        window.parent.postMessage({ type: 'READY' }, '*');
+        updateDisplay();
+    </script>
+</body>
+</html>

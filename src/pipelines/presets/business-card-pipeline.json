@@ -1,0 +1,124 @@
+{
+  "id": "business-card-generator",
+  "name": "Business Card Generator Pipeline",
+  "description": "Complete AI-powered business card generation flow with wizard UI",
+  "version": "1.0.0",
+  "category": "design",
+  "tags": ["business-card", "ai", "generator", "wizard"],
+
+  "nodes": [
+    {
+      "id": "wizard",
+      "widgetId": "stickernest.wizard-controller",
+      "position": { "x": 100, "y": 200 },
+      "config": {
+        "projectType": "business-card"
+      }
+    },
+    {
+      "id": "template-engine",
+      "widgetId": "stickernest.template-engine",
+      "position": { "x": 400, "y": 100 },
+      "config": {}
+    },
+    {
+      "id": "image-gen",
+      "widgetId": "stickernest.ai-image-generator",
+      "position": { "x": 400, "y": 250 },
+      "config": {
+        "provider": "replicate",
+        "model": "flux-schnell"
+      }
+    },
+    {
+      "id": "compositor",
+      "widgetId": "stickernest.compositor",
+      "position": { "x": 400, "y": 400 },
+      "config": {}
+    }
+  ],
+
+  "connections": [
+    {
+      "id": "conn-1",
+      "sourceNodeId": "wizard",
+      "sourcePortId": "data.collected",
+      "targetNodeId": "template-engine",
+      "targetPortId": "user.data"
+    },
+    {
+      "id": "conn-2",
+      "sourceNodeId": "wizard",
+      "sourcePortId": "generate.request",
+      "targetNodeId": "template-engine",
+      "targetPortId": "trigger.process"
+    },
+    {
+      "id": "conn-3",
+      "sourceNodeId": "template-engine",
+      "sourcePortId": "prompt.ready",
+      "targetNodeId": "image-gen",
+      "targetPortId": "prompt.generate"
+    },
+    {
+      "id": "conn-4",
+      "sourceNodeId": "template-engine",
+      "sourcePortId": "mask.ready",
+      "targetNodeId": "image-gen",
+      "targetPortId": "mask.input"
+    },
+    {
+      "id": "conn-5",
+      "sourceNodeId": "image-gen",
+      "sourcePortId": "image.generated",
+      "targetNodeId": "compositor",
+      "targetPortId": "image.base"
+    },
+    {
+      "id": "conn-6",
+      "sourceNodeId": "template-engine",
+      "sourcePortId": "layout.ready",
+      "targetNodeId": "compositor",
+      "targetPortId": "layout.zones"
+    },
+    {
+      "id": "conn-7",
+      "sourceNodeId": "wizard",
+      "sourcePortId": "data.collected",
+      "targetNodeId": "compositor",
+      "targetPortId": "user.data"
+    },
+    {
+      "id": "conn-8",
+      "sourceNodeId": "image-gen",
+      "sourcePortId": "image.batch",
+      "targetNodeId": "wizard",
+      "targetPortId": "generation.complete"
+    },
+    {
+      "id": "conn-9",
+      "sourceNodeId": "compositor",
+      "sourcePortId": "image.composed",
+      "targetNodeId": "wizard",
+      "targetPortId": "generation.complete"
+    }
+  ],
+
+  "uiLayout": {
+    "wizardPosition": "center",
+    "automationVisible": false,
+    "theme": "light"
+  },
+
+  "metadata": {
+    "author": "StickerNest",
+    "createdAt": "2024-01-01T00:00:00Z",
+    "reusableFor": [
+      "business-card",
+      "tarot-card",
+      "birthday-card",
+      "flyer",
+      "poster"
+    ]
+  }
+}

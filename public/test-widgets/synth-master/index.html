@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #222;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .header {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 80px;
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+
+        input[type="range"] {
+            width: 60%;
+        }
+
+        .value-display {
+            width: 30px;
+            text-align: right;
+            color: #0f0;
+        }
+
+        .target-select {
+            margin-top: 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 4px;
+            width: 100%;
+        }
+
+        .status-led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-led.active {
+            background: #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <span class="status-led" id="led"></span>
+        LFO Master
+    </div>
+
+    <canvas id="scope"></canvas>
+
+    <div class="controls">
+        <div class="control-row">
+            <span>FREQ</span>
+            <input type="range" id="freq" min="0.1" max="5" step="0.1" value="1">
+            <span class="value-display" id="freq-val">1.0</span>
+        </div>
+        <div class="control-row">
+            <span>AMP</span>
+            <input type="range" id="amp" min="0" max="1" step="0.01" value="0.5">
+            <span class="value-display" id="amp-val">0.5</span>
+        </div>
+        <div class="control-row">
+            <span>WAVE</span>
+            <select id="wave" style="width: 60%; background: #333; color: #fff; border: none;">
+                <option value="sine">Sine</option>
+                <option value="square">Square</option>
+                <option value="saw">Sawtooth</option>
+                <option value="noise">Noise</option>
+            </select>
+        </div>
+    </div>
+
+    <select class="target-select" id="target">
+        <option value="blur">Target: Blur</option>
+        <option value="glitch">Target: Glitch</option>
+        <option value="hueRotate">Target: Hue</option>
+        <option value="invert">Target: Invert</option>
+    </select>
+
+    <script>
+        const canvas = document.getElementById('scope');
+        const ctx = canvas.getContext('2d');
+        const led = document.getElementById('led');
+
+        // Controls
+        const freqInput = document.getElementById('freq');
+        const ampInput = document.getElementById('amp');
+        const waveInput = document.getElementById('wave');
+        const targetInput = document.getElementById('target');
+
+        // State
+        let time = 0;
+        let value = 0;
+        let isRunning = true;
+
+        // Resize canvas
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Update UI values
+        freqInput.addEventListener('input', (e) => document.getElementById('freq-val').textContent = e.target.value);
+        ampInput.addEventListener('input', (e) => document.getElementById('amp-val').textContent = e.target.value);
+
+        function getWaveValue(t, type) {
+            switch (type) {
+                case 'sine': return Math.sin(t) * 0.5 + 0.5;
+                case 'square': return Math.sin(t) > 0 ? 1 : 0;
+                case 'saw': return (t % (Math.PI * 2)) / (Math.PI * 2);
+                case 'noise': return Math.random();
+                default: return 0;
+            }
+        }
+
+        function loop() {
+            if (!isRunning) return;
+
+            const freq = parseFloat(freqInput.value);
+            const amp = parseFloat(ampInput.value);
+            const waveType = waveInput.value;
+            const target = targetInput.value;
+
+            // Advance time
+            time += freq * 0.1;
+
+            // Calculate value (0-1)
+            const rawValue = getWaveValue(time, waveType);
+            value = rawValue * amp;
+
+            // Draw Scope
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw history (simulated)
+            ctx.beginPath();
+            ctx.strokeStyle = '#0f0';
+            ctx.lineWidth = 2;
+
+            const historyWidth = canvas.width;
+            for (let x = 0; x < historyWidth; x++) {
+                const t = time - (historyWidth - x) * 0.05 * freq;
+                const v = getWaveValue(t, waveType) * amp;
+                const y = canvas.height - (v * canvas.height);
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Emit Event
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent('modulate', {
+                    target: target,
+                    value: value,
+                    timestamp: Date.now()
+                });
+                led.classList.add('active');
+            } else {
+                led.classList.remove('active');
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // Init
+        function init() {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.log('Synth Master initialized');
+            }
+            loop();
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+
+</html>

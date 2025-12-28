@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #D2691E 0%, #8B4513 100%);
+            min-height: 100vh;
+        }
+        h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            font-size: 14px;
+            text-align: center;
+        }
+        .seeds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 8px;
+        }
+        .seed-item {
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .seed-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border-color: #22c55e;
+        }
+        .seed-item:active { transform: scale(0.95); }
+        .seed-emoji { font-size: 24px; }
+        .seed-name {
+            font-size: 10px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 4px;
+        }
+        .seed-count {
+            font-size: 9px;
+            color: #666;
+        }
+        .empty { opacity: 0.4; cursor: not-allowed; }
+        .empty:hover { transform: none; box-shadow: none; border-color: transparent; }
+        .info {
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h3>Seed Bag</h3>
+    <div class="seeds-grid" id="seedsGrid"></div>
+    <div class="info" id="info">Click a seed to plant it</div>
+
+    <script>
+        const SEEDS = [
+            { id: 'tomato', emoji: '🍅', name: 'Tomato', count: 5 },
+            { id: 'carrot', emoji: '🥕', name: 'Carrot', count: 8 },
+            { id: 'corn', emoji: '🌽', name: 'Corn', count: 3 },
+            { id: 'wheat', emoji: '🌾', name: 'Wheat', count: 10 },
+            { id: 'strawberry', emoji: '🍓', name: 'Strawberry', count: 4 }
+        ];
+
+        let seeds = JSON.parse(JSON.stringify(SEEDS));
+
+        function renderSeeds() {
+            const grid = document.getElementById('seedsGrid');
+            grid.innerHTML = seeds.map(seed => `
+                <div class="seed-item ${seed.count === 0 ? 'empty' : ''}"
+                     onclick="selectSeed('${seed.id}')"
+                     data-seed="${seed.id}">
+                    <div class="seed-emoji">${seed.emoji}</div>
+                    <div class="seed-name">${seed.name}</div>
+                    <div class="seed-count">x${seed.count}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectSeed(seedId) {
+            const seed = seeds.find(s => s.id === seedId);
+            if (!seed || seed.count === 0) return;
+
+            seed.count--;
+            renderSeeds();
+
+            document.getElementById('info').textContent = `Planted ${seed.name} seed!`;
+            setTimeout(() => {
+                document.getElementById('info').textContent = 'Click a seed to plant it';
+            }, 2000);
+
+            // Emit seed selection
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: 'farm:plant-seed',
+                    payload: {
+                        seedType: seedId,
+                        emoji: seed.emoji,
+                        name: seed.name
+                    }
+                }
+            }, '*');
+        }
+
+        function addSeeds(seedId, amount) {
+            const seed = seeds.find(s => s.id === seedId);
+            if (seed) {
+                seed.count += amount;
+                renderSeeds();
+            }
+        }
+
+        // Listen for messages
+        window.addEventListener('message', (event) => {
+            const { type, payload } = event.data || {};
+            if (type === 'EVENT' && payload?.type === 'farm:purchase-seeds') {
+                const { seedType, amount } = payload.payload || {};
+                if (seedType && amount) {
+                    addSeeds(seedType, amount);
+                }
+            }
+        });
+
+        // Send ready message
+        window.parent.postMessage({ type: 'READY' }, '*');
+        renderSeeds();
+    </script>
+</body>
+</html>

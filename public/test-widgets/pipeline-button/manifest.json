@@ -1,0 +1,27 @@
+{
+    "id": "pipeline-test-button",
+    "name": "Pipeline Button",
+    "version": "1.1.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "description": "Test button for pipeline validation - emits click events",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "io": {
+        "inputs": [],
+        "outputs": [
+            {
+                "id": "clicked",
+                "type": "trigger",
+                "description": "Emitted when button is clicked"
+            },
+            {
+                "id": "clickData",
+                "type": "object",
+                "description": "Click event data with timestamp and count"
+            }
+        ]
+    }
+}

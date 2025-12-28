@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            font-size: 14px;
+        }
+        .sprinkler {
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .sprinkler:hover { transform: scale(1.05); }
+        .sprinkler:active { transform: scale(0.95); }
+        .sprinkler.active {
+            animation: spray 0.5s ease-in-out infinite;
+        }
+        @keyframes spray {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        .water-drops {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .drop {
+            position: absolute;
+            font-size: 16px;
+            animation: fall 1s ease-in forwards;
+            opacity: 0;
+        }
+        @keyframes fall {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(60px); }
+        }
+        .status {
+            color: #fff;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        button:active { transform: scale(0.95); }
+        .spray-btn { background: #22c55e; color: white; }
+        .spray-btn:hover { background: #16a34a; }
+        .auto-toggle {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+        .auto-toggle.active { background: #22c55e; }
+        .tank {
+            margin-top: 10px;
+            width: 100%;
+            max-width: 120px;
+        }
+        .tank-bar {
+            height: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .tank-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+            transition: width 0.3s;
+        }
+        .tank-label {
+            color: rgba(255,255,255,0.8);
+            font-size: 10px;
+            text-align: center;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h3>Water Sprinkler</h3>
+    <div class="sprinkler" id="sprinkler" onclick="spray()">
+        💦
+        <div class="water-drops" id="drops"></div>
+    </div>
+    <div class="status" id="status">Click to water crops</div>
+    <div class="controls">
+        <button class="spray-btn" onclick="spray()">💧 Spray</button>
+        <button class="auto-toggle" id="autoBtn" onclick="toggleAuto()">Auto: OFF</button>
+    </div>
+    <div class="tank">
+        <div class="tank-bar">
+            <div class="tank-fill" id="tankFill" style="width: 100%"></div>
+        </div>
+        <div class="tank-label" id="tankLabel">Water: 100%</div>
+    </div>
+
+    <script>
+        let state = {
+            water: 100,
+            autoMode: false,
+            isRaining: false,
+            spraying: false
+        };
+
+        function createDrops() {
+            const drops = document.getElementById('drops');
+            drops.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                const drop = document.createElement('span');
+                drop.className = 'drop';
+                drop.textContent = '💧';
+                drop.style.left = (10 + Math.random() * 80) + '%';
+                drop.style.top = (20 + Math.random() * 30) + '%';
+                drop.style.animationDelay = (Math.random() * 0.5) + 's';
+                drops.appendChild(drop);
+            }
+        }
+
+        function spray() {
+            if (state.water <= 0 || state.spraying) return;
+
+            state.spraying = true;
+            state.water = Math.max(0, state.water - 10);
+
+            const sprinkler = document.getElementById('sprinkler');
+            sprinkler.classList.add('active');
+            createDrops();
+
+            updateDisplay();
+
+            // Emit water event
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: 'farm:water',
+                    payload: { source: 'sprinkler' }
+                }
+            }, '*');
+
+            setTimeout(() => {
+                sprinkler.classList.remove('active');
+                state.spraying = false;
+                document.getElementById('drops').innerHTML = '';
+            }, 1000);
+        }
+
+        function toggleAuto() {
+            state.autoMode = !state.autoMode;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('tankFill').style.width = state.water + '%';
+            document.getElementById('tankLabel').textContent = `Water: ${state.water}%`;
+
+            const autoBtn = document.getElementById('autoBtn');
+            autoBtn.textContent = `Auto: ${state.autoMode ? 'ON' : 'OFF'}`;
+            autoBtn.classList.toggle('active', state.autoMode);
+
+            let statusText = 'Click to water crops';
+            if (state.water <= 0) statusText = 'Tank empty! Waiting for rain...';
+            else if (state.autoMode && state.isRaining) statusText = 'Rain detected - auto-watering!';
+            else if (state.autoMode) statusText = 'Auto mode - waiting for rain';
+            document.getElementById('status').textContent = statusText;
+        }
+
+        // Refill water slowly
+        setInterval(() => {
+            if (state.water < 100) {
+                state.water = Math.min(100, state.water + (state.isRaining ? 5 : 1));
+                updateDisplay();
+            }
+        }, 3000);
+
+        // Auto-spray in rain
+        setInterval(() => {
+            if (state.autoMode && state.isRaining && state.water > 0 && !state.spraying) {
+                spray();
+            }
+        }, 2000);
+
+        // Listen for messages
+        window.addEventListener('message', (event) => {
+            const { type, payload } = event.data || {};
+            if (type === 'EVENT' && payload?.type === 'farm:weather') {
+                state.isRaining = payload.payload?.rainy || false;
+                updateDisplay();
+            }
+        });
+
+        // Send ready message
+        window.parent.postMessage({ type: 'READY' }, '*');
+        updateDisplay();
+    </script>
+</body>
+</html>

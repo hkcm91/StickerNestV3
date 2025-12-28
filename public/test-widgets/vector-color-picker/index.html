@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+        h3 {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .color-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .color-input-row input[type="color"] {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .color-input-row input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .apply-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .apply-btn:hover {
+            transform: translateY(-1px);
+        }
+        .apply-btn:active {
+            transform: scale(0.98);
+        }
+        .apply-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 6px;
+        }
+        .apply-stroke {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        .preset-colors {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .preset-color {
+            aspect-ratio: 1;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-color:hover {
+            transform: scale(1.1);
+            border-color: #333;
+        }
+        .preset-color.selected {
+            border-color: #333;
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333;
+        }
+        .no-fill-btn {
+            width: 100%;
+            padding: 8px;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            background: repeating-linear-gradient(
+                45deg,
+                #fff,
+                #fff 4px,
+                #f0f0f0 4px,
+                #f0f0f0 8px
+            );
+            cursor: pointer;
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .no-fill-btn:hover {
+            border-color: #999;
+        }
+        .selection-status {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h3>Color Picker</h3>
+
+    <!-- Fill Section -->
+    <div class="section">
+        <div class="section-title">Fill Color</div>
+        <div class="color-input-row">
+            <input type="color" id="fillColor" value="#3b82f6">
+            <input type="text" id="fillHex" value="#3b82f6" placeholder="#hex">
+        </div>
+        <button class="apply-btn apply-fill" onclick="applyFill()">Apply Fill</button>
+        <button class="no-fill-btn" onclick="applyFill('none')">No Fill (Transparent)</button>
+
+        <div class="preset-colors" id="fillPresets"></div>
+    </div>
+
+    <!-- Stroke Section -->
+    <div class="section">
+        <div class="section-title">Stroke Color</div>
+        <div class="color-input-row">
+            <input type="color" id="strokeColor" value="#1e40af">
+            <input type="text" id="strokeHex" value="#1e40af" placeholder="#hex">
+        </div>
+        <button class="apply-btn apply-stroke" onclick="applyStroke()">Apply Stroke</button>
+        <button class="no-fill-btn" onclick="applyStroke('none')">No Stroke</button>
+
+        <div class="preset-colors" id="strokePresets"></div>
+    </div>
+
+    <div class="selection-status" id="status">No selection</div>
+
+    <script>
+        const presetColors = [
+            '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6',
+            '#8b5cf6', '#ec4899', '#f43f5e', '#000000', '#6b7280', '#ffffff'
+        ];
+
+        const fillColor = document.getElementById('fillColor');
+        const fillHex = document.getElementById('fillHex');
+        const strokeColor = document.getElementById('strokeColor');
+        const strokeHex = document.getElementById('strokeHex');
+        const status = document.getElementById('status');
+
+        let selectedEntityId = null;
+
+        // Create preset color buttons
+        function createPresets(containerId, type) {
+            const container = document.getElementById(containerId);
+            presetColors.forEach(color => {
+                const btn = document.createElement('div');
+                btn.className = 'preset-color';
+                btn.style.background = color;
+                btn.onclick = () => {
+                    if (type === 'fill') {
+                        fillColor.value = color;
+                        fillHex.value = color;
+                    } else {
+                        strokeColor.value = color;
+                        strokeHex.value = color;
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        createPresets('fillPresets', 'fill');
+        createPresets('strokePresets', 'stroke');
+
+        // Sync color picker with hex input
+        fillColor.addEventListener('input', () => {
+            fillHex.value = fillColor.value;
+        });
+        fillHex.addEventListener('input', () => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(fillHex.value)) {
+                fillColor.value = fillHex.value;
+            }
+        });
+        strokeColor.addEventListener('input', () => {
+            strokeHex.value = strokeColor.value;
+        });
+        strokeHex.addEventListener('input', () => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(strokeHex.value)) {
+                strokeColor.value = strokeHex.value;
+            }
+        });
+
+        function emitEvent(type, payload) {
+            console.log('[Color Picker] Emitting:', type, payload);
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+        }
+
+        function applyFill(override) {
+            const color = override || fillColor.value;
+            console.log('[Color Picker] Applying fill:', color);
+            emitEvent('vector:set-fill', { fill: color });
+        }
+
+        function applyStroke(override) {
+            const color = override || strokeColor.value;
+            console.log('[Color Picker] Applying stroke:', color);
+            emitEvent('vector:set-stroke', { stroke: color });
+        }
+
+        // Listen for selection changes
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            console.log('[Color Picker] Message:', data);
+
+            if (data.type === 'widget:event' && data.payload?.type === 'vector:selection-changed') {
+                const selection = data.payload.payload;
+                if (selection && selection.id) {
+                    selectedEntityId = selection.id;
+                    status.textContent = `Selected: ${selection.type || 'entity'}`;
+                    status.style.background = 'rgba(34, 197, 94, 0.3)';
+
+                    // Update color inputs to match selection
+                    if (selection.fill && selection.fill !== 'none') {
+                        fillColor.value = selection.fill;
+                        fillHex.value = selection.fill;
+                    }
+                    if (selection.stroke && selection.stroke !== 'none') {
+                        strokeColor.value = selection.stroke;
+                        strokeHex.value = selection.stroke;
+                    }
+                } else {
+                    selectedEntityId = null;
+                    status.textContent = 'No selection';
+                    status.style.background = 'rgba(0,0,0,0.2)';
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+        console.log('[Color Picker] Ready');
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+    "id": "debug-cursor-tracker",
+    "name": "Cursor Tracker",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "cursor-position": {
+            "type": "event",
+            "description": "Receives cursor position updates from other users"
+        }
+    },
+    "outputs": {
+        "cursor-move": {
+            "type": "event",
+            "description": "Broadcasts local cursor position"
+        }
+    }
+}

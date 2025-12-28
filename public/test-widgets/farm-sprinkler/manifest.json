@@ -1,0 +1,23 @@
+{
+    "id": "farm-sprinkler",
+    "name": "Water Sprinkler",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "weather": {
+            "type": "event",
+            "description": "Receives weather to auto-activate in rain"
+        }
+    },
+    "outputs": {
+        "water": {
+            "type": "event",
+            "description": "Emits water event to all connected crop plots"
+        }
+    }
+}

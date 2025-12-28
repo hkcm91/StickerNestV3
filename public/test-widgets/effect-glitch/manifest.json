@@ -1,0 +1,23 @@
+{
+    "id": "effect-glitch",
+    "name": "Glitch Effect",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "modulation": {
+            "type": "event",
+            "description": "Trigger signal (0-1)"
+        }
+    },
+    "outputs": {
+        "effect-params": {
+            "type": "event",
+            "description": "Glitch parameters for overlay"
+        }
+    }
+}

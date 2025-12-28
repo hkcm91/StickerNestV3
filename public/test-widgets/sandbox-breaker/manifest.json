@@ -1,0 +1,18 @@
+{
+    "id": "debug-sandbox-breaker",
+    "name": "Sandbox Breaker",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {},
+    "outputs": {
+        "breach-attempt": {
+            "type": "event",
+            "description": "Reports sandbox breach attempts"
+        }
+    }
+}

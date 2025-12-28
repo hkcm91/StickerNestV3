@@ -1,0 +1,23 @@
+{
+    "id": "debug-state-mirror",
+    "name": "State Mirror",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "state-sync": {
+            "type": "event",
+            "description": "Receives state from other instances"
+        }
+    },
+    "outputs": {
+        "state-broadcast": {
+            "type": "event",
+            "description": "Broadcasts local state changes"
+        }
+    }
+}

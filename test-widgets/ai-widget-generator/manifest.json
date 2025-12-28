@@ -1,0 +1,31 @@
+{
+    "id": "ai-widget-generator",
+    "name": "AI Widget Generator",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "pipeline-selected": {
+            "type": "event",
+            "description": "Receive selected pipeline for layer generation"
+        },
+        "widget-selected": {
+            "type": "event",
+            "description": "Receive selected widget for variation generation"
+        }
+    },
+    "outputs": {
+        "widgets-generated": {
+            "type": "event",
+            "description": "Emitted when widgets are generated"
+        },
+        "widget-add-request": {
+            "type": "event",
+            "description": "Request to add generated widget to canvas"
+        }
+    }
+}

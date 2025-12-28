@@ -1,0 +1,47 @@
+{
+    "id": "stickernest.form-flow",
+    "name": "FormFlow",
+    "version": "1.0.0",
+    "kind": "ui",
+    "entry": "index.tsx",
+    "description": "A reusable, schema-driven form widget.",
+    "author": "StickerNest",
+    "tags": [
+        "form",
+        "input",
+        "ui",
+        "data-collection",
+        "pipeline"
+    ],
+    "inputs": {
+        "schema": {
+            "type": "json",
+            "description": "Form schema definition",
+            "required": true
+        }
+    },
+    "outputs": {
+        "formflow:changed": {
+            "type": "event",
+            "description": "Emitted when form values change"
+        },
+        "formflow:submitted": {
+            "type": "event",
+            "description": "Emitted when form is submitted"
+        },
+        "formflow:completed": {
+            "type": "event",
+            "description": "Emitted when multi-step form is completed"
+        }
+    },
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "size": {
+        "width": 400,
+        "height": 500,
+        "minWidth": 300,
+        "minHeight": 200
+    }
+}

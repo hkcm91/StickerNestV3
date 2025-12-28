@@ -1,0 +1,18 @@
+{
+    "id": "debug-pipeline-visualizer",
+    "name": "Pipeline Visualizer",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "pipeline-event": {
+            "type": "event",
+            "description": "Receives pipeline events for visualization"
+        }
+    },
+    "outputs": {}
+}

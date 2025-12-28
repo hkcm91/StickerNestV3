@@ -1,0 +1,260 @@
+/**
+ * StickerNest v2 - Canvas Toolbar Styles
+ *
+ * Horizontal toolbar for tool selection and entity actions
+ */
+
+/* =============================================================================
+   Main Toolbar Container
+   ============================================================================= */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--sn-bg-tertiary, #252538);
+  border-radius: 8px;
+  border: 1px solid var(--sn-accent-primary, #8b5cf6);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
+}
+
+/* =============================================================================
+   Tool Section
+   ============================================================================= */
+
+.toolSection {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* =============================================================================
+   Tool Button
+   ============================================================================= */
+
+.toolButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sn-text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: all 150ms ease;
+  position: relative;
+}
+
+.toolButton:hover:not(.disabled) {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--sn-text-primary, #e2e8f0);
+}
+
+.toolButton.active {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: #ffffff;
+}
+
+.toolButton.active:hover {
+  background: var(--sn-accent-secondary, #a78bfa);
+}
+
+.toolButton.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Dropdown indicator */
+.dropdownIndicator {
+  transition: transform 150ms ease;
+  margin-left: 1px;
+}
+
+.dropdownIndicator.open {
+  transform: rotate(180deg);
+}
+
+/* =============================================================================
+   Dropdown Container
+   ============================================================================= */
+
+.dropdownContainer {
+  position: relative;
+}
+
+/* =============================================================================
+   Shape Dropdown
+   ============================================================================= */
+
+.shapeDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--sn-bg-elevated, #2a2a42);
+  border: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.3));
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  animation: dropdownFadeIn 150ms ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.shapeOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sn-text-primary, #e2e8f0);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 100ms ease;
+  text-align: left;
+}
+
+.shapeOption:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.shapeOption.active {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: #ffffff;
+}
+
+/* =============================================================================
+   Toolbar Divider
+   ============================================================================= */
+
+.toolbarDivider {
+  width: 1px;
+  height: 20px;
+  background: var(--sn-border-primary, rgba(139, 92, 246, 0.3));
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* =============================================================================
+   Action Section
+   ============================================================================= */
+
+.actionSection {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* =============================================================================
+   Selection Indicator
+   ============================================================================= */
+
+.selectionIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 4px;
+  color: var(--sn-accent-primary, #8b5cf6);
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* =============================================================================
+   Action Button
+   ============================================================================= */
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sn-text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.actionButton:hover:not(.disabled) {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--sn-text-primary, #e2e8f0);
+}
+
+.actionButton.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.actionButton.danger:hover:not(.disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--sn-error, #ef4444);
+}
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+
+@media (max-width: 900px) {
+  .toolbar {
+    padding: 4px 6px;
+  }
+
+  .toolButton {
+    width: 30px;
+    height: 26px;
+  }
+
+  .actionButton {
+    width: 24px;
+    height: 24px;
+  }
+
+  .selectionIndicator {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+
+  .shapeDropdown {
+    min-width: 130px;
+  }
+
+  .shapeOption {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+/* Hide action buttons on very small screens */
+@media (max-width: 700px) {
+  .actionSection {
+    display: none;
+  }
+
+  .toolbarDivider:last-of-type {
+    display: none;
+  }
+}

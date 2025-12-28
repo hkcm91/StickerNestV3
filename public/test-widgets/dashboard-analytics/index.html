@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 15px;
+            color: #fff;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255,255,255,0.15);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .stat-card.selected {
+            border-color: #00d9ff;
+            box-shadow: 0 0 20px rgba(0,217,255,0.3);
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+        .stat-change {
+            font-size: 10px;
+            margin-top: 5px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .stat-change.up { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .stat-change.down { background: rgba(255,68,68,0.2); color: #ff4444; }
+
+        .chart-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .chart-tabs {
+            display: flex;
+            gap: 5px;
+        }
+        .chart-tab {
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 10px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: rgba(255,255,255,0.7);
+            transition: all 0.2s;
+        }
+        .chart-tab:hover { background: rgba(255,255,255,0.2); }
+        .chart-tab.active { background: #00d9ff; color: #000; }
+
+        .chart {
+            height: 120px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            padding: 10px 0;
+        }
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #00d9ff 0%, #0066ff 100%);
+            border-radius: 4px 4px 0 0;
+            min-height: 5px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+        }
+        .bar:hover {
+            background: linear-gradient(180deg, #00ff88 0%, #00d9ff 100%);
+            transform: scaleY(1.05);
+        }
+        .bar-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .bar:hover .bar-tooltip { opacity: 1; }
+
+        .activity-feed {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .activity-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 11px;
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .activity-icon.sale { background: rgba(0,255,136,0.2); }
+        .activity-icon.user { background: rgba(0,217,255,0.2); }
+        .activity-icon.alert { background: rgba(255,170,0,0.2); }
+        .activity-text { flex: 1; color: rgba(255,255,255,0.8); }
+        .activity-time { color: rgba(255,255,255,0.4); font-size: 10px; }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #00d9ff, #0066ff);
+            color: #fff;
+        }
+        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(0,217,255,0.4); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+    <div class="dashboard" id="stats"></div>
+
+    <div class="chart-container">
+        <div class="chart-header">
+            <span class="chart-title">Revenue Trend</span>
+            <div class="chart-tabs">
+                <button class="chart-tab active" onclick="setTimeRange('week')">Week</button>
+                <button class="chart-tab" onclick="setTimeRange('month')">Month</button>
+                <button class="chart-tab" onclick="setTimeRange('year')">Year</button>
+            </div>
+        </div>
+        <div class="chart" id="chart"></div>
+    </div>
+
+    <div class="activity-feed">
+        <div class="activity-title">
+            <span class="activity-dot"></span>
+            Live Activity
+        </div>
+        <div id="activity"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-primary" onclick="refreshData()">
+            <span>Refresh</span>
+        </button>
+        <button class="btn btn-secondary" onclick="exportData()">
+            <span>Export</span>
+        </button>
+    </div>
+
+    <script>
+        let state = {
+            stats: [
+                { id: 'revenue', label: 'Revenue', value: 48250, change: 12.5, up: true },
+                { id: 'users', label: 'Users', value: 2847, change: 8.3, up: true },
+                { id: 'orders', label: 'Orders', value: 384, change: -2.1, up: false },
+                { id: 'conversion', label: 'Conv. Rate', value: 3.2, change: 0.5, up: true, suffix: '%' }
+            ],
+            chartData: [],
+            timeRange: 'week',
+            selectedStat: null,
+            activities: []
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function generateChartData(range) {
+            const points = range === 'week' ? 7 : range === 'month' ? 30 : 12;
+            return Array.from({ length: points }, () => 20 + Math.random() * 80);
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toFixed(num % 1 === 0 ? 0 : 1);
+        }
+
+        function renderStats() {
+            const container = document.getElementById('stats');
+            container.innerHTML = state.stats.map(stat => `
+                <div class="stat-card ${state.selectedStat === stat.id ? 'selected' : ''}"
+                     onclick="selectStat('${stat.id}')">
+                    <div class="stat-value">${formatNumber(stat.value)}${stat.suffix || ''}</div>
+                    <div class="stat-label">${stat.label}</div>
+                    <div class="stat-change ${stat.up ? 'up' : 'down'}">
+                        ${stat.up ? '+' : ''}${stat.change}%
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderChart() {
+            const container = document.getElementById('chart');
+            const max = Math.max(...state.chartData);
+            container.innerHTML = state.chartData.map((val, i) => `
+                <div class="bar" style="height: ${(val / max) * 100}%">
+                    <div class="bar-tooltip">$${formatNumber(val * 1000)}</div>
+                </div>
+            `).join('');
+
+            // Update tab states
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.textContent.toLowerCase() === state.timeRange);
+            });
+        }
+
+        function renderActivity() {
+            const container = document.getElementById('activity');
+            container.innerHTML = state.activities.slice(0, 5).map(act => `
+                <div class="activity-item">
+                    <div class="activity-icon ${act.type}">${act.icon}</div>
+                    <span class="activity-text">${act.text}</span>
+                    <span class="activity-time">${act.time}</span>
+                </div>
+            `).join('');
+        }
+
+        function selectStat(id) {
+            state.selectedStat = state.selectedStat === id ? null : id;
+            renderStats();
+            log('Selected stat: ' + (state.selectedStat || 'none'));
+            emit('analytics:selection', { statId: state.selectedStat });
+        }
+
+        function setTimeRange(range) {
+            state.timeRange = range;
+            state.chartData = generateChartData(range);
+            renderChart();
+            log('Time range: ' + range);
+            emit('analytics:timerange', { range });
+        }
+
+        function refreshData() {
+            // Simulate data refresh
+            state.stats = state.stats.map(stat => ({
+                ...stat,
+                value: stat.value * (0.95 + Math.random() * 0.1),
+                change: (Math.random() * 20 - 10).toFixed(1),
+                up: Math.random() > 0.3
+            }));
+            state.chartData = generateChartData(state.timeRange);
+            addActivity('sale', 'Data refreshed', 'Just now');
+            renderStats();
+            renderChart();
+            log('Data refreshed');
+            emit('analytics:refresh', { timestamp: Date.now() });
+        }
+
+        function exportData() {
+            log('Export requested');
+            emit('analytics:export', {
+                stats: state.stats,
+                timeRange: state.timeRange,
+                timestamp: Date.now()
+            });
+            addActivity('alert', 'Export initiated', 'Just now');
+        }
+
+        function addActivity(type, text, time) {
+            const icons = { sale: '$', user: '👤', alert: '!' };
+            state.activities.unshift({ type, icon: icons[type], text, time });
+            if (state.activities.length > 10) state.activities.pop();
+            renderActivity();
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Analytics Dashboard ready');
+
+            // Generate initial data
+            state.chartData = generateChartData(state.timeRange);
+            state.activities = [
+                { type: 'sale', icon: '$', text: 'New order #1234', time: '2m ago' },
+                { type: 'user', icon: '👤', text: 'User signed up', time: '5m ago' },
+                { type: 'sale', icon: '$', text: 'Payment received', time: '12m ago' }
+            ];
+
+            renderStats();
+            renderChart();
+            renderActivity();
+
+            // Simulate live updates
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    const events = [
+                        { type: 'sale', text: 'New order #' + Math.floor(Math.random() * 9000 + 1000) },
+                        { type: 'user', text: 'New user registered' },
+                        { type: 'sale', text: 'Payment processed' }
+                    ];
+                    const event = events[Math.floor(Math.random() * events.length)];
+                    addActivity(event.type, event.text, 'Just now');
+                }
+            }, 5000);
+
+            window.WidgetAPI.onEvent('*', (event) => {
+                if (event.type === 'analytics:data') {
+                    if (event.payload.stats) {
+                        state.stats = event.payload.stats;
+                        renderStats();
+                    }
+                }
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

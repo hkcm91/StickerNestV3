@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .header h1 { font-size: 1rem; color: #f59e0b; margin: 0; }
+        .badge { background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.6rem; }
+        .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .rate-btn {
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .rate-btn.active { background: #f59e0b; border-color: #f59e0b; color: #000; }
+        .rate-btn:hover:not(.active) { border-color: #f59e0b; color: #f59e0b; }
+        .stats { background: rgba(0,0,0,0.3); border-radius: 6px; padding: 10px; font-size: 0.75rem; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .stat-label { color: #64748b; }
+        .stat-value { color: #10b981; font-family: monospace; }
+        .stat-value.warning { color: #f59e0b; }
+        .stat-value.error { color: #ef4444; }
+        .log { max-height: 80px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 6px; margin-top: 8px; font-size: 0.65rem; font-family: monospace; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Event Flooder</h1>
+        <span class="badge">DEBUG</span>
+    </div>
+
+    <div class="controls">
+        <button class="rate-btn" data-rate="0">Stop</button>
+        <button class="rate-btn" data-rate="1">1 Hz</button>
+        <button class="rate-btn" data-rate="10">10 Hz</button>
+        <button class="rate-btn" data-rate="50">50 Hz</button>
+        <button class="rate-btn" data-rate="100">100 Hz</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-row">
+            <span class="stat-label">Sent:</span>
+            <span class="stat-value" id="sent">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Received:</span>
+            <span class="stat-value" id="received">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Dropped (est.):</span>
+            <span class="stat-value" id="dropped">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Events/sec (in):</span>
+            <span class="stat-value" id="rate">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Current Rate:</span>
+            <span class="stat-value" id="currentRate">Stopped</span>
+        </div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+        let state = {
+            sent: 0,
+            received: 0,
+            dropped: 0,
+            lastSecondReceived: 0,
+            rate: 0,
+            currentRate: 0,
+            intervalId: null,
+            sequence: 0,
+            expectedSequences: new Map()
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            logEl.innerHTML = `<div>${time} ${msg}</div>` + logEl.innerHTML;
+            if (logEl.children.length > 20) logEl.lastChild.remove();
+        }
+
+        function updateUI() {
+            document.getElementById('sent').textContent = state.sent.toLocaleString();
+            document.getElementById('received').textContent = state.received.toLocaleString();
+            document.getElementById('dropped').textContent = state.dropped.toLocaleString();
+            document.getElementById('rate').textContent = state.rate.toFixed(1);
+            document.getElementById('currentRate').textContent = state.currentRate === 0 ? 'Stopped' : `${state.currentRate} Hz`;
+
+            const droppedEl = document.getElementById('dropped');
+            droppedEl.className = 'stat-value' + (state.dropped > 0 ? ' error' : '');
+        }
+
+        function startFlooding(hz) {
+            if (state.intervalId) {
+                clearInterval(state.intervalId);
+                state.intervalId = null;
+            }
+
+            state.currentRate = hz;
+            updateUI();
+
+            if (hz === 0) {
+                log('Flooding stopped');
+                return;
+            }
+
+            const interval = Math.floor(1000 / hz);
+            log(`Starting flood at ${hz} Hz (${interval}ms interval)`);
+
+            state.intervalId = setInterval(() => {
+                state.sequence++;
+                state.sent++;
+                emit('widget:flood', {
+                    sequence: state.sequence,
+                    timestamp: Date.now(),
+                    sourceRate: hz
+                });
+                updateUI();
+            }, interval);
+        }
+
+        function handleFloodEvent(event) {
+            const payload = event.payload || {};
+            state.received++;
+            state.lastSecondReceived++;
+
+            // Track sequence gaps for dropped event detection
+            const sourceId = payload.sourceId || 'unknown';
+            const seq = payload.sequence || 0;
+            const lastSeq = state.expectedSequences.get(sourceId) || 0;
+
+            if (seq > lastSeq + 1 && lastSeq > 0) {
+                const missed = seq - lastSeq - 1;
+                state.dropped += missed;
+                log(`Detected ${missed} dropped events from ${sourceId}`);
+            }
+            state.expectedSequences.set(sourceId, seq);
+
+            updateUI();
+        }
+
+        // Rate calculation interval
+        setInterval(() => {
+            state.rate = state.lastSecondReceived;
+            state.lastSecondReceived = 0;
+            updateUI();
+        }, 1000);
+
+        // Set up button handlers
+        document.querySelectorAll('.rate-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const rate = parseInt(btn.dataset.rate, 10);
+                startFlooding(rate);
+            });
+        });
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Event Flooder ready');
+
+            window.WidgetAPI.onEvent('widget:flood', handleFloodEvent);
+            window.WidgetAPI.onEvent('*', (event) => {
+                if (event.type.includes('flood') && event.type !== 'widget:flood') {
+                    handleFloodEvent(event);
+                }
+            });
+
+            // Set initial state
+            document.querySelector('[data-rate="0"]').classList.add('active');
+            updateUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>

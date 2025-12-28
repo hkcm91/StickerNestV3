@@ -1,0 +1,361 @@
+paths:
+  /api/jobs:
+    get:
+      tags:
+        - Jobs
+      summary: List user's jobs
+      description: Get a list of background jobs for the current user
+      parameters:
+        - name: queue
+          in: query
+          schema:
+            type: string
+            enum: [ai:image, ai:video, ai:generation, ai:lora]
+          description: Filter by queue name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, active, completed, failed]
+          description: Filter by job status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        jobId:
+                          type: string
+                        queue:
+                          type: string
+                        type:
+                          type: string
+                        status:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/jobs/stats:
+    get:
+      tags:
+        - Jobs
+      summary: Get queue statistics
+      description: Get statistics for all job queues
+      responses:
+        '200':
+          description: Queue statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adapter:
+                    type: string
+                    example: local
+                  queues:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        pending:
+                          type: integer
+                        active:
+                          type: integer
+                        completed:
+                          type: integer
+                        failed:
+                          type: integer
+                        delayed:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/jobs/image:
+    post:
+      tags:
+        - Jobs
+      summary: Submit image generation job
+      description: Queue an image generation job for async processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageGenerationRequest'
+      responses:
+        '202':
+          description: Job submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    example: job_abc123
+                  queue:
+                    type: string
+                    example: ai:image
+                  status:
+                    type: string
+                    example: pending
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/jobs/video:
+    post:
+      tags:
+        - Jobs
+      summary: Submit video generation job
+      description: Queue a video generation job for async processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+              properties:
+                prompt:
+                  type: string
+                  description: Text prompt for video generation
+                  example: A timelapse of clouds moving
+                imageUrl:
+                  type: string
+                  format: uri
+                  description: Optional base image URL
+                duration:
+                  type: number
+                  default: 4
+                  minimum: 1
+                  maximum: 30
+                fps:
+                  type: integer
+                  default: 24
+                  minimum: 12
+                  maximum: 60
+                provider:
+                  type: string
+                  enum: [replicate]
+                  default: replicate
+      responses:
+        '202':
+          description: Job submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  queue:
+                    type: string
+                    example: ai:video
+                  status:
+                    type: string
+                    example: pending
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/jobs/widget:
+    post:
+      tags:
+        - Jobs
+      summary: Submit widget generation job
+      description: Queue a widget generation job for async processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetGenerationRequest'
+      responses:
+        '202':
+          description: Job submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  queue:
+                    type: string
+                    example: ai:generation
+                  status:
+                    type: string
+                    example: pending
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/jobs/lora:
+    post:
+      tags:
+        - Jobs
+      summary: Submit LoRA training job
+      description: Queue a LoRA model training job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - instancePrompt
+                - imageUrls
+              properties:
+                name:
+                  type: string
+                  description: Name for the trained model
+                  example: my-character-lora
+                instancePrompt:
+                  type: string
+                  description: The trigger word/phrase
+                  example: sks character
+                classPrompt:
+                  type: string
+                  description: Class description
+                  example: a person
+                imageUrls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  minItems: 5
+                  description: Training images (minimum 5)
+                trainingSteps:
+                  type: integer
+                  default: 1000
+                  maximum: 10000
+                learningRate:
+                  type: number
+                  default: 0.0001
+                provider:
+                  type: string
+                  enum: [replicate]
+                  default: replicate
+      responses:
+        '202':
+          description: Training job submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  queue:
+                    type: string
+                    example: ai:lora
+                  status:
+                    type: string
+                    example: pending
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/jobs/{jobId}:
+    get:
+      tags:
+        - Jobs
+      summary: Get job status
+      description: Get the status and result of a specific job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: queue
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The queue name the job belongs to
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Queue parameter required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Jobs
+      summary: Cancel job
+      description: Cancel a pending job (cannot cancel active jobs)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: queue
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Job cancelled successfully
+        '400':
+          description: Cannot cancel job that has already started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'

@@ -1,0 +1,64 @@
+{
+  "id": "youtube-playlist-widget",
+  "name": "YouTube Playlist",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Manage and play YouTube video playlists with ordered or shuffled playback",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "addVideo": {
+      "type": "string",
+      "description": "Add video by YouTube URL or video ID"
+    },
+    "play": {
+      "type": "trigger",
+      "description": "Start playback"
+    },
+    "pause": {
+      "type": "trigger",
+      "description": "Pause playback"
+    },
+    "next": {
+      "type": "trigger",
+      "description": "Skip to next video"
+    },
+    "previous": {
+      "type": "trigger",
+      "description": "Go to previous video"
+    },
+    "shuffle": {
+      "type": "boolean",
+      "description": "Enable or disable shuffle mode"
+    }
+  },
+  "outputs": {
+    "videoChanged": {
+      "type": "object",
+      "description": "Emitted when current video changes"
+    },
+    "playStateChanged": {
+      "type": "object",
+      "description": "Emitted on play or pause"
+    },
+    "preview": {
+      "type": "object",
+      "description": "Emits current video for preview widgets"
+    }
+  },
+  "events": {
+    "listens": ["playlist:add", "playlist:control"],
+    "emits": ["playlist:changed", "playlist:preview"]
+  },
+  "size": {
+    "width": 400,
+    "height": 500,
+    "minWidth": 320,
+    "minHeight": 400,
+    "maxWidth": 800,
+    "maxHeight": 900
+  }
+}

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            background: #0d1117;
+            min-height: 100vh;
+            padding: 10px;
+            color: #c9d1d9;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+        .title {
+            color: #58a6ff;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #3fb950;
+            font-size: 10px;
+        }
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #3fb950;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .ctrl-btn {
+            padding: 3px 8px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            background: #21262d;
+            color: #8b949e;
+            font-size: 10px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .ctrl-btn:hover {
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+        .ctrl-btn.active {
+            background: #388bfd;
+            border-color: #388bfd;
+            color: white;
+        }
+
+        .feed {
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+        }
+        .feed::-webkit-scrollbar {
+            width: 6px;
+        }
+        .feed::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        .feed::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+
+        .event {
+            display: flex;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            animation: fadeIn 0.3s ease;
+            font-family: inherit;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; background: rgba(56, 139, 253, 0.1); }
+            to { opacity: 1; background: transparent; }
+        }
+        .event:hover {
+            background: #161b22;
+        }
+        .event-time {
+            color: #484f58;
+            min-width: 55px;
+            flex-shrink: 0;
+        }
+        .event-type {
+            min-width: 140px;
+            flex-shrink: 0;
+        }
+        .event-type.task { color: #58a6ff; }
+        .event-type.timer { color: #3fb950; }
+        .event-type.note { color: #a371f7; }
+        .event-type.sync { color: #8b949e; }
+        .event-type.system { color: #f0883e; }
+
+        .event-detail {
+            color: #8b949e;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .event-detail .highlight {
+            color: #c9d1d9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #161b22;
+            border-radius: 6px;
+            border: 1px solid #21262d;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+        .stat-label {
+            font-size: 9px;
+            color: #8b949e;
+            text-transform: uppercase;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #484f58;
+        }
+
+        .search {
+            margin-bottom: 8px;
+        }
+        .search input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        .search input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        .search input::placeholder { color: #484f58; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="title">Activity Feed</span>
+        <div class="live-indicator">
+            <span class="live-dot"></span>
+            <span>LIVE</span>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value" id="totalEvents">0</div>
+            <div class="stat-label">Events</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" id="taskEvents">0</div>
+            <div class="stat-label">Tasks</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" id="timerEvents">0</div>
+            <div class="stat-label">Timer</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" id="noteEvents">0</div>
+            <div class="stat-label">Notes</div>
+        </div>
+    </div>
+
+    <div class="search">
+        <input type="text" id="searchInput" placeholder="Filter events..." oninput="filterEvents()">
+    </div>
+
+    <div class="controls">
+        <button class="ctrl-btn active" data-filter="all" onclick="setTypeFilter('all')">All</button>
+        <button class="ctrl-btn" data-filter="task" onclick="setTypeFilter('task')">Tasks</button>
+        <button class="ctrl-btn" data-filter="timer" onclick="setTypeFilter('timer')">Timer</button>
+        <button class="ctrl-btn" data-filter="note" onclick="setTypeFilter('note')">Notes</button>
+        <button class="ctrl-btn" onclick="clearFeed()" style="margin-left: auto;">Clear</button>
+        <button class="ctrl-btn" onclick="togglePause()" id="pauseBtn">Pause</button>
+    </div>
+
+    <div class="feed" id="feed"></div>
+
+    <script>
+        // Categorize events
+        const EVENT_CATEGORIES = {
+            'project:task-created': { category: 'task', label: 'task:created', format: p => `Task "${p.task?.title}"` },
+            'project:task-updated': { category: 'task', label: 'task:updated', format: p => `"${p.task?.title}" ${p.change}` },
+            'project:task-deleted': { category: 'task', label: 'task:deleted', format: p => `Task "${p.task?.title}"` },
+            'project:task-selected': { category: 'task', label: 'task:selected', format: p => `"${p.task?.title}"` },
+            'project:tasks-sync': { category: 'sync', label: 'tasks:sync', format: p => `${p.tasks?.length || 0} tasks synced` },
+            'project:task-time-update': { category: 'timer', label: 'time:update', format: p => `${formatDuration(p.timeSpent)} on task` },
+            'timer:started': { category: 'timer', label: 'timer:start', format: p => `Tracking "${p.taskTitle}"` },
+            'timer:stopped': { category: 'timer', label: 'timer:stop', format: p => `${formatDuration(p.sessionTime)} session` },
+            'notes:created': { category: 'note', label: 'note:created', format: p => `"${(p.note?.content || '').substring(0, 30)}..."` },
+            'project:task-note-added': { category: 'note', label: 'note:attached', format: p => `Note added to task` }
+        };
+
+        let state = {
+            events: [],
+            typeFilter: 'all',
+            searchFilter: '',
+            paused: false,
+            stats: { total: 0, task: 0, timer: 0, note: 0 }
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function formatDuration(ms) {
+            if (!ms) return '0m';
+            const mins = Math.floor(ms / 60000);
+            const hours = Math.floor(mins / 60);
+            if (hours > 0) return hours + 'h ' + (mins % 60) + 'm';
+            return mins + 'm';
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function addEvent(eventType, payload) {
+            if (state.paused) return;
+
+            const config = EVENT_CATEGORIES[eventType];
+            if (!config) {
+                // Unknown event - show as system
+                const evt = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    type: eventType,
+                    category: 'system',
+                    label: eventType.split(':').pop(),
+                    detail: JSON.stringify(payload).substring(0, 50),
+                    timestamp: Date.now()
+                };
+                state.events.unshift(evt);
+                state.stats.total++;
+            } else {
+                const evt = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    type: eventType,
+                    category: config.category,
+                    label: config.label,
+                    detail: config.format(payload),
+                    timestamp: Date.now()
+                };
+                state.events.unshift(evt);
+                state.stats.total++;
+                if (state.stats[config.category] !== undefined) {
+                    state.stats[config.category]++;
+                }
+            }
+
+            // Keep only last 200 events
+            if (state.events.length > 200) {
+                state.events = state.events.slice(0, 200);
+            }
+
+            updateStats();
+            renderFeed();
+        }
+
+        function setTypeFilter(type) {
+            state.typeFilter = type;
+            document.querySelectorAll('.ctrl-btn[data-filter]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === type);
+            });
+            renderFeed();
+        }
+
+        function filterEvents() {
+            state.searchFilter = document.getElementById('searchInput').value.toLowerCase();
+            renderFeed();
+        }
+
+        function getFilteredEvents() {
+            return state.events.filter(e => {
+                if (state.typeFilter !== 'all' && e.category !== state.typeFilter) return false;
+                if (state.searchFilter && !e.label.includes(state.searchFilter) && !e.detail.toLowerCase().includes(state.searchFilter)) return false;
+                return true;
+            });
+        }
+
+        function clearFeed() {
+            state.events = [];
+            state.stats = { total: 0, task: 0, timer: 0, note: 0 };
+            updateStats();
+            renderFeed();
+            log('Activity feed cleared');
+        }
+
+        function togglePause() {
+            state.paused = !state.paused;
+            const btn = document.getElementById('pauseBtn');
+            btn.textContent = state.paused ? 'Resume' : 'Pause';
+            btn.classList.toggle('active', state.paused);
+            log(state.paused ? 'Feed paused' : 'Feed resumed');
+        }
+
+        function updateStats() {
+            document.getElementById('totalEvents').textContent = state.stats.total;
+            document.getElementById('taskEvents').textContent = state.stats.task;
+            document.getElementById('timerEvents').textContent = state.stats.timer;
+            document.getElementById('noteEvents').textContent = state.stats.note;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderFeed() {
+            const container = document.getElementById('feed');
+            const filtered = getFilteredEvents();
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        ${state.events.length === 0
+                            ? 'Waiting for events...'
+                            : 'No matching events'}
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.slice(0, 100).map(e => `
+                <div class="event">
+                    <span class="event-time">${formatTime(e.timestamp)}</span>
+                    <span class="event-type ${e.category}">${e.label}</span>
+                    <span class="event-detail">${escapeHtml(e.detail)}</span>
+                </div>
+            `).join('');
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Activity Feed ready');
+            renderFeed();
+
+            // Listen to ALL events
+            window.WidgetAPI.onEvent('*', (event) => {
+                // Skip internal/request events
+                if (event.type.includes('request') || event.type === 'widget:log') return;
+                addEvent(event.type, event.payload);
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+    "id": "debug-transport-monitor",
+    "name": "Transport Monitor",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "transport-status": {
+            "type": "event",
+            "description": "Receives transport status updates"
+        }
+    },
+    "outputs": {
+        "transport-query": {
+            "type": "event",
+            "description": "Queries transport status"
+        }
+    }
+}

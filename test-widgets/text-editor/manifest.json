@@ -1,0 +1,71 @@
+{
+  "id": "text-editor",
+  "name": "Text Editor",
+  "version": "1.0.0",
+  "description": "Rich text editor widget with nested editing capabilities",
+  "kind": "2d",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["text"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "text.set": {
+      "type": "string",
+      "description": "Set the editor content"
+    },
+    "text.append": {
+      "type": "string",
+      "description": "Append text to current content"
+    },
+    "text.clear": {
+      "type": "event",
+      "description": "Clear all content"
+    },
+    "format.apply": {
+      "type": "object",
+      "description": "Apply formatting (bold, italic, underline, etc.)"
+    },
+    "mode.set": {
+      "type": "string",
+      "description": "Set editor mode: edit, preview, readonly"
+    }
+  },
+  "outputs": {
+    "text.changed": {
+      "type": "string",
+      "description": "Emitted when text content changes"
+    },
+    "selection.changed": {
+      "type": "object",
+      "description": "Emitted when selection changes"
+    },
+    "editor.ready": {
+      "type": "event",
+      "description": "Emitted when editor is initialized"
+    },
+    "editor.focus": {
+      "type": "event",
+      "description": "Emitted when editor gains focus"
+    },
+    "editor.blur": {
+      "type": "event",
+      "description": "Emitted when editor loses focus"
+    }
+  },
+  "config": {
+    "placeholder": "Start typing...",
+    "autoFocus": false,
+    "maxLength": 0,
+    "mode": "edit"
+  },
+  "skinSlots": [
+    { "name": "editorBg", "type": "color", "variable": "--editor-bg" },
+    { "name": "editorText", "type": "color", "variable": "--editor-text" },
+    { "name": "editorAccent", "type": "color", "variable": "--editor-accent" },
+    { "name": "toolbarBg", "type": "color", "variable": "--toolbar-bg" }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+    "id": "farm-seed-bag",
+    "name": "Seed Bag",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "purchase": {
+            "type": "event",
+            "description": "Receives purchase/restock events"
+        }
+    },
+    "outputs": {
+        "seed": {
+            "type": "event",
+            "description": "Emits seed selection to plant"
+        }
+    }
+}

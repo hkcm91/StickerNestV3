@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%);
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .title {
+            font-size: 13px;
+            color: #d6bcfa;
+            font-weight: 600;
+        }
+        .note-count {
+            font-size: 10px;
+            color: #718096;
+        }
+
+        .task-context {
+            background: rgba(214, 188, 250, 0.1);
+            border: 1px solid rgba(214, 188, 250, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+        .task-label {
+            font-size: 9px;
+            color: #d6bcfa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .task-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .no-task {
+            color: #718096;
+            font-style: italic;
+        }
+
+        .note-input-area {
+            margin-bottom: 12px;
+        }
+        .note-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: #e2e8f0;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 8px;
+        }
+        .note-textarea:focus {
+            outline: none;
+            border-color: #9f7aea;
+        }
+        .note-textarea::placeholder { color: #718096; }
+
+        .note-toolbar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .tag-btn {
+            padding: 4px 8px;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            background: transparent;
+            color: #a0aec0;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tag-btn:hover {
+            border-color: #9f7aea;
+            color: #d6bcfa;
+        }
+        .tag-btn.active {
+            background: #9f7aea;
+            border-color: #9f7aea;
+            color: white;
+        }
+        .btn-add {
+            margin-left: auto;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, #9f7aea, #805ad5);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-add:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(159, 122, 234, 0.3);
+        }
+        .btn-add:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .notes-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .note-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid #9f7aea;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .note-item.idea { border-left-color: #f6e05e; }
+        .note-item.issue { border-left-color: #fc8181; }
+        .note-item.progress { border-left-color: #68d391; }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .note-tag {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .note-tag.idea { background: rgba(246, 224, 94, 0.2); color: #f6e05e; }
+        .note-tag.issue { background: rgba(252, 129, 129, 0.2); color: #fc8181; }
+        .note-tag.progress { background: rgba(104, 211, 145, 0.2); color: #68d391; }
+        .note-tag.general { background: rgba(159, 122, 234, 0.2); color: #d6bcfa; }
+
+        .note-time {
+            font-size: 10px;
+            color: #718096;
+        }
+        .note-content {
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .note-task-ref {
+            font-size: 10px;
+            color: #718096;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #718096;
+        }
+        .empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+        .filter-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .filter-btn {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: #a0aec0;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .filter-btn:hover { background: rgba(255,255,255,0.15); }
+        .filter-btn.active { background: #9f7aea; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="title">Task Notes</span>
+        <span class="note-count" id="noteCount">0 notes</span>
+    </div>
+
+    <div class="task-context" id="taskContext">
+        <div class="task-label">Attached To</div>
+        <div class="task-name no-task">Select a task to add notes</div>
+    </div>
+
+    <div class="note-input-area">
+        <textarea class="note-textarea" id="noteInput" placeholder="Write a note..."></textarea>
+        <div class="note-toolbar">
+            <button class="tag-btn" data-tag="general" onclick="setTag('general')">General</button>
+            <button class="tag-btn" data-tag="idea" onclick="setTag('idea')">Idea</button>
+            <button class="tag-btn" data-tag="issue" onclick="setTag('issue')">Issue</button>
+            <button class="tag-btn" data-tag="progress" onclick="setTag('progress')">Progress</button>
+            <button class="btn-add" id="addBtn" onclick="addNote()" disabled>Add Note</button>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" data-filter="idea" onclick="setFilter('idea')">Ideas</button>
+        <button class="filter-btn" data-filter="issue" onclick="setFilter('issue')">Issues</button>
+        <button class="filter-btn" data-filter="progress" onclick="setFilter('progress')">Progress</button>
+    </div>
+
+    <div class="notes-list" id="notesList"></div>
+
+    <script>
+        const EVENTS = {
+            TASK_SELECTED: 'project:task-selected',
+            TASKS_SYNC: 'project:tasks-sync',
+            NOTE_ADDED: 'project:task-note-added',
+            NOTE_CREATED: 'notes:created',
+            REQUEST_TASKS: 'project:request-tasks'
+        };
+
+        let state = {
+            currentTask: null,
+            notes: [],
+            selectedTag: 'general',
+            filter: 'all',
+            tasks: {}
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function generateId() {
+            return 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function setTag(tag) {
+            state.selectedTag = tag;
+            document.querySelectorAll('.tag-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tag === tag);
+            });
+        }
+
+        function setFilter(filter) {
+            state.filter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+            renderNotes();
+        }
+
+        function addNote() {
+            const input = document.getElementById('noteInput');
+            const content = input.value.trim();
+            if (!content) return;
+
+            const note = {
+                id: generateId(),
+                content: content,
+                tag: state.selectedTag,
+                taskId: state.currentTask?.id || null,
+                taskTitle: state.currentTask?.title || null,
+                createdAt: Date.now()
+            };
+
+            state.notes.unshift(note);
+            input.value = '';
+            renderNotes();
+
+            log('Note added: ' + content.substring(0, 30) + (content.length > 30 ? '...' : ''));
+
+            // Emit note created event
+            emit(EVENTS.NOTE_CREATED, { note });
+
+            // If attached to a task, notify the project tracker
+            if (state.currentTask) {
+                emit(EVENTS.NOTE_ADDED, {
+                    taskId: state.currentTask.id,
+                    note: note
+                });
+            }
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+            return date.toLocaleDateString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notesList');
+            let filteredNotes = state.notes;
+
+            if (state.filter !== 'all') {
+                filteredNotes = state.notes.filter(n => n.tag === state.filter);
+            }
+
+            document.getElementById('noteCount').textContent =
+                state.notes.length + ' note' + (state.notes.length !== 1 ? 's' : '');
+
+            if (filteredNotes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <div>${state.notes.length === 0 ? 'No notes yet' : 'No ' + state.filter + ' notes'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredNotes.map(note => `
+                <div class="note-item ${note.tag}">
+                    <div class="note-header">
+                        <span class="note-tag ${note.tag}">${note.tag}</span>
+                        <span class="note-time">${formatTime(note.createdAt)}</span>
+                    </div>
+                    <div class="note-content">${escapeHtml(note.content)}</div>
+                    ${note.taskTitle ? `
+                        <div class="note-task-ref">
+                            <span>📋</span> ${escapeHtml(note.taskTitle)}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function setCurrentTask(task) {
+            state.currentTask = task;
+            const context = document.getElementById('taskContext');
+            context.innerHTML = `
+                <div class="task-label">Attached To</div>
+                <div class="task-name">${escapeHtml(task.title)}</div>
+            `;
+            document.getElementById('addBtn').disabled = false;
+            log('Context set to task: ' + task.title);
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Task Notes ready');
+
+            // Enable add button even without task (will be a general note)
+            document.getElementById('noteInput').addEventListener('input', function() {
+                document.getElementById('addBtn').disabled = !this.value.trim();
+            });
+
+            renderNotes();
+
+            // Request current tasks
+            emit(EVENTS.REQUEST_TASKS, {});
+
+            window.WidgetAPI.onEvent('*', (event) => {
+                switch (event.type) {
+                    case EVENTS.TASK_SELECTED:
+                        if (event.payload.task) {
+                            setCurrentTask(event.payload.task);
+                        }
+                        break;
+
+                    case EVENTS.TASKS_SYNC:
+                        if (event.payload.tasks) {
+                            event.payload.tasks.forEach(t => {
+                                state.tasks[t.id] = t;
+                            });
+                            // If we have a selected task from sync
+                            if (event.payload.selectedTaskId && !state.currentTask) {
+                                const task = state.tasks[event.payload.selectedTaskId];
+                                if (task) setCurrentTask(task);
+                            }
+                        }
+                        break;
+                }
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

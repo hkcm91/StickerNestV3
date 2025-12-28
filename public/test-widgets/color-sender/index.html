@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: sans-serif;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+        }
+
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Pick a Color 🎨</h3>
+    <div class="grid">
+        <button style="background: #ef4444;" onclick="sendColor('#ef4444')">Red</button>
+        <button style="background: #22c55e;" onclick="sendColor('#22c55e')">Green</button>
+        <button style="background: #3b82f6;" onclick="sendColor('#3b82f6')">Blue</button>
+        <button style="background: #eab308;" onclick="sendColor('#eab308')">Yellow</button>
+    </div>
+
+    <script>
+        // Emit output on port - portId MUST match io.outputs[].id
+        function emit(portId, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portId,
+                    payload: payload
+                }
+            }, '*');
+        }
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+
+        function sendColor(color) {
+            // Emit on 'color' port - matches io.outputs[].id: "color"
+            emit('color', { color: color });
+        }
+    </script>
+</body>
+
+</html>

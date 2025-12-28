@@ -1,0 +1,23 @@
+{
+    "id": "debug-echo-widget",
+    "name": "Echo Widget",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "any-event": {
+            "type": "event",
+            "description": "Receives any event to echo back"
+        }
+    },
+    "outputs": {
+        "echo": {
+            "type": "event",
+            "description": "Echoes received events with timing info"
+        }
+    }
+}

@@ -1,0 +1,92 @@
+{
+  "id": "word-processor-widget",
+  "name": "Word Processor",
+  "version": "1.0.0",
+  "description": "A full-featured word processor widget that appears as a document icon on the canvas. Click to open a rich text editor with formatting tools, export options, and document management.",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "productivity",
+  "tags": ["word", "document", "text", "editor", "writing", "productivity", "notes", "rich-text"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["text", "document"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "document.load": {
+      "type": "object",
+      "description": "Load document content with title and HTML body"
+    },
+    "document.clear": {
+      "type": "event",
+      "description": "Clear the document"
+    },
+    "format.apply": {
+      "type": "object",
+      "description": "Apply formatting (bold, italic, underline, etc.)"
+    },
+    "view.toggle": {
+      "type": "string",
+      "description": "Toggle between 'icon' and 'editor' view"
+    },
+    "icon.set": {
+      "type": "object",
+      "description": "Set custom icon (iconType: 'doc'|'docx'|'txt'|'rtf'|'note'|'custom', customEmoji: string)"
+    },
+    "export.request": {
+      "type": "string",
+      "description": "Request export in format: 'html', 'txt', 'markdown'"
+    }
+  },
+  "outputs": {
+    "document.changed": {
+      "type": "object",
+      "description": "Emitted when document content changes"
+    },
+    "document.saved": {
+      "type": "object",
+      "description": "Emitted when document is saved"
+    },
+    "document.exported": {
+      "type": "object",
+      "description": "Emitted with exported document data"
+    },
+    "view.changed": {
+      "type": "string",
+      "description": "Emitted when view mode changes ('icon' or 'editor')"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["brand:color-changed", "brand:font-changed"],
+    "emits": ["document:content-changed", "document:saved"]
+  },
+  "config": {
+    "defaultTitle": "Untitled Document",
+    "defaultViewMode": "icon",
+    "autoSave": true,
+    "autoSaveInterval": 30000
+  },
+  "size": {
+    "width": 800,
+    "height": 600,
+    "minWidth": 120,
+    "minHeight": 140,
+    "maxWidth": 1400,
+    "maxHeight": 1000
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "toolbarBg", "type": "color", "variable": "--toolbar-bg" },
+    { "name": "editorBg", "type": "color", "variable": "--editor-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" },
+    { "name": "textColor", "type": "color", "variable": "--text-color" },
+    { "name": "borderColor", "type": "color", "variable": "--border-color" }
+  ]
+}

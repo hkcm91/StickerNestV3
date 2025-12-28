@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: transparent;
+            min-height: 100vh;
+            color: #e2e8f0;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* ===== CLOSED FOLDER VIEW (Windows 11 Style Icon) ===== */
+        .folder-closed {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+        .folder-closed:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .folder-closed:active {
+            transform: scale(0.96);
+        }
+        .folder-closed.dragover {
+            background: rgba(96, 165, 250, 0.25);
+            outline: 2px dashed #60a5fa;
+            outline-offset: -4px;
+        }
+
+        /* Windows 11 Style Folder Icon */
+        .folder-icon-wrapper {
+            position: relative;
+            width: 72px;
+            height: 60px;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+            transition: all 0.2s ease;
+        }
+        .folder-closed:hover .folder-icon-wrapper {
+            transform: translateY(-2px);
+            filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5));
+        }
+
+        /* Folder back panel */
+        .folder-back {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: linear-gradient(145deg, var(--folder-color-light) 0%, var(--folder-color) 100%);
+            border-radius: 4px 4px 6px 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        /* Folder tab */
+        .folder-tab {
+            position: absolute;
+            top: 0;
+            left: 4px;
+            width: 28px;
+            height: 14px;
+            background: linear-gradient(145deg, var(--folder-color-light) 0%, var(--folder-color) 100%);
+            border-radius: 4px 4px 0 0;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-bottom: none;
+        }
+
+        /* Folder front panel */
+        .folder-front {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            background: linear-gradient(175deg, var(--folder-color) 0%, var(--folder-color-dark) 100%);
+            border-radius: 2px 2px 6px 6px;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-top: 1px solid rgba(255,255,255,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Item preview inside folder */
+        .folder-preview {
+            display: flex;
+            gap: 3px;
+            padding: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 100%;
+            opacity: 0.7;
+        }
+        .folder-preview-item {
+            width: 12px;
+            height: 14px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .folder-preview-item.image {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+        }
+        .folder-preview-item.widget {
+            background: linear-gradient(135deg, #34d399, #22c55e);
+        }
+
+        /* Folder label */
+        .folder-name {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+            color: #f1f5f9;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+            max-width: 100%;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.4);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .folder-name.editing {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #60a5fa;
+            outline: none;
+            min-width: 60px;
+        }
+
+        .item-count {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* ===== OPEN FOLDER VIEW ===== */
+        .folder-open {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        /* Title bar */
+        .folder-titlebar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .folder-titlebar-icon {
+            width: 20px;
+            height: 16px;
+            position: relative;
+        }
+        .folder-titlebar-icon .mini-back {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 12px;
+            background: var(--folder-color);
+            border-radius: 2px;
+        }
+        .folder-titlebar-icon .mini-tab {
+            position: absolute;
+            top: 0;
+            left: 2px;
+            width: 8px;
+            height: 5px;
+            background: var(--folder-color);
+            border-radius: 2px 2px 0 0;
+        }
+        .folder-titlebar-name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        .folder-titlebar-name.editing {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid #60a5fa;
+            border-radius: 4px;
+            padding: 2px 8px;
+            outline: none;
+        }
+
+        /* Window buttons */
+        .window-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .window-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: none;
+            background: rgba(255,255,255,0.08);
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .window-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: #f1f5f9;
+        }
+        .window-btn.close:hover {
+            background: rgba(239, 68, 68, 0.8);
+            color: white;
+        }
+
+        /* Toolbar */
+        .folder-toolbar {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            color: #94a3b8;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .toolbar-btn:hover {
+            background: rgba(96, 165, 250, 0.15);
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #60a5fa;
+        }
+        .toolbar-btn.primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-color: #3b82f6;
+            color: white;
+        }
+        .toolbar-btn.primary:hover {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+        }
+
+        /* Content area */
+        .folder-content {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 8px;
+            align-content: start;
+        }
+        .folder-content.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .folder-content.dragover {
+            background: rgba(96, 165, 250, 0.1);
+            outline: 2px dashed rgba(96, 165, 250, 0.5);
+            outline-offset: -8px;
+        }
+
+        /* Items inside folder */
+        .folder-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 2px solid transparent;
+        }
+        .folder-item:hover {
+            background: rgba(255,255,255,0.06);
+        }
+        .folder-item.selected {
+            background: rgba(96, 165, 250, 0.15);
+            border-color: rgba(96, 165, 250, 0.4);
+        }
+        .folder-item-icon {
+            width: 48px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 6px;
+            position: relative;
+        }
+
+        /* Document icon */
+        .doc-icon {
+            width: 36px;
+            height: 42px;
+            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 2px 8px 4px 4px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .doc-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(135deg, #cbd5e1 50%, transparent 50%);
+        }
+        .doc-icon::after {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 6px;
+            right: 6px;
+            height: 2px;
+            background: #94a3b8;
+            box-shadow: 0 5px 0 #94a3b8, 0 10px 0 #94a3b8, 0 15px 0 #94a3b8;
+        }
+        .doc-icon.word {
+            background: linear-gradient(180deg, #2563eb, #1d4ed8);
+        }
+        .doc-icon.word::after { background: rgba(255,255,255,0.4); box-shadow: 0 5px 0 rgba(255,255,255,0.4), 0 10px 0 rgba(255,255,255,0.4); }
+
+        /* Image icon */
+        .image-icon {
+            width: 42px;
+            height: 36px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .image-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-icon::after {
+            content: '🖼';
+            font-size: 18px;
+        }
+        .image-icon:has(img)::after { display: none; }
+
+        /* Widget icon */
+        .widget-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #22c55e, #16a34a);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+        }
+
+        /* Mini folder icon */
+        .mini-folder {
+            width: 40px;
+            height: 34px;
+            position: relative;
+        }
+        .mini-folder .mf-back {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 26px;
+            background: linear-gradient(145deg, var(--item-folder-light) 0%, var(--item-folder) 100%);
+            border-radius: 2px 2px 4px 4px;
+        }
+        .mini-folder .mf-tab {
+            position: absolute;
+            top: 0;
+            left: 2px;
+            width: 14px;
+            height: 8px;
+            background: var(--item-folder);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .folder-item-name {
+            font-size: 11px;
+            text-align: center;
+            color: #cbd5e1;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            color: #64748b;
+            padding: 30px;
+        }
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+        .empty-text {
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .empty-hint {
+            font-size: 11px;
+            color: #475569;
+        }
+
+        /* Status bar */
+        .folder-statusbar {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        /* Context menu */
+        .context-menu {
+            position: fixed;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            padding: 6px 0;
+            min-width: 160px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+        }
+        .context-menu.visible { display: block; }
+        .context-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .context-item:hover {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+        }
+        .context-item.danger:hover {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        .context-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin: 4px 0;
+        }
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            padding: 8px 14px;
+        }
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+        }
+        .color-dot:hover {
+            transform: scale(1.15);
+        }
+        .color-dot.active {
+            border-color: white;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+        /* Folder color variables */
+        :root {
+            --folder-color: #fbbf24;
+            --folder-color-light: #fcd34d;
+            --folder-color-dark: #d97706;
+        }
+        .folder-blue { --folder-color: #3b82f6; --folder-color-light: #60a5fa; --folder-color-dark: #2563eb; }
+        .folder-green { --folder-color: #22c55e; --folder-color-light: #4ade80; --folder-color-dark: #16a34a; }
+        .folder-red { --folder-color: #ef4444; --folder-color-light: #f87171; --folder-color-dark: #dc2626; }
+        .folder-purple { --folder-color: #a855f7; --folder-color-light: #c084fc; --folder-color-dark: #9333ea; }
+        .folder-orange { --folder-color: #f97316; --folder-color-light: #fb923c; --folder-color-dark: #ea580c; }
+        .folder-pink { --folder-color: #ec4899; --folder-color-light: #f472b6; --folder-color-dark: #db2777; }
+        .folder-cyan { --folder-color: #06b6d4; --folder-color-light: #22d3ee; --folder-color-dark: #0891b2; }
+    </style>
+</head>
+<body>
+    <!-- Closed Folder View -->
+    <div class="folder-closed folder-yellow" id="folderClosed">
+        <div class="folder-icon-wrapper">
+            <div class="folder-back"></div>
+            <div class="folder-tab"></div>
+            <div class="folder-front">
+                <div class="folder-preview" id="folderPreview"></div>
+            </div>
+        </div>
+        <div class="folder-name" id="folderName">New Folder</div>
+        <div class="item-count" id="itemCount"></div>
+    </div>
+
+    <!-- Open Folder View -->
+    <div class="folder-open" id="folderOpen" style="display: none;">
+        <div class="folder-titlebar">
+            <div class="folder-titlebar-icon folder-yellow" id="titlebarIcon">
+                <div class="mini-back"></div>
+                <div class="mini-tab"></div>
+            </div>
+            <span class="folder-titlebar-name" id="titlebarName">New Folder</span>
+            <div class="window-buttons">
+                <button class="window-btn" onclick="closeFolder()" title="Minimize">─</button>
+                <button class="window-btn close" onclick="closeFolder()" title="Close">✕</button>
+            </div>
+        </div>
+        <div class="folder-toolbar">
+            <button class="toolbar-btn primary" onclick="createSubFolder()">
+                <span>📁</span> New Folder
+            </button>
+            <button class="toolbar-btn" onclick="addDocument()">
+                <span>📄</span> New Document
+            </button>
+        </div>
+        <div class="folder-content" id="folderContent"></div>
+        <div class="folder-statusbar">
+            <span id="statusItemCount">0 items</span>
+            <span id="statusSelected"></span>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-item" onclick="openFolder()">📂 Open</div>
+        <div class="context-item" onclick="startRename()">✏️ Rename</div>
+        <div class="context-divider"></div>
+        <div style="padding: 4px 14px; font-size: 10px; color: #64748b;">Folder Color</div>
+        <div class="color-picker" id="colorPicker">
+            <div class="color-dot" style="background: #fbbf24" data-color="yellow"></div>
+            <div class="color-dot" style="background: #3b82f6" data-color="blue"></div>
+            <div class="color-dot" style="background: #22c55e" data-color="green"></div>
+            <div class="color-dot" style="background: #ef4444" data-color="red"></div>
+            <div class="color-dot" style="background: #a855f7" data-color="purple"></div>
+            <div class="color-dot" style="background: #f97316" data-color="orange"></div>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="createNewCanvasFolder()">📁 New Folder on Canvas</div>
+    </div>
+
+    <script>
+        // ==================
+        // STATE
+        // ==================
+        let state = {
+            name: 'New Folder',
+            color: 'yellow',
+            isOpen: false,
+            items: [],
+            selectedItems: []
+        };
+
+        let instanceId = null;
+
+        // ==================
+        // WIDGET API HELPERS
+        // ==================
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+            console.log('[Folder]', msg);
+        }
+
+        function saveState() {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.setState(state);
+            }
+        }
+
+        function loadState() {
+            if (window.WidgetAPI) {
+                const saved = window.WidgetAPI.getState();
+                if (saved && saved.name) {
+                    state = { ...state, ...saved };
+                }
+            }
+        }
+
+        // ==================
+        // UI UPDATE
+        // ==================
+        function updateUI() {
+            const colorClass = `folder-${state.color}`;
+
+            // Update closed view
+            document.getElementById('folderClosed').className = `folder-closed ${colorClass}`;
+            document.getElementById('folderName').textContent = state.name;
+
+            // Update item count
+            const count = state.items.length;
+            document.getElementById('itemCount').textContent = count > 0 ? `${count} item${count !== 1 ? 's' : ''}` : '';
+
+            // Update folder preview (show mini icons of contents)
+            updateFolderPreview();
+
+            // Update open view
+            document.getElementById('titlebarIcon').className = `folder-titlebar-icon ${colorClass}`;
+            document.getElementById('titlebarName').textContent = state.name;
+
+            // Toggle views
+            document.getElementById('folderClosed').style.display = state.isOpen ? 'none' : 'flex';
+            document.getElementById('folderOpen').style.display = state.isOpen ? 'flex' : 'none';
+
+            if (state.isOpen) {
+                renderItems();
+                updateStatusBar();
+            }
+
+            // Update color picker active state
+            document.querySelectorAll('.color-dot').forEach(dot => {
+                dot.classList.toggle('active', dot.dataset.color === state.color);
+            });
+        }
+
+        function updateFolderPreview() {
+            const preview = document.getElementById('folderPreview');
+            const items = state.items.slice(0, 4);
+
+            if (items.length === 0) {
+                preview.innerHTML = '';
+                return;
+            }
+
+            preview.innerHTML = items.map(item => {
+                let typeClass = '';
+                if (item.type === 'image') typeClass = 'image';
+                else if (item.type === 'widget') typeClass = 'widget';
+                return `<div class="folder-preview-item ${typeClass}"></div>`;
+            }).join('');
+        }
+
+        function renderItems() {
+            const container = document.getElementById('folderContent');
+
+            if (state.items.length === 0) {
+                container.className = 'folder-content empty';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📂</div>
+                        <div class="empty-text">This folder is empty</div>
+                        <div class="empty-hint">Drop widgets, files, or images here</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.className = 'folder-content';
+            container.innerHTML = state.items.map((item, idx) => {
+                const isSelected = state.selectedItems.includes(idx);
+                return `
+                    <div class="folder-item ${isSelected ? 'selected' : ''}"
+                         onclick="selectItem(event, ${idx})"
+                         ondblclick="openItem(${idx})"
+                         draggable="true"
+                         ondragstart="handleItemDragStart(event, ${idx})">
+                        <div class="folder-item-icon">
+                            ${getItemIcon(item)}
+                        </div>
+                        <span class="folder-item-name">${escapeHtml(item.name)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getItemIcon(item) {
+            switch (item.type) {
+                case 'folder':
+                    const folderColor = item.color || 'yellow';
+                    return `<div class="mini-folder" style="--item-folder: var(--folder-color); --item-folder-light: var(--folder-color-light);">
+                        <div class="mf-back" style="background: linear-gradient(145deg, ${FOLDER_COLORS[folderColor].light}, ${FOLDER_COLORS[folderColor].main});"></div>
+                        <div class="mf-tab" style="background: ${FOLDER_COLORS[folderColor].main};"></div>
+                    </div>`;
+                case 'document':
+                case 'file':
+                    return `<div class="doc-icon ${item.docType || ''}"></div>`;
+                case 'image':
+                    if (item.thumbnail) {
+                        return `<div class="image-icon"><img src="${item.thumbnail}" alt="${item.name}"></div>`;
+                    }
+                    return `<div class="image-icon"></div>`;
+                case 'widget':
+                    return `<div class="widget-icon">${item.icon || '🧩'}</div>`;
+                default:
+                    return `<div class="doc-icon"></div>`;
+            }
+        }
+
+        function updateStatusBar() {
+            const count = state.items.length;
+            document.getElementById('statusItemCount').textContent = `${count} item${count !== 1 ? 's' : ''}`;
+
+            const selected = state.selectedItems.length;
+            document.getElementById('statusSelected').textContent = selected > 0 ? `${selected} selected` : '';
+        }
+
+        // ==================
+        // FOLDER ACTIONS
+        // ==================
+        function openFolder() {
+            state.isOpen = true;
+            saveState();
+            updateUI();
+            emit('folder:opened', { id: instanceId, name: state.name, items: state.items });
+            log('Opened folder: ' + state.name);
+            hideContextMenu();
+        }
+
+        function closeFolder() {
+            state.isOpen = false;
+            state.selectedItems = [];
+            saveState();
+            updateUI();
+            emit('folder:closed', { id: instanceId, name: state.name });
+            log('Closed folder: ' + state.name);
+        }
+
+        function startRename() {
+            hideContextMenu();
+            const nameEl = state.isOpen
+                ? document.getElementById('titlebarName')
+                : document.getElementById('folderName');
+
+            nameEl.contentEditable = true;
+            nameEl.classList.add('editing');
+            nameEl.focus();
+
+            // Select all text
+            const range = document.createRange();
+            range.selectNodeContents(nameEl);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+
+            const finishRename = () => {
+                nameEl.contentEditable = false;
+                nameEl.classList.remove('editing');
+                const newName = nameEl.textContent.trim() || 'New Folder';
+                if (newName !== state.name) {
+                    const oldName = state.name;
+                    state.name = newName;
+                    saveState();
+                    updateUI();
+                    emit('folder:renamed', { id: instanceId, oldName, newName });
+                    log('Renamed: ' + oldName + ' -> ' + newName);
+                }
+            };
+
+            nameEl.onblur = finishRename;
+            nameEl.onkeydown = (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); }
+                if (e.key === 'Escape') { nameEl.textContent = state.name; nameEl.blur(); }
+            };
+        }
+
+        function setColor(color) {
+            state.color = color;
+            saveState();
+            updateUI();
+            hideContextMenu();
+            log('Color changed to: ' + color);
+        }
+
+        function createSubFolder() {
+            const name = prompt('Folder name:', 'New Folder');
+            if (name) {
+                addItem({
+                    type: 'folder',
+                    name: name,
+                    color: 'yellow',
+                    items: []
+                });
+            }
+        }
+
+        function addDocument() {
+            const name = prompt('Document name:', 'New Document.txt');
+            if (name) {
+                addItem({
+                    type: 'document',
+                    name: name,
+                    content: ''
+                });
+            }
+        }
+
+        function createNewCanvasFolder() {
+            hideContextMenu();
+            emit('widget:add-request', {
+                widgetDefId: 'folder-widget',
+                source: 'local',
+                state: { name: 'New Folder', color: 'yellow', isOpen: false, items: [] }
+            });
+            log('Requested new folder on canvas');
+        }
+
+        // ==================
+        // ITEM MANAGEMENT
+        // ==================
+        function addItem(item) {
+            const newItem = {
+                id: generateId(),
+                createdAt: Date.now(),
+                ...item
+            };
+            state.items.push(newItem);
+            saveState();
+            if (state.isOpen) {
+                renderItems();
+                updateStatusBar();
+            }
+            updateFolderPreview();
+            updateUI();
+            emit('folder:item-added', { folderId: instanceId, item: newItem });
+            log('Added item: ' + newItem.name);
+            return newItem;
+        }
+
+        function selectItem(event, idx) {
+            event.stopPropagation();
+            if (event.ctrlKey || event.metaKey) {
+                // Multi-select
+                const pos = state.selectedItems.indexOf(idx);
+                if (pos >= 0) {
+                    state.selectedItems.splice(pos, 1);
+                } else {
+                    state.selectedItems.push(idx);
+                }
+            } else {
+                // Single select
+                state.selectedItems = [idx];
+            }
+            renderItems();
+            updateStatusBar();
+        }
+
+        function openItem(idx) {
+            const item = state.items[idx];
+            if (!item) return;
+
+            if (item.type === 'folder') {
+                // Emit to open nested folder or create new folder widget
+                emit('folder:subfolder-opened', { folderId: instanceId, subfolder: item });
+            } else if (item.type === 'widget' && item.widgetId) {
+                // Emit to focus/restore the widget
+                emit('folder:widget-restored', { folderId: instanceId, widgetId: item.widgetId, widgetDefId: item.widgetDefId });
+            } else if (item.type === 'document') {
+                // Emit to open document (could spawn word processor widget)
+                emit('folder:document-opened', { folderId: instanceId, document: item });
+            }
+            log('Opened item: ' + item.name);
+        }
+
+        function deleteSelected() {
+            if (state.selectedItems.length === 0) return;
+
+            // Sort descending to remove from end first
+            const toRemove = [...state.selectedItems].sort((a, b) => b - a);
+            toRemove.forEach(idx => state.items.splice(idx, 1));
+            state.selectedItems = [];
+            saveState();
+            renderItems();
+            updateStatusBar();
+            updateFolderPreview();
+            updateUI();
+        }
+
+        // ==================
+        // DRAG AND DROP
+        // ==================
+        function setupDragDrop() {
+            const closedView = document.getElementById('folderClosed');
+            const contentArea = document.getElementById('folderContent');
+
+            // Closed folder drop zone
+            closedView.ondragover = handleDragOver;
+            closedView.ondragleave = handleDragLeave;
+            closedView.ondrop = handleDrop;
+            closedView.ondblclick = openFolder;
+            closedView.oncontextmenu = showContextMenu;
+
+            // Open folder content drop zone
+            contentArea.ondragover = handleDragOver;
+            contentArea.ondragleave = handleDragLeave;
+            contentArea.ondrop = handleDrop;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add('dragover');
+            e.dataTransfer.dropEffect = 'copy';
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('dragover');
+
+            // Check for dropped files from desktop
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFileDrop(e.dataTransfer.files);
+                return;
+            }
+
+            // Check for widget instance from canvas (text/widget-id)
+            const widgetId = e.dataTransfer.getData('text/widget-id');
+            if (widgetId) {
+                handleWidgetDrop(widgetId);
+                return;
+            }
+
+            // Check for widget definition from library
+            const widgetDefId = e.dataTransfer.getData('text/widget-def-id');
+            if (widgetDefId) {
+                const source = e.dataTransfer.getData('text/widget-source') || 'local';
+                handleWidgetDefDrop(widgetDefId, source);
+                return;
+            }
+
+            // Check for sticker drop
+            const stickerId = e.dataTransfer.getData('text/sticker-library-id');
+            if (stickerId) {
+                handleStickerDrop(e.dataTransfer);
+                return;
+            }
+
+            // Check for plain text/URL
+            const text = e.dataTransfer.getData('text/plain');
+            if (text && text.trim()) {
+                handleTextDrop(text);
+            }
+        }
+
+        function handleFileDrop(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        addItem({
+                            type: 'image',
+                            name: file.name,
+                            thumbnail: ev.target.result,
+                            size: file.size
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    addItem({
+                        type: 'file',
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type
+                    });
+                }
+            });
+            log(`Dropped ${files.length} file(s)`);
+        }
+
+        function handleWidgetDrop(widgetId) {
+            // A widget instance was dragged from the canvas into this folder
+            addItem({
+                type: 'widget',
+                name: `Widget ${widgetId.slice(-6)}`,
+                widgetId: widgetId,
+                icon: '🧩'
+            });
+
+            // Emit event to notify canvas to hide/remove the widget
+            emit('folder:widget-stored', { folderId: instanceId, widgetId });
+            log('Stored widget: ' + widgetId);
+        }
+
+        function handleWidgetDefDrop(widgetDefId, source) {
+            // A widget definition was dragged from the library
+            addItem({
+                type: 'widget',
+                name: widgetDefId,
+                widgetDefId: widgetDefId,
+                source: source,
+                icon: '🧩'
+            });
+            log('Added widget def: ' + widgetDefId);
+        }
+
+        function handleStickerDrop(dataTransfer) {
+            const name = dataTransfer.getData('text/sticker-name') || 'Sticker';
+            const mediaSrc = dataTransfer.getData('text/sticker-media-src');
+
+            addItem({
+                type: 'image',
+                name: name,
+                thumbnail: mediaSrc,
+                isSticker: true
+            });
+            log('Added sticker: ' + name);
+        }
+
+        function handleTextDrop(text) {
+            // Check if it's a URL
+            try {
+                new URL(text);
+                addItem({
+                    type: 'link',
+                    name: text.length > 30 ? text.slice(0, 30) + '...' : text,
+                    url: text
+                });
+            } catch {
+                // Plain text - create a note
+                addItem({
+                    type: 'document',
+                    name: 'Note',
+                    content: text
+                });
+            }
+        }
+
+        function handleItemDragStart(e, idx) {
+            const item = state.items[idx];
+            e.dataTransfer.setData('text/folder-item', JSON.stringify({ folderId: instanceId, itemIndex: idx, item }));
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        // ==================
+        // CONTEXT MENU
+        // ==================
+        function showContextMenu(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const menu = document.getElementById('contextMenu');
+            menu.classList.add('visible');
+
+            let x = e.clientX;
+            let y = e.clientY;
+
+            requestAnimationFrame(() => {
+                const rect = menu.getBoundingClientRect();
+                if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 10;
+                if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - 10;
+                menu.style.left = x + 'px';
+                menu.style.top = y + 'px';
+            });
+        }
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').classList.remove('visible');
+        }
+
+        // ==================
+        // UTILITIES
+        // ==================
+        const FOLDER_COLORS = {
+            yellow: { main: '#fbbf24', light: '#fcd34d', dark: '#d97706' },
+            blue: { main: '#3b82f6', light: '#60a5fa', dark: '#2563eb' },
+            green: { main: '#22c55e', light: '#4ade80', dark: '#16a34a' },
+            red: { main: '#ef4444', light: '#f87171', dark: '#dc2626' },
+            purple: { main: '#a855f7', light: '#c084fc', dark: '#9333ea' },
+            orange: { main: '#f97316', light: '#fb923c', dark: '#ea580c' },
+            pink: { main: '#ec4899', light: '#f472b6', dark: '#db2777' },
+            cyan: { main: '#06b6d4', light: '#22d3ee', dark: '#0891b2' }
+        };
+
+        function generateId() {
+            return 'item-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ==================
+        // KEYBOARD SHORTCUTS
+        // ==================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F2' && !state.isOpen) {
+                startRename();
+            } else if (e.key === 'Enter' && !state.isOpen && !e.target.isContentEditable) {
+                openFolder();
+            } else if (e.key === 'Escape') {
+                if (state.isOpen) closeFolder();
+                hideContextMenu();
+            } else if (e.key === 'Delete' && state.isOpen && state.selectedItems.length > 0) {
+                deleteSelected();
+            } else if (e.key === 'a' && (e.ctrlKey || e.metaKey) && state.isOpen) {
+                e.preventDefault();
+                state.selectedItems = state.items.map((_, i) => i);
+                renderItems();
+                updateStatusBar();
+            }
+        });
+
+        // Click handlers
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu')) hideContextMenu();
+            if (e.target.closest('.folder-content') && !e.target.closest('.folder-item')) {
+                state.selectedItems = [];
+                renderItems();
+                updateStatusBar();
+            }
+        });
+
+        // Color picker clicks
+        document.getElementById('colorPicker').addEventListener('click', (e) => {
+            const dot = e.target.closest('.color-dot');
+            if (dot && dot.dataset.color) {
+                setColor(dot.dataset.color);
+            }
+        });
+
+        // ==================
+        // INIT
+        // ==================
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            if (window.WidgetAPI.getInstanceId) {
+                instanceId = window.WidgetAPI.getInstanceId();
+            }
+
+            log('Folder widget ready');
+            loadState();
+            setupDragDrop();
+            updateUI();
+
+            // Listen for events
+            window.WidgetAPI.onEvent('*', (event) => {
+                switch (event.type) {
+                    case 'folder:rename':
+                        if (event.payload?.name) {
+                            state.name = event.payload.name;
+                            saveState();
+                            updateUI();
+                        }
+                        break;
+                    case 'folder:set-color':
+                        if (event.payload?.color) {
+                            setColor(event.payload.color);
+                        }
+                        break;
+                    case 'folder:open':
+                        openFolder();
+                        break;
+                    case 'folder:close':
+                        closeFolder();
+                        break;
+                    case 'folder:add-item':
+                        if (event.payload) {
+                            addItem(event.payload);
+                        }
+                        break;
+                }
+            });
+        }
+
+        init();
+
+        // Message listener
+        window.addEventListener('message', (event) => {
+            const { type, instanceId: msgInstanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Folder initialized:', msgInstanceId);
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

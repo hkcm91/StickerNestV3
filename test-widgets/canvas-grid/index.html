@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #252538 100%);
+            color: #e2e8f0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            color: #8b5cf6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section {
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .toggle-label {
+            flex: 1;
+            font-size: 13px;
+        }
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .toggle.active {
+            background: #8b5cf6;
+        }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+        .toggle.active::after {
+            transform: translateX(20px);
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .slider-label {
+            width: 70px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .slider-value {
+            width: 50px;
+            text-align: right;
+            font-size: 11px;
+            color: #64748b;
+            font-family: monospace;
+        }
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .color-picker {
+            width: 36px;
+            height: 28px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+        .zoom-btns {
+            display: flex;
+            gap: 6px;
+        }
+        .zoom-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .zoom-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        .flip-btns {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .flip-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid transparent;
+            border-radius: 6px;
+            color: #94a3b8;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .flip-btn.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+            color: #e2e8f0;
+        }
+        .reset-btn {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <h3>📐 Grid & Transform</h3>
+
+    <div class="section">
+        <div class="section-title">Grid Settings</div>
+
+        <div class="toggle-row">
+            <span class="toggle-label">Show Grid</span>
+            <div class="toggle" id="gridToggle" onclick="toggleGrid()"></div>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Size</span>
+            <input type="range" class="slider" id="gridSize" min="5" max="100" value="20" oninput="updateGrid()">
+            <span class="slider-value" id="gridSize-val">20px</span>
+        </div>
+
+        <div class="slider-row">
+            <span class="slider-label">Opacity</span>
+            <input type="range" class="slider" id="gridOpacity" min="0" max="100" value="50" oninput="updateGrid()">
+            <span class="slider-value" id="gridOpacity-val">50%</span>
+        </div>
+
+        <div class="color-row">
+            <span class="slider-label">Color</span>
+            <input type="color" class="color-picker" id="gridColor" value="#000000" onchange="updateGrid()">
+            <span style="flex: 1; font-size: 12px; color: #64748b;">Click to change</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Canvas Transform</div>
+
+        <div class="slider-row">
+            <span class="slider-label">Zoom</span>
+            <input type="range" class="slider" id="zoom" min="10" max="500" value="100" oninput="updateTransform()">
+            <span class="slider-value" id="zoom-val">100%</span>
+        </div>
+
+        <div class="zoom-btns">
+            <button class="zoom-btn" onclick="setZoom(50)">50%</button>
+            <button class="zoom-btn" onclick="setZoom(100)">100%</button>
+            <button class="zoom-btn" onclick="setZoom(150)">150%</button>
+            <button class="zoom-btn" onclick="setZoom(200)">200%</button>
+        </div>
+
+        <div class="slider-row" style="margin-top: 12px;">
+            <span class="slider-label">Rotation</span>
+            <input type="range" class="slider" id="rotation" min="0" max="360" value="0" oninput="updateTransform()">
+            <span class="slider-value" id="rotation-val">0°</span>
+        </div>
+
+        <div class="flip-btns">
+            <button class="flip-btn" id="flipX" onclick="toggleFlip('X')">↔️ Flip H</button>
+            <button class="flip-btn" id="flipY" onclick="toggleFlip('Y')">↕️ Flip V</button>
+        </div>
+    </div>
+
+    <button class="reset-btn" onclick="resetAll()">Reset All</button>
+
+    <script>
+        let gridState = {
+            visible: false,
+            size: 20,
+            color: 'rgba(0,0,0,0.1)',
+            opacity: 0.5
+        };
+
+        let transformState = {
+            zoom: 1,
+            rotation: 0,
+            flipX: false,
+            flipY: false
+        };
+
+        function emit(eventType, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type: eventType, payload }
+            }, '*');
+        }
+
+        function broadcast(eventType, payload) {
+            window.parent.postMessage({
+                type: 'widget:broadcast',
+                payload: { type: eventType, payload }
+            }, '*');
+        }
+
+        function toggleGrid() {
+            gridState.visible = !gridState.visible;
+            document.getElementById('gridToggle').classList.toggle('active', gridState.visible);
+            updateGrid();
+        }
+
+        function updateGrid() {
+            const size = parseInt(document.getElementById('gridSize').value);
+            const opacity = parseInt(document.getElementById('gridOpacity').value) / 100;
+            const color = document.getElementById('gridColor').value;
+
+            gridState.size = size;
+            gridState.opacity = opacity;
+
+            // Convert hex color to rgba
+            const r = parseInt(color.substr(1, 2), 16);
+            const g = parseInt(color.substr(3, 2), 16);
+            const b = parseInt(color.substr(5, 2), 16);
+            gridState.color = `rgba(${r},${g},${b},${opacity})`;
+
+            // Update display
+            document.getElementById('gridSize-val').textContent = size + 'px';
+            document.getElementById('gridOpacity-val').textContent = Math.round(opacity * 100) + '%';
+
+            emit('canvas:set-grid', gridState);
+            broadcast('canvas:set-grid', gridState);
+        }
+
+        function setZoom(percent) {
+            document.getElementById('zoom').value = percent;
+            updateTransform();
+        }
+
+        function updateTransform() {
+            const zoom = parseInt(document.getElementById('zoom').value) / 100;
+            const rotation = parseInt(document.getElementById('rotation').value);
+
+            transformState.zoom = zoom;
+            transformState.rotation = rotation;
+
+            // Update display
+            document.getElementById('zoom-val').textContent = Math.round(zoom * 100) + '%';
+            document.getElementById('rotation-val').textContent = rotation + '°';
+
+            emit('canvas:set-transform', transformState);
+            broadcast('canvas:set-transform', transformState);
+        }
+
+        function toggleFlip(axis) {
+            const btn = document.getElementById('flip' + axis);
+            if (axis === 'X') {
+                transformState.flipX = !transformState.flipX;
+                btn.classList.toggle('active', transformState.flipX);
+            } else {
+                transformState.flipY = !transformState.flipY;
+                btn.classList.toggle('active', transformState.flipY);
+            }
+
+            emit('canvas:set-transform', transformState);
+            broadcast('canvas:set-transform', transformState);
+        }
+
+        function resetAll() {
+            // Reset grid
+            gridState = { visible: false, size: 20, color: 'rgba(0,0,0,0.1)', opacity: 0.5 };
+            document.getElementById('gridToggle').classList.remove('active');
+            document.getElementById('gridSize').value = 20;
+            document.getElementById('gridOpacity').value = 50;
+            document.getElementById('gridColor').value = '#000000';
+            document.getElementById('gridSize-val').textContent = '20px';
+            document.getElementById('gridOpacity-val').textContent = '50%';
+
+            // Reset transform
+            transformState = { zoom: 1, rotation: 0, flipX: false, flipY: false };
+            document.getElementById('zoom').value = 100;
+            document.getElementById('rotation').value = 0;
+            document.getElementById('zoom-val').textContent = '100%';
+            document.getElementById('rotation-val').textContent = '0°';
+            document.getElementById('flipX').classList.remove('active');
+            document.getElementById('flipY').classList.remove('active');
+
+            emit('canvas:set-grid', gridState);
+            emit('canvas:set-transform', transformState);
+            broadcast('canvas:set-grid', gridState);
+            broadcast('canvas:set-transform', transformState);
+        }
+
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

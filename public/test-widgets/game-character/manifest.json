@@ -1,0 +1,65 @@
+{
+  "id": "game-character",
+  "name": "Game Character",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Character creator and manager for isometric games. Connect to sprite widgets for appearance, configure animations, and deploy to game maps.",
+  "tags": ["gaming", "character", "avatar", "sprite", "animation", "habbo", "isometric"],
+  "author": "StickerNest",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "inputs": {
+    "setSpriteData": {
+      "type": "object",
+      "description": "Set character sprite from sprite widget"
+    },
+    "setProperties": {
+      "type": "object",
+      "description": "Set character properties {name, color, skinColor, speed}"
+    },
+    "setPosition": {
+      "type": "object",
+      "description": "Update character position {x, y}"
+    },
+    "playAnimation": {
+      "type": "string",
+      "description": "Play animation by name (walk_n, walk_s, idle, etc.)"
+    },
+    "setDirection": {
+      "type": "string",
+      "description": "Set facing direction (n, s, e, w, ne, nw, se, sw)"
+    },
+    "loadCharacter": {
+      "type": "object",
+      "description": "Load complete character data"
+    }
+  },
+  "outputs": {
+    "characterData": {
+      "type": "object",
+      "description": "Complete character data for use in isometric grid"
+    },
+    "deployToMap": {
+      "type": "object",
+      "description": "Deploy character to isometric map"
+    },
+    "animationChanged": {
+      "type": "object",
+      "description": "Emitted when animation state changes"
+    },
+    "propertiesChanged": {
+      "type": "object",
+      "description": "Emitted when character properties change"
+    }
+  },
+  "size": {
+    "width": 450,
+    "height": 520,
+    "minWidth": 380,
+    "minHeight": 420
+  }
+}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 0.5s;
+        }
+        body.sunny { background: linear-gradient(135deg, #87CEEB 0%, #f0e68c 100%); }
+        body.cloudy { background: linear-gradient(135deg, #778899 0%, #B0C4DE 100%); }
+        body.rainy { background: linear-gradient(135deg, #4a5568 0%, #718096 100%); }
+        body.stormy { background: linear-gradient(135deg, #1a202c 0%, #4a5568 100%); }
+
+        h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            font-size: 14px;
+        }
+        .weather-display {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 180px;
+        }
+        .weather-icon { font-size: 48px; margin-bottom: 5px; }
+        .weather-name {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .weather-effect {
+            color: rgba(255,255,255,0.8);
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.3);
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        button:hover { background: rgba(255,255,255,0.5); transform: scale(1.05); }
+        button:active { transform: scale(0.95); }
+        button.active {
+            background: rgba(255,255,255,0.7);
+            color: #333;
+        }
+        .forecast {
+            margin-top: 10px;
+            color: rgba(255,255,255,0.7);
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body class="sunny">
+    <h3>Weather Station</h3>
+    <div class="weather-display">
+        <div class="weather-icon" id="icon">☀️</div>
+        <div class="weather-name" id="name">Sunny</div>
+        <div class="weather-effect" id="effect">+30% growth speed</div>
+    </div>
+    <div class="controls">
+        <button onclick="setWeather('sunny')" id="btn-sunny" class="active">☀️</button>
+        <button onclick="setWeather('cloudy')" id="btn-cloudy">☁️</button>
+        <button onclick="setWeather('rainy')" id="btn-rainy">🌧️</button>
+        <button onclick="setWeather('stormy')" id="btn-stormy">⛈️</button>
+    </div>
+    <div class="forecast" id="forecast">Auto-change in 30s</div>
+
+    <script>
+        const WEATHER = {
+            sunny: { icon: '☀️', name: 'Sunny', effect: '+30% growth speed', sunny: true, rainy: false },
+            cloudy: { icon: '☁️', name: 'Cloudy', effect: 'Normal growth', sunny: false, rainy: false },
+            rainy: { icon: '🌧️', name: 'Rainy', effect: 'Auto-water + slower growth', sunny: false, rainy: true },
+            stormy: { icon: '⛈️', name: 'Stormy', effect: '-20% growth, but free water!', sunny: false, rainy: true }
+        };
+
+        let currentWeather = 'sunny';
+        let autoChangeTimer = null;
+        let countdown = 30;
+
+        function setWeather(type) {
+            if (!WEATHER[type]) return;
+
+            currentWeather = type;
+            const weather = WEATHER[type];
+
+            document.body.className = type;
+            document.getElementById('icon').textContent = weather.icon;
+            document.getElementById('name').textContent = weather.name;
+            document.getElementById('effect').textContent = weather.effect;
+
+            // Update active button
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `btn-${type}`);
+            });
+
+            // Emit weather event
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: 'farm:weather',
+                    payload: {
+                        type: currentWeather,
+                        sunny: weather.sunny,
+                        rainy: weather.rainy,
+                        icon: weather.icon,
+                        name: weather.name
+                    }
+                }
+            }, '*');
+
+            // Reset auto-change timer
+            resetAutoChange();
+        }
+
+        function resetAutoChange() {
+            countdown = 30;
+            if (autoChangeTimer) clearInterval(autoChangeTimer);
+
+            autoChangeTimer = setInterval(() => {
+                countdown--;
+                document.getElementById('forecast').textContent = `Auto-change in ${countdown}s`;
+
+                if (countdown <= 0) {
+                    // Random weather change
+                    const types = Object.keys(WEATHER);
+                    const randomType = types[Math.floor(Math.random() * types.length)];
+                    setWeather(randomType);
+                }
+            }, 1000);
+        }
+
+        // Listen for messages
+        window.addEventListener('message', (event) => {
+            const { type, payload } = event.data || {};
+            if (type === 'EVENT' && payload?.type === 'farm:set-weather') {
+                const weatherType = payload.payload?.type;
+                if (weatherType && WEATHER[weatherType]) {
+                    setWeather(weatherType);
+                }
+            }
+        });
+
+        // Send ready message
+        window.parent.postMessage({ type: 'READY' }, '*');
+        resetAutoChange();
+    </script>
+</body>
+</html>

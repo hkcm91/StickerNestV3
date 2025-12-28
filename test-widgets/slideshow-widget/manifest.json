@@ -1,0 +1,84 @@
+{
+  "id": "slideshow-widget",
+  "name": "Slideshow",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Cycle through images from the Gallery widget with transitions",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "setImages": {
+      "type": "object",
+      "description": "Set images to cycle through { images: [{ url, name? }] }"
+    },
+    "galleryChanged": {
+      "type": "object",
+      "description": "Receive all images from Gallery { images: [] }"
+    },
+    "allImages": {
+      "type": "object",
+      "description": "Receive all images from Gallery { images: [] }"
+    },
+    "addImage": {
+      "type": "object",
+      "description": "Add a single image { url, name? }"
+    },
+    "imageAdded": {
+      "type": "object",
+      "description": "Image added from Gallery { id, url, name }"
+    },
+    "setInterval": {
+      "type": "number",
+      "description": "Set slideshow interval in milliseconds (1000-30000)"
+    },
+    "play": {
+      "type": "trigger",
+      "description": "Start the slideshow"
+    },
+    "pause": {
+      "type": "trigger",
+      "description": "Pause the slideshow"
+    },
+    "next": {
+      "type": "trigger",
+      "description": "Go to next image"
+    },
+    "previous": {
+      "type": "trigger",
+      "description": "Go to previous image"
+    },
+    "clear": {
+      "type": "trigger",
+      "description": "Clear all images"
+    }
+  },
+  "outputs": {
+    "currentImage": {
+      "type": "object",
+      "description": "Emitted when current image changes { index, url, name, total }"
+    },
+    "playStateChanged": {
+      "type": "object",
+      "description": "Emitted when play/pause state changes { playing: boolean }"
+    },
+    "slideClicked": {
+      "type": "object",
+      "description": "Emitted when current slide is clicked { index, url, name }"
+    }
+  },
+  "events": {
+    "listens": ["gallery:changed", "gallery:image-added"],
+    "emits": ["slideshow:changed", "slideshow:clicked"]
+  },
+  "size": {
+    "width": 400,
+    "height": 300,
+    "minWidth": 250,
+    "minHeight": 200,
+    "maxWidth": 800,
+    "maxHeight": 600
+  }
+}

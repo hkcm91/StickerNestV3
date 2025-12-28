@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-text-muted: #64748b;
+      --sn-accent-primary: #8b5cf6;
+      --sn-accent-secondary: #a78bfa;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-border-hover: rgba(139, 92, 246, 0.4);
+      --sn-radius-sm: 4px;
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+      --sn-success: #22c55e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--sn-bg-primary);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 12px;
+      background: var(--sn-bg-tertiary);
+      border-bottom: 1px solid var(--sn-border-primary);
+      display: flex;
+      gap: 8px;
+    }
+
+    .add-btn {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--sn-accent-primary);
+      border: none;
+      border-radius: var(--sn-radius-md);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .add-btn:hover {
+      background: var(--sn-accent-secondary);
+      transform: translateY(-1px);
+    }
+
+    .add-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Selection Status */
+    .selection-status {
+      padding: 8px 12px;
+      background: var(--sn-bg-secondary);
+      border-bottom: 1px solid var(--sn-border-primary);
+      font-size: 11px;
+      color: var(--sn-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .selection-status.has-selection {
+      color: var(--sn-success);
+    }
+
+    .selection-status .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sn-text-muted);
+    }
+
+    .selection-status.has-selection .dot {
+      background: var(--sn-success);
+    }
+
+    /* Image Preview */
+    .preview-canvas {
+      flex: 0 0 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--sn-bg-tertiary);
+      border-bottom: 1px solid var(--sn-border-primary);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-canvas.empty {
+      border: 2px dashed var(--sn-border-primary);
+      margin: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .preview-canvas.empty:hover {
+      border-color: var(--sn-accent-primary);
+    }
+
+    .preview-canvas.empty::after {
+      content: 'Click or drop image';
+      position: absolute;
+      color: var(--sn-text-secondary);
+      font-size: 12px;
+    }
+
+    .preview-image {
+      max-width: 140px;
+      max-height: 140px;
+      object-fit: contain;
+      border-radius: var(--sn-radius-sm);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--sn-bg-secondary);
+      padding: 12px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sn-text-secondary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .control-value {
+      color: var(--sn-accent-primary);
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    /* Inputs */
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--sn-bg-primary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--sn-accent-primary);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    select:focus { outline: none; border-color: var(--sn-accent-primary); }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px;
+      background: var(--sn-bg-primary);
+      border-radius: var(--sn-radius-sm);
+      margin-bottom: 8px;
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: var(--sn-bg-tertiary);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toggle-switch.active { background: var(--sn-accent-primary); }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toggle-switch.active::after { left: 18px; }
+
+    /* Load Button */
+    .load-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--sn-bg-primary);
+      border: 2px dashed var(--sn-border-primary);
+      border-radius: var(--sn-radius-md);
+      color: var(--sn-text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .load-btn:hover {
+      border-color: var(--sn-accent-primary);
+      color: var(--sn-accent-primary);
+    }
+
+    /* URL Input */
+    .url-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: var(--sn-accent-primary);
+    }
+
+    /* Mask Grid */
+    .mask-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .mask-btn {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--sn-bg-primary);
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      padding: 4px;
+    }
+
+    .mask-btn:hover {
+      border-color: var(--sn-border-hover);
+      transform: scale(1.05);
+    }
+
+    .mask-btn.active {
+      border-color: var(--sn-accent-primary);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .mask-btn .preview {
+      width: 100%;
+      height: 100%;
+      background: var(--sn-accent-primary);
+    }
+
+    .mask-btn[data-mask="rect"] .preview { clip-path: inset(0); }
+    .mask-btn[data-mask="rounded"] .preview { border-radius: 20%; }
+    .mask-btn[data-mask="circle"] .preview { clip-path: circle(50% at 50% 50%); }
+    .mask-btn[data-mask="triangle"] .preview { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .mask-btn[data-mask="diamond"] .preview { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    .mask-btn[data-mask="hexagon"] .preview { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+    .mask-btn[data-mask="star"] .preview { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+    .mask-btn[data-mask="heart"] .preview { clip-path: path('M 0.5,0.15 C 0.3,-0.05 0,0.1 0,0.35 C 0,0.55 0.2,0.75 0.5,1 C 0.8,0.75 1,0.55 1,0.35 C 1,0.1 0.7,-0.05 0.5,0.15 Z'); }
+
+    /* Hidden */
+    #fileInput { display: none; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--sn-bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--sn-bg-tertiary); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <button class="add-btn" id="addImageBtn" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+      Add Image to Canvas
+    </button>
+  </div>
+
+  <!-- Selection Status -->
+  <div class="selection-status" id="selectionStatus">
+    <span class="dot"></span>
+    <span id="statusText">No image selected</span>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-canvas empty" id="previewCanvas">
+    <img class="preview-image" id="previewImage" src="" alt="Preview" style="display: none;">
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <!-- Load Image -->
+    <div class="control-section">
+      <div class="section-header">Load Image</div>
+      <button class="load-btn" id="loadImageBtn">Click to browse or drop image file</button>
+      <input type="text" class="url-input" id="imageUrl" placeholder="Or paste image URL...">
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <!-- Mask Shape -->
+    <div class="control-section">
+      <div class="section-header">Mask Shape</div>
+      <div class="mask-grid">
+        <button class="mask-btn active" data-mask="rect" title="Rectangle">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="rounded" title="Rounded">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="circle" title="Circle">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="triangle" title="Triangle">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="diamond" title="Diamond">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="hexagon" title="Hexagon">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="star" title="Star">
+          <div class="preview"></div>
+        </button>
+        <button class="mask-btn" data-mask="heart" title="Heart">
+          <div class="preview"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Object Fit -->
+    <div class="control-section">
+      <div class="section-header">Object Fit</div>
+      <select id="objectFit">
+        <option value="contain">Contain</option>
+        <option value="cover" selected>Cover</option>
+        <option value="fill">Fill</option>
+        <option value="none">None (Original Size)</option>
+        <option value="scale-down">Scale Down</option>
+      </select>
+    </div>
+
+    <!-- Adjustments -->
+    <div class="control-section">
+      <div class="section-header">Adjustments</div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Opacity</span>
+            <span class="control-value" id="opacityValue">100%</span>
+          </div>
+          <input type="range" id="opacity" min="0" max="100" value="100">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Border Radius</span>
+            <span class="control-value" id="borderRadiusValue">0px</span>
+          </div>
+          <input type="range" id="borderRadius" min="0" max="100" value="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="control-section">
+      <div class="section-header">Filters</div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Brightness</span>
+            <span class="control-value" id="brightnessValue">100%</span>
+          </div>
+          <input type="range" id="brightness" min="0" max="200" value="100">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Contrast</span>
+            <span class="control-value" id="contrastValue">100%</span>
+          </div>
+          <input type="range" id="contrast" min="0" max="200" value="100">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Saturation</span>
+            <span class="control-value" id="saturationValue">100%</span>
+          </div>
+          <input type="range" id="saturation" min="0" max="200" value="100">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Blur</span>
+            <span class="control-value" id="blurValue">0px</span>
+          </div>
+          <input type="range" id="blur" min="0" max="20" value="0">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Grayscale</span>
+            <span class="control-value" id="grayscaleValue">0%</span>
+          </div>
+          <input type="range" id="grayscale" min="0" max="100" value="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Shadow -->
+    <div class="control-section">
+      <div class="section-header">Shadow</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Enable Shadow</span>
+        <div class="toggle-switch" id="shadowEnabled"></div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Shadow Blur</span>
+            <span class="control-value" id="shadowBlurValue">10px</span>
+          </div>
+          <input type="range" id="shadowBlur" min="0" max="50" value="10">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE
+    // ========================================
+    const state = {
+      src: null,
+      naturalWidth: 0,
+      naturalHeight: 0,
+      mask: 'rect',
+      objectFit: 'cover',
+      opacity: 100,
+      borderRadius: 0,
+      filters: {
+        brightness: 100,
+        contrast: 100,
+        saturation: 100,
+        blur: 0,
+        grayscale: 0,
+      },
+      shadow: { enabled: false, blur: 10 },
+      selectedWidgetId: null,
+    };
+
+    // DOM Elements
+    const previewCanvas = document.getElementById('previewCanvas');
+    const previewImage = document.getElementById('previewImage');
+    const fileInput = document.getElementById('fileInput');
+    const addBtn = document.getElementById('addImageBtn');
+
+    // ========================================
+    // HELPERS
+    // ========================================
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function broadcast(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload, broadcast: true });
+      }
+    }
+
+    function log(msg) {
+      console.log('[ImageTool]', msg);
+      if (window.WidgetAPI) window.WidgetAPI.log(msg);
+    }
+
+    function loadImage(src) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        state.src = src;
+        state.naturalWidth = img.width;
+        state.naturalHeight = img.height;
+
+        previewImage.src = src;
+        previewImage.style.display = 'block';
+        previewCanvas.classList.remove('empty');
+        addBtn.disabled = false;
+
+        updatePreview();
+        emitStyleChange();
+        log(`Image loaded: ${img.width}x${img.height}`);
+      };
+
+      img.onerror = () => {
+        log('Failed to load image');
+      };
+
+      img.src = src;
+    }
+
+    function updatePreview() {
+      if (!state.src) return;
+
+      // Apply mask
+      const clipPaths = {
+        rect: 'none',
+        rounded: 'none',
+        circle: 'circle(50% at 50% 50%)',
+        triangle: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+        diamond: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+        hexagon: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+        star: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+        heart: 'path("M 0.5,0.15 C 0.3,-0.05 0,0.1 0,0.35 C 0,0.55 0.2,0.75 0.5,1 C 0.8,0.75 1,0.55 1,0.35 C 1,0.1 0.7,-0.05 0.5,0.15 Z")',
+      };
+
+      previewImage.style.clipPath = clipPaths[state.mask] || 'none';
+      previewImage.style.borderRadius = state.mask === 'rounded' ? `${state.borderRadius}px` : (state.mask === 'rect' ? `${state.borderRadius}px` : '0');
+      previewImage.style.opacity = state.opacity / 100;
+      previewImage.style.objectFit = state.objectFit;
+
+      // Apply filters
+      const filterParts = [];
+      if (state.filters.brightness !== 100) filterParts.push(`brightness(${state.filters.brightness}%)`);
+      if (state.filters.contrast !== 100) filterParts.push(`contrast(${state.filters.contrast}%)`);
+      if (state.filters.saturation !== 100) filterParts.push(`saturate(${state.filters.saturation}%)`);
+      if (state.filters.blur > 0) filterParts.push(`blur(${state.filters.blur}px)`);
+      if (state.filters.grayscale > 0) filterParts.push(`grayscale(${state.filters.grayscale}%)`);
+      if (state.shadow.enabled) filterParts.push(`drop-shadow(0 4px ${state.shadow.blur}px rgba(0,0,0,0.5))`);
+
+      previewImage.style.filter = filterParts.join(' ') || 'none';
+    }
+
+    function updateUI() {
+      document.querySelectorAll('.mask-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`[data-mask="${state.mask}"]`)?.classList.add('active');
+
+      document.getElementById('objectFit').value = state.objectFit;
+      document.getElementById('opacity').value = state.opacity;
+      document.getElementById('borderRadius').value = state.borderRadius;
+      document.getElementById('brightness').value = state.filters.brightness;
+      document.getElementById('contrast').value = state.filters.contrast;
+      document.getElementById('saturation').value = state.filters.saturation;
+      document.getElementById('blur').value = state.filters.blur;
+      document.getElementById('grayscale').value = state.filters.grayscale;
+      document.getElementById('shadowBlur').value = state.shadow.blur;
+      document.getElementById('shadowEnabled').classList.toggle('active', state.shadow.enabled);
+
+      document.getElementById('opacityValue').textContent = `${state.opacity}%`;
+      document.getElementById('borderRadiusValue').textContent = `${state.borderRadius}px`;
+      document.getElementById('brightnessValue').textContent = `${state.filters.brightness}%`;
+      document.getElementById('contrastValue').textContent = `${state.filters.contrast}%`;
+      document.getElementById('saturationValue').textContent = `${state.filters.saturation}%`;
+      document.getElementById('blurValue').textContent = `${state.filters.blur}px`;
+      document.getElementById('grayscaleValue').textContent = `${state.filters.grayscale}%`;
+      document.getElementById('shadowBlurValue').textContent = `${state.shadow.blur}px`;
+
+      updatePreview();
+    }
+
+    function updateSelectionStatus() {
+      const status = document.getElementById('selectionStatus');
+      const text = document.getElementById('statusText');
+      if (state.selectedWidgetId) {
+        status.classList.add('has-selection');
+        text.textContent = `Editing: ${state.selectedWidgetId.slice(0, 12)}...`;
+      } else {
+        status.classList.remove('has-selection');
+        text.textContent = 'No image selected';
+      }
+    }
+
+    function emitStyleChange() {
+      const styleData = {
+        src: state.src,
+        mask: state.mask,
+        objectFit: state.objectFit,
+        opacity: state.opacity,
+        borderRadius: state.borderRadius,
+        filters: { ...state.filters },
+        shadow: { ...state.shadow },
+      };
+
+      broadcast('canvas:style-changed', {
+        targetType: 'image',
+        targetId: state.selectedWidgetId,
+        styles: styleData
+      });
+
+      emit('image.style-changed', styleData);
+    }
+
+    // ========================================
+    // EVENT HANDLERS
+    // ========================================
+
+    // Add Image
+    addBtn.addEventListener('click', () => {
+      if (!state.src) return;
+
+      broadcast('canvas:add-image', {
+        src: state.src,
+        naturalWidth: state.naturalWidth,
+        naturalHeight: state.naturalHeight,
+        mask: state.mask,
+        objectFit: state.objectFit,
+        opacity: state.opacity,
+        borderRadius: state.borderRadius,
+        filters: { ...state.filters },
+        shadow: { ...state.shadow },
+      });
+      log('Added image to canvas');
+    });
+
+    // Load image from file
+    document.getElementById('loadImageBtn').addEventListener('click', () => fileInput.click());
+    previewCanvas.addEventListener('click', () => {
+      if (previewCanvas.classList.contains('empty')) fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => loadImage(e.target.result);
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Load from URL
+    document.getElementById('imageUrl').addEventListener('change', (e) => {
+      if (e.target.value) {
+        loadImage(e.target.value);
+      }
+    });
+
+    // Drag and drop
+    previewCanvas.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      previewCanvas.style.borderColor = 'var(--sn-accent-primary)';
+    });
+
+    previewCanvas.addEventListener('dragleave', () => {
+      previewCanvas.style.borderColor = '';
+    });
+
+    previewCanvas.addEventListener('drop', (e) => {
+      e.preventDefault();
+      previewCanvas.style.borderColor = '';
+
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => loadImage(e.target.result);
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Mask selection
+    document.querySelectorAll('.mask-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.mask = btn.dataset.mask;
+        updateUI();
+        emitStyleChange();
+      });
+    });
+
+    // Object fit
+    document.getElementById('objectFit').addEventListener('change', (e) => {
+      state.objectFit = e.target.value;
+      updateUI();
+      emitStyleChange();
+    });
+
+    // Sliders
+    document.getElementById('opacity').addEventListener('input', (e) => {
+      state.opacity = parseInt(e.target.value);
+      document.getElementById('opacityValue').textContent = `${state.opacity}%`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('borderRadius').addEventListener('input', (e) => {
+      state.borderRadius = parseInt(e.target.value);
+      document.getElementById('borderRadiusValue').textContent = `${state.borderRadius}px`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('brightness').addEventListener('input', (e) => {
+      state.filters.brightness = parseInt(e.target.value);
+      document.getElementById('brightnessValue').textContent = `${state.filters.brightness}%`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('contrast').addEventListener('input', (e) => {
+      state.filters.contrast = parseInt(e.target.value);
+      document.getElementById('contrastValue').textContent = `${state.filters.contrast}%`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('saturation').addEventListener('input', (e) => {
+      state.filters.saturation = parseInt(e.target.value);
+      document.getElementById('saturationValue').textContent = `${state.filters.saturation}%`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('blur').addEventListener('input', (e) => {
+      state.filters.blur = parseInt(e.target.value);
+      document.getElementById('blurValue').textContent = `${state.filters.blur}px`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('grayscale').addEventListener('input', (e) => {
+      state.filters.grayscale = parseInt(e.target.value);
+      document.getElementById('grayscaleValue').textContent = `${state.filters.grayscale}%`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('shadowBlur').addEventListener('input', (e) => {
+      state.shadow.blur = parseInt(e.target.value);
+      document.getElementById('shadowBlurValue').textContent = `${state.shadow.blur}px`;
+      updatePreview();
+      emitStyleChange();
+    });
+
+    document.getElementById('shadowEnabled').addEventListener('click', function() {
+      this.classList.toggle('active');
+      state.shadow.enabled = this.classList.contains('active');
+      updatePreview();
+      emitStyleChange();
+    });
+
+    // ========================================
+    // WIDGET API
+    // ========================================
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Image Tool');
+
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'widget:selected':
+          case 'entity:selected':
+            if (event.payload?.entityType === 'image' || event.payload?.type === 'image') {
+              state.selectedWidgetId = event.payload.widgetInstanceId || event.payload.id;
+
+              if (event.payload.src) loadImage(event.payload.src);
+              if (event.payload.styles) {
+                if (event.payload.styles.mask) state.mask = event.payload.styles.mask;
+                if (event.payload.styles.objectFit) state.objectFit = event.payload.styles.objectFit;
+                if (event.payload.styles.opacity !== undefined) state.opacity = event.payload.styles.opacity;
+                if (event.payload.styles.borderRadius !== undefined) state.borderRadius = event.payload.styles.borderRadius;
+                if (event.payload.styles.filters) state.filters = { ...state.filters, ...event.payload.styles.filters };
+                if (event.payload.styles.shadow) state.shadow = { ...state.shadow, ...event.payload.styles.shadow };
+              }
+              updateUI();
+              updateSelectionStatus();
+            }
+            break;
+
+          case 'widget:deselected':
+          case 'selection:cleared':
+            state.selectedWidgetId = null;
+            updateSelectionStatus();
+            break;
+
+          case 'image.load':
+            if (event.payload?.src) loadImage(event.payload.src);
+            break;
+
+          case 'asset:image-selected':
+            if (event.payload?.url) loadImage(event.payload.url);
+            break;
+        }
+      });
+
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['image'],
+          canCreate: ['image'],
+          isDesignTool: true,
+        });
+      }
+
+      updateUI();
+      updateSelectionStatus();
+      emit('widget.ready', { capabilities: ['image', 'design-tool'] });
+      log('Image Tool ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

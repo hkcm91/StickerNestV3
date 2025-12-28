@@ -1,0 +1,32 @@
+{
+  "id": "drop-shadow-control",
+  "name": "Drop Shadow Control",
+  "version": "1.0.0",
+  "description": "Controls drop shadow properties for selected vector entities - offset, blur, color, and opacity",
+  "author": "StickerNest",
+  "kind": "2d",
+  "entry": "index.html",
+  "icon": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='6' y='6' width='12' height='12' rx='2' fill='%23334155' opacity='0.5'/><rect x='3' y='3' width='12' height='12' rx='2' fill='%238b5cf6'/></svg>",
+  "category": "vector",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "size": {
+    "defaultWidth": 280,
+    "defaultHeight": 320,
+    "minWidth": 240,
+    "minHeight": 280
+  },
+  "permissions": [],
+  "inputs": {
+    "selection": { "type": "object", "description": "Selected entity from vector canvas" }
+  },
+  "outputs": {
+    "shadow-applied": { "type": "event", "description": "Emitted when shadow is applied to entity" }
+  },
+  "events": {
+    "emits": ["vector:set-shadow"],
+    "listens": ["vector:selection-changed", "vector:entity-updated"]
+  }
+}

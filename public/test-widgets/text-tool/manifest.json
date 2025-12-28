@@ -1,0 +1,57 @@
+{
+  "id": "text-tool",
+  "name": "Text Tool",
+  "version": "1.0.0",
+  "description": "Adobe-style text tool for adding and editing text on the canvas in real-time",
+  "author": "StickerNest",
+  "category": "design",
+  "kind": "2d",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["text"],
+    "canCreate": ["text"],
+    "isDesignTool": true
+  },
+  "size": {
+    "width": 320,
+    "height": 600,
+    "minWidth": 280,
+    "maxWidth": 400
+  },
+  "inputs": {
+    "text.load": {
+      "type": "object",
+      "description": "Load text properties"
+    },
+    "entity:selected": {
+      "type": "object",
+      "description": "Entity selected on canvas"
+    },
+    "widget:selected": {
+      "type": "object",
+      "description": "Widget selected on canvas"
+    }
+  },
+  "outputs": {
+    "text.style-changed": {
+      "type": "object",
+      "description": "Text style changed"
+    }
+  },
+  "broadcasts": {
+    "listens": [
+      "widget:selected",
+      "widget:deselected",
+      "entity:selected",
+      "selection:cleared",
+      "brand:color-changed",
+      "brand:font-changed"
+    ],
+    "emits": [
+      "canvas:add-text",
+      "canvas:style-changed"
+    ]
+  },
+  "tags": ["text", "typography", "design", "tool", "editor"]
+}

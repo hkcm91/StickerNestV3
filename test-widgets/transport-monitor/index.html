@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #ff9800;
+            font-weight: 600;
+        }
+        .transport-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .transport-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 10px;
+            border-left: 3px solid #666;
+        }
+        .transport-card.connected { border-left-color: #2ecc71; }
+        .transport-card.disconnected { border-left-color: #e74c3c; }
+        .transport-card.connecting { border-left-color: #f39c12; }
+        .transport-name {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .transport-status {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .transport-status.connected { background: #2ecc71; color: #000; }
+        .transport-status.disconnected { background: #e74c3c; color: #fff; }
+        .transport-status.connecting { background: #f39c12; color: #000; }
+        .transport-stat {
+            font-size: 9px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .transport-stat span { color: #79c0ff; }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ff9800;
+        }
+        .stat-label {
+            font-size: 8px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .section {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .section h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .message-graph {
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            padding: 4px 0;
+        }
+        .graph-bar {
+            flex: 1;
+            background: #ff9800;
+            min-height: 2px;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.2s;
+        }
+        .graph-bar.sent { background: #2ecc71; }
+        .graph-bar.received { background: #3498db; }
+        .message-log {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .message-entry {
+            font-family: 'Consolas', monospace;
+            font-size: 9px;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+        }
+        .message-entry:last-child { border-bottom: none; }
+        .msg-direction { width: 20px; }
+        .msg-direction.in { color: #3498db; }
+        .msg-direction.out { color: #2ecc71; }
+        .msg-transport { color: #ff9800; width: 60px; }
+        .msg-type { color: #ce93d8; flex: 1; }
+        .msg-time { color: #666; }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .btn-query { background: #ff9800; color: #000; }
+        .btn-clear { background: #3498db; color: #fff; }
+        .btn-test { background: #2ecc71; color: #000; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📡 Transport Monitor</h1>
+    </div>
+
+    <div class="controls">
+        <button class="btn-query" id="queryBtn">Query Status</button>
+        <button class="btn-test" id="testBtn">Send Test</button>
+        <button class="btn-clear" id="clearBtn">Clear Log</button>
+    </div>
+
+    <div class="transport-grid">
+        <div class="transport-card disconnected" id="bcCard">
+            <div class="transport-name">
+                BroadcastChannel
+                <span class="transport-status disconnected" id="bcStatus">Unknown</span>
+            </div>
+            <div class="transport-stat">Scope: <span>Tab</span></div>
+            <div class="transport-stat">Messages: <span id="bcMessages">0</span></div>
+        </div>
+        <div class="transport-card disconnected" id="swCard">
+            <div class="transport-name">
+                SharedWorker
+                <span class="transport-status disconnected" id="swStatus">Unknown</span>
+            </div>
+            <div class="transport-stat">Scope: <span>Device</span></div>
+            <div class="transport-stat">Tabs: <span id="swTabs">0</span></div>
+        </div>
+        <div class="transport-card disconnected" id="wsCard">
+            <div class="transport-name">
+                WebSocket
+                <span class="transport-status disconnected" id="wsStatus">Unknown</span>
+            </div>
+            <div class="transport-stat">Scope: <span>Network</span></div>
+            <div class="transport-stat">Users: <span id="wsUsers">0</span></div>
+        </div>
+        <div class="transport-card connected" id="ebCard">
+            <div class="transport-name">
+                EventBus
+                <span class="transport-status connected" id="ebStatus">Active</span>
+            </div>
+            <div class="transport-stat">Scope: <span>Local</span></div>
+            <div class="transport-stat">Handlers: <span id="ebHandlers">-</span></div>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-value" id="totalSent">0</div>
+            <div class="stat-label">Sent</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="totalReceived">0</div>
+            <div class="stat-label">Received</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="msgPerSec">0</div>
+            <div class="stat-label">Msg/sec</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="avgLatency">-</div>
+            <div class="stat-label">Avg Latency</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Message Rate (last 30s)</h3>
+        <div class="message-graph" id="messageGraph"></div>
+    </div>
+
+    <div class="section">
+        <h3>Message Log (last 30)</h3>
+        <div class="message-log" id="messageLog">No messages yet</div>
+    </div>
+
+    <script>
+        // State
+        let totalSent = 0;
+        let totalReceived = 0;
+        const messageHistory = [];
+        const rateHistory = [];
+        const MAX_LOG = 30;
+        const MAX_RATE_HISTORY = 30;
+        let latencies = [];
+
+        // DOM elements
+        const bcCard = document.getElementById('bcCard');
+        const bcStatus = document.getElementById('bcStatus');
+        const bcMessages = document.getElementById('bcMessages');
+        const swCard = document.getElementById('swCard');
+        const swStatus = document.getElementById('swStatus');
+        const swTabs = document.getElementById('swTabs');
+        const wsCard = document.getElementById('wsCard');
+        const wsStatus = document.getElementById('wsStatus');
+        const wsUsers = document.getElementById('wsUsers');
+        const ebHandlers = document.getElementById('ebHandlers');
+        const totalSentEl = document.getElementById('totalSent');
+        const totalReceivedEl = document.getElementById('totalReceived');
+        const msgPerSecEl = document.getElementById('msgPerSec');
+        const avgLatencyEl = document.getElementById('avgLatency');
+        const messageGraph = document.getElementById('messageGraph');
+        const messageLog = document.getElementById('messageLog');
+
+        // Initialize graph bars
+        for (let i = 0; i < MAX_RATE_HISTORY; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'graph-bar';
+            bar.style.height = '2px';
+            messageGraph.appendChild(bar);
+            rateHistory.push(0);
+        }
+
+        function updateTransportCard(card, statusEl, connected) {
+            card.className = `transport-card ${connected ? 'connected' : 'disconnected'}`;
+            statusEl.className = `transport-status ${connected ? 'connected' : 'disconnected'}`;
+            statusEl.textContent = connected ? 'Connected' : 'Disconnected';
+        }
+
+        function logMessage(direction, transport, type, payload) {
+            const entry = {
+                direction,
+                transport,
+                type,
+                timestamp: Date.now()
+            };
+            messageHistory.unshift(entry);
+            if (messageHistory.length > MAX_LOG) messageHistory.pop();
+
+            if (direction === 'out') {
+                totalSent++;
+                totalSentEl.textContent = totalSent;
+            } else {
+                totalReceived++;
+                totalReceivedEl.textContent = totalReceived;
+            }
+
+            renderMessageLog();
+        }
+
+        function renderMessageLog() {
+            if (messageHistory.length === 0) {
+                messageLog.textContent = 'No messages yet';
+                return;
+            }
+
+            const entries = messageHistory.map(m => {
+                const age = Date.now() - m.timestamp;
+                const ageStr = age < 1000 ? `${age}ms` : `${(age/1000).toFixed(1)}s`;
+                const arrow = m.direction === 'out' ? '→' : '←';
+
+                return `<div class="message-entry">
+                    <span class="msg-direction ${m.direction === 'out' ? 'out' : 'in'}">${arrow}</span>
+                    <span class="msg-transport">${m.transport}</span>
+                    <span class="msg-type">${m.type}</span>
+                    <span class="msg-time">${ageStr}</span>
+                </div>`;
+            }).join('');
+
+            messageLog.innerHTML = entries;
+        }
+
+        function updateGraph() {
+            // Calculate current rate
+            const now = Date.now();
+            const oneSecondAgo = now - 1000;
+            const recentMessages = messageHistory.filter(m => m.timestamp > oneSecondAgo).length;
+
+            rateHistory.shift();
+            rateHistory.push(recentMessages);
+
+            msgPerSecEl.textContent = recentMessages;
+
+            // Update graph bars
+            const maxRate = Math.max(...rateHistory, 1);
+            const bars = messageGraph.querySelectorAll('.graph-bar');
+            rateHistory.forEach((rate, i) => {
+                const height = Math.max(2, (rate / maxRate) * 56);
+                bars[i].style.height = `${height}px`;
+            });
+        }
+
+        function updateLatency(ms) {
+            latencies.push(ms);
+            if (latencies.length > 20) latencies.shift();
+
+            const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+            avgLatencyEl.textContent = `${Math.round(avg)}ms`;
+        }
+
+        function queryStatus() {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent('transport-query', {
+                    requestId: Date.now()
+                });
+                logMessage('out', 'EventBus', 'transport-query', {});
+            }
+        }
+
+        function sendTestMessage() {
+            if (window.WidgetAPI) {
+                const testPayload = {
+                    type: 'transport-test',
+                    timestamp: Date.now(),
+                    source: 'transport-monitor'
+                };
+                window.WidgetAPI.emitEvent('transport-test', testPayload);
+                logMessage('out', 'EventBus', 'transport-test', testPayload);
+            }
+        }
+
+        function clearLog() {
+            messageHistory.length = 0;
+            renderMessageLog();
+        }
+
+        // Event listeners
+        document.getElementById('queryBtn').addEventListener('click', queryStatus);
+        document.getElementById('testBtn').addEventListener('click', sendTestMessage);
+        document.getElementById('clearBtn').addEventListener('click', clearLog);
+
+        // Listen for transport status updates
+        if (window.WidgetAPI) {
+            window.WidgetAPI.onEvent('transport-status', (payload) => {
+                logMessage('in', 'Runtime', 'transport-status', payload);
+
+                if (payload.broadcastChannel !== undefined) {
+                    updateTransportCard(bcCard, bcStatus, payload.broadcastChannel.connected);
+                    bcMessages.textContent = payload.broadcastChannel.messageCount || 0;
+                }
+
+                if (payload.sharedWorker !== undefined) {
+                    updateTransportCard(swCard, swStatus, payload.sharedWorker.connected);
+                    swTabs.textContent = payload.sharedWorker.connectedTabs || 0;
+                }
+
+                if (payload.webSocket !== undefined) {
+                    updateTransportCard(wsCard, wsStatus, payload.webSocket.connected);
+                    wsUsers.textContent = payload.webSocket.remoteUsers || 0;
+                }
+
+                if (payload.eventBus !== undefined) {
+                    ebHandlers.textContent = payload.eventBus.handlerCount || '-';
+                }
+            });
+
+            // Listen for test message responses
+            window.WidgetAPI.onEvent('transport-test-response', (payload) => {
+                logMessage('in', payload.transport || 'Unknown', 'test-response', payload);
+                if (payload.originalTimestamp) {
+                    const latency = Date.now() - payload.originalTimestamp;
+                    updateLatency(latency);
+                }
+            });
+
+            // Generic message listener for all events (for monitoring)
+            window.WidgetAPI.onEvent('*', (payload, eventType) => {
+                if (!eventType.startsWith('transport-')) {
+                    logMessage('in', 'EventBus', eventType, payload);
+                }
+            });
+        }
+
+        // Periodic updates
+        setInterval(updateGraph, 1000);
+
+        // Initial query
+        queryStatus();
+    </script>
+</body>
+</html>

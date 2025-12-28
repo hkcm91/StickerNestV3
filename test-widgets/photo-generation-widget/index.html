@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .header h1 .icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .settings-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-btn.active {
+      background: rgba(16, 185, 129, 0.3);
+      border-color: #10b981;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    .provider-select, .model-select {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .provider-select:focus, .model-select:focus {
+      outline: none;
+      border-color: #10b981;
+    }
+
+    .sync-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .sync-badge.synced {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .sync-badge.not-synced {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      display: none;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .settings-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .api-key-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .api-key-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    .api-key-input:focus {
+      outline: none;
+      border-color: #10b981;
+    }
+
+    .save-key-btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #10b981;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .save-key-btn:hover {
+      background: #059669;
+    }
+
+    .key-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .key-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .key-status .dot.valid {
+      background: #10b981;
+    }
+
+    .key-status .dot.invalid {
+      background: #ef4444;
+    }
+
+    .key-status .dot.unknown {
+      background: #6b7280;
+    }
+
+    /* Content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* Prompt Preview */
+    .prompt-preview {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .prompt-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .prompt-preview-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .edit-btn {
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background: transparent;
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .edit-btn:hover {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .prompt-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.9);
+      word-break: break-word;
+      max-height: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .prompt-text.empty {
+      color: rgba(255, 255, 255, 0.4);
+      font-style: italic;
+    }
+
+    .settings-preview {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .setting-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .setting-chip .value {
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    /* Generation Status */
+    .generation-status {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: none;
+    }
+
+    .generation-status.active {
+      display: block;
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .status-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #10b981;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .cancel-btn {
+      padding: 6px 12px;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 6px;
+      background: transparent;
+      color: #ef4444;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .status-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 8px;
+    }
+
+    /* Generated Images Grid */
+    .images-section {
+      flex: 1;
+    }
+
+    .images-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .images-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .images-count {
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .image-card {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .image-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .image-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-card .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10px;
+    }
+
+    .image-card:hover .overlay {
+      opacity: 1;
+    }
+
+    .image-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .image-action-btn {
+      flex: 1;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .image-action-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .image-action-btn.primary {
+      background: rgba(16, 185, 129, 0.8);
+    }
+
+    .image-action-btn.primary:hover {
+      background: #10b981;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .generate-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .num-control {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .num-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .num-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .num-display {
+      width: 30px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .lightbox.active {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 85%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .lightbox .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.2s;
+    }
+
+    .lightbox .close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .lightbox .actions-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+
+    .lightbox .action-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lightbox .action-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .lightbox .action-btn.primary {
+      background: #10b981;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 0 16px 8px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* History Panel */
+    .history-panel {
+      padding: 12px 0;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px 10px;
+    }
+
+    .history-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .clear-history-btn {
+      padding: 4px 10px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .clear-history-btn:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .history-item:hover {
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .history-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .history-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-prompt {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .history-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .history-action-btn {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 9px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .history-action-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .history-action-btn.upscale {
+      background: rgba(168, 85, 247, 0.3);
+      color: #a855f7;
+    }
+
+    .history-action-btn.upscale:hover {
+      background: rgba(168, 85, 247, 0.4);
+    }
+
+    /* Upscale Modal */
+    .upscale-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      flex-direction: column;
+      z-index: 250;
+    }
+
+    .upscale-modal.active {
+      display: flex;
+    }
+
+    .upscale-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .upscale-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .upscale-close {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .upscale-content {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .upscale-preview {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .upscale-original, .upscale-result {
+      flex: 1;
+      text-align: center;
+    }
+
+    .upscale-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 8px;
+    }
+
+    .upscale-img {
+      width: 100%;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .upscale-options {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .upscale-option-group {
+      margin-bottom: 14px;
+    }
+
+    .upscale-option-group label {
+      display: block;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 6px;
+    }
+
+    .upscale-option-group select,
+    .upscale-option-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .upscale-scales {
+      display: flex;
+      gap: 8px;
+    }
+
+    .scale-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: transparent;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .scale-btn:hover {
+      border-color: #a855f7;
+    }
+
+    .scale-btn.active {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.2);
+    }
+
+    .upscale-footer {
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 10px;
+    }
+
+    .upscale-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upscale-btn.primary {
+      background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+      color: #fff;
+    }
+
+    .upscale-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .upscale-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .upscale-progress {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(168, 85, 247, 0.1);
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .upscale-progress.active {
+      display: flex;
+    }
+
+    .upscale-progress .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(168, 85, 247, 0.3);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .upscale-progress-text {
+      font-size: 12px;
+      color: #a855f7;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 300;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span class="icon">I</span>
+      Photo Generator
+    </h1>
+    <button class="settings-btn" id="settingsBtn" title="Settings">S</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-title">API Configuration</div>
+    <div class="api-key-row">
+      <input type="password" class="api-key-input" id="apiKeyInput" placeholder="Enter API key...">
+      <button class="save-key-btn" id="saveKeyBtn">Save</button>
+    </div>
+    <div class="key-status">
+      <span class="dot" id="keyStatusDot"></span>
+      <span id="keyStatusText">No API key configured</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <select class="provider-select" id="providerSelect">
+      <option value="replicate">Replicate</option>
+      <option value="openai">OpenAI</option>
+      <option value="stability">Stability AI</option>
+      <option value="fal">Fal.ai</option>
+    </select>
+    <select class="model-select" id="modelSelect">
+      <option value="flux-schnell">FLUX Schnell</option>
+      <option value="flux-dev">FLUX Dev</option>
+      <option value="flux-pro">FLUX Pro</option>
+      <option value="sdxl">SDXL</option>
+    </select>
+    <span class="sync-badge not-synced" id="syncBadge">
+      <span id="syncIcon">!</span>
+      <span id="syncText">Not synced</span>
+    </span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="generate">Generate</button>
+    <button class="tab-btn" data-tab="history">History</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Generate Tab -->
+    <div class="tab-content active" id="generateTab">
+      <!-- Prompt Preview -->
+      <div class="prompt-preview">
+        <div class="prompt-preview-header">
+          <span class="prompt-preview-title">Current Prompt</span>
+          <button class="edit-btn" id="editPromptBtn">Edit</button>
+        </div>
+        <div class="prompt-text empty" id="promptText">No prompt set. Connect to Prompt Options widget or enter manually.</div>
+        <div class="settings-preview" id="settingsPreview">
+          <div class="setting-chip">
+            <span>Size:</span>
+            <span class="value" id="sizePreview">1024x1024</span>
+          </div>
+          <div class="setting-chip">
+            <span>CFG:</span>
+            <span class="value" id="cfgPreview">7.5</span>
+          </div>
+          <div class="setting-chip">
+            <span>Steps:</span>
+            <span class="value" id="stepsPreview">30</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generation Status -->
+      <div class="generation-status" id="generationStatus">
+        <div class="status-header">
+          <div class="status-title">
+            <div class="status-spinner"></div>
+            <span id="statusTitle">Generating...</span>
+          </div>
+          <button class="cancel-btn" id="cancelBtn">Cancel</button>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="status-text" id="statusText">Starting generation...</div>
+      </div>
+
+      <!-- Generated Images -->
+      <div class="images-section">
+        <div class="images-header">
+          <span class="images-title">Generated Images</span>
+          <span class="images-count" id="imagesCount">0 images</span>
+        </div>
+        <div class="images-grid" id="imagesGrid">
+          <div class="empty-state" id="emptyState">
+            <div class="icon">I</div>
+            <h3>No Images Yet</h3>
+            <p>Enter a prompt and click Generate to create images</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div class="tab-content" id="historyTab">
+      <div class="history-panel">
+        <div class="history-header">
+          <span class="history-title">Generation History</span>
+          <button class="clear-history-btn" id="clearHistoryBtn">Clear All</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="empty-state" id="historyEmptyState">
+            <div class="icon">H</div>
+            <h3>No History Yet</h3>
+            <p>Your generated images will appear here</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <button class="generate-btn" id="generateBtn">
+      <span>Generate</span>
+    </button>
+    <div class="num-control">
+      <button class="num-btn" id="numDecBtn">-</button>
+      <span class="num-display" id="numDisplay">1</span>
+      <button class="num-btn" id="numIncBtn">+</button>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="close-btn" id="lightboxClose">&times;</button>
+    <img id="lightboxImage" src="" alt="">
+    <div class="actions-bar">
+      <button class="action-btn" id="downloadBtn">Download</button>
+      <button class="action-btn" id="upscaleBtn" style="background: rgba(168, 85, 247, 0.3); color: #a855f7;">Upscale</button>
+      <button class="action-btn primary" id="sendToGalleryBtn">Send to Gallery</button>
+    </div>
+  </div>
+
+  <!-- Upscale Modal -->
+  <div class="upscale-modal" id="upscaleModal">
+    <div class="upscale-header">
+      <h3>
+        <span style="color: #a855f7;">U</span>
+        Upscale Image
+      </h3>
+      <button class="upscale-close" id="upscaleClose">&times;</button>
+    </div>
+    <div class="upscale-content">
+      <div class="upscale-preview">
+        <div class="upscale-original">
+          <div class="upscale-label">Original</div>
+          <img class="upscale-img" id="upscaleOriginal" src="" alt="">
+        </div>
+        <div class="upscale-result">
+          <div class="upscale-label">Upscaled</div>
+          <img class="upscale-img" id="upscaleResult" src="" alt="" style="display: none;">
+          <div id="upscaleResultPlaceholder" style="padding: 40px; color: rgba(255,255,255,0.4); font-size: 12px;">
+            Result will appear here
+          </div>
+        </div>
+      </div>
+      <div class="upscale-options">
+        <div class="upscale-option-group">
+          <label>Upscale Model</label>
+          <select id="upscaleModel">
+            <option value="real-esrgan">Real-ESRGAN (General)</option>
+            <option value="clarity-upscaler">Clarity Upscaler (Photos)</option>
+            <option value="esrgan-anime">ESRGAN Anime</option>
+            <option value="swin-ir">SwinIR (Sharp)</option>
+          </select>
+        </div>
+        <div class="upscale-option-group">
+          <label>Scale Factor</label>
+          <div class="upscale-scales">
+            <button class="scale-btn active" data-scale="2">2x</button>
+            <button class="scale-btn" data-scale="4">4x</button>
+            <button class="scale-btn" data-scale="8">8x</button>
+          </div>
+        </div>
+        <div class="upscale-option-group">
+          <label>Face Enhancement</label>
+          <select id="upscaleFaceEnhance">
+            <option value="none">None</option>
+            <option value="gfpgan">GFPGAN</option>
+            <option value="codeformer">CodeFormer</option>
+          </select>
+        </div>
+        <div class="upscale-progress" id="upscaleProgress">
+          <div class="spinner"></div>
+          <span class="upscale-progress-text" id="upscaleProgressText">Upscaling image...</span>
+        </div>
+      </div>
+    </div>
+    <div class="upscale-footer">
+      <button class="upscale-btn secondary" id="upscaleCancelBtn">Cancel</button>
+      <button class="upscale-btn primary" id="upscaleStartBtn">Upscale</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==========================================
+    // Model Registry
+    // ==========================================
+    const MODEL_REGISTRY = {
+      replicate: {
+        'flux-schnell': { id: 'black-forest-labs/flux-schnell', name: 'FLUX Schnell' },
+        'flux-dev': { id: 'black-forest-labs/flux-dev', name: 'FLUX Dev' },
+        'flux-pro': { id: 'black-forest-labs/flux-1.1-pro', name: 'FLUX Pro' },
+        'sdxl': { id: 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b', name: 'SDXL' },
+        'sd3': { id: 'stability-ai/stable-diffusion-3', name: 'SD 3' },
+      },
+      openai: {
+        'dall-e-3': { id: 'dall-e-3', name: 'DALL-E 3' },
+        'dall-e-2': { id: 'dall-e-2', name: 'DALL-E 2' },
+      },
+      stability: {
+        'sd-ultra': { id: 'sd-ultra', name: 'SD Ultra' },
+        'sd-core': { id: 'sd-core', name: 'SD Core' },
+      },
+      fal: {
+        'fal-flux-schnell': { id: 'fal-ai/flux/schnell', name: 'FLUX Schnell' },
+        'fal-flux-dev': { id: 'fal-ai/flux/dev', name: 'FLUX Dev' },
+        'fal-flux-pro': { id: 'fal-ai/flux-pro', name: 'FLUX Pro' },
+      },
+    };
+
+    // ==========================================
+    // Upscale Model Registry
+    // ==========================================
+    const UPSCALE_MODELS = {
+      'real-esrgan': {
+        id: 'nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa',
+        name: 'Real-ESRGAN'
+      },
+      'clarity-upscaler': {
+        id: 'philz1337x/clarity-upscaler:dfad41707589d68ecdccd1dfa600d55a208f9310748e44bfe35b4a6291453d5e',
+        name: 'Clarity Upscaler'
+      },
+      'esrgan-anime': {
+        id: 'cjwbw/real-esrgan:d0ee3d708c9b911f122a4ad90046c5d26a0293b99476d697f6bb7f2e251ce2d4',
+        name: 'ESRGAN Anime'
+      },
+      'swin-ir': {
+        id: 'jingyunliang/swinir:660d922d33153019e8c263a3bba265de882e7f4f70396546b6c9c8f9d47a021a',
+        name: 'SwinIR'
+      }
+    };
+
+    // ==========================================
+    // State
+    // ==========================================
+    const state = {
+      apiKeys: {},
+      provider: 'replicate',
+      model: 'flux-schnell',
+      numOutputs: 1,
+      promptConfig: null,
+      isGenerating: false,
+      isUpscaling: false,
+      generatedImages: [],
+      generationHistory: [],
+      lightboxIndex: -1,
+      upscaleImageIndex: -1,
+      upscaleScale: 2,
+      currentTab: 'generate',
+    };
+
+    // ==========================================
+    // DOM Elements
+    // ==========================================
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const saveKeyBtn = document.getElementById('saveKeyBtn');
+    const keyStatusDot = document.getElementById('keyStatusDot');
+    const keyStatusText = document.getElementById('keyStatusText');
+    const providerSelect = document.getElementById('providerSelect');
+    const modelSelect = document.getElementById('modelSelect');
+    const syncBadge = document.getElementById('syncBadge');
+    const syncIcon = document.getElementById('syncIcon');
+    const syncText = document.getElementById('syncText');
+    const promptText = document.getElementById('promptText');
+    const sizePreview = document.getElementById('sizePreview');
+    const cfgPreview = document.getElementById('cfgPreview');
+    const stepsPreview = document.getElementById('stepsPreview');
+    const generationStatus = document.getElementById('generationStatus');
+    const statusTitle = document.getElementById('statusTitle');
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('statusText');
+    const imagesGrid = document.getElementById('imagesGrid');
+    const imagesCount = document.getElementById('imagesCount');
+    const emptyState = document.getElementById('emptyState');
+    const generateBtn = document.getElementById('generateBtn');
+    const numDisplay = document.getElementById('numDisplay');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    const toast = document.getElementById('toast');
+
+    // ==========================================
+    // Utilities
+    // ==========================================
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload }
+      }, '*');
+    }
+
+    function updateSyncBadge(synced) {
+      syncBadge.className = synced ? 'sync-badge synced' : 'sync-badge not-synced';
+      syncIcon.textContent = synced ? '~' : '!';
+      syncText.textContent = synced ? 'Synced' : 'Not synced';
+    }
+
+    function updateKeyStatus() {
+      const hasKey = state.apiKeys[state.provider];
+      keyStatusDot.className = hasKey ? 'dot valid' : 'dot unknown';
+      keyStatusText.textContent = hasKey ? 'API key configured' : 'No API key configured';
+      apiKeyInput.value = hasKey ? '********' : '';
+    }
+
+    function updateModelOptions() {
+      const models = MODEL_REGISTRY[state.provider] || {};
+      modelSelect.innerHTML = Object.entries(models)
+        .map(([key, val]) => `<option value="${key}">${val.name}</option>`)
+        .join('');
+
+      if (models[state.model]) {
+        modelSelect.value = state.model;
+      } else {
+        state.model = Object.keys(models)[0] || 'flux-schnell';
+        modelSelect.value = state.model;
+      }
+    }
+
+    function updatePromptPreview() {
+      if (state.promptConfig && state.promptConfig.prompt) {
+        promptText.textContent = state.promptConfig.prompt;
+        promptText.classList.remove('empty');
+        sizePreview.textContent = `${state.promptConfig.width || 1024}x${state.promptConfig.height || 1024}`;
+        cfgPreview.textContent = (state.promptConfig.guidanceScale || 7.5).toFixed(1);
+        stepsPreview.textContent = state.promptConfig.numInferenceSteps || 30;
+        updateSyncBadge(true);
+      } else {
+        promptText.textContent = 'No prompt set. Connect to Prompt Options widget or enter manually.';
+        promptText.classList.add('empty');
+        updateSyncBadge(false);
+      }
+    }
+
+    function updateImagesUI() {
+      const count = state.generatedImages.length;
+      imagesCount.textContent = `${count} image${count !== 1 ? 's' : ''}`;
+      emptyState.style.display = count === 0 ? 'block' : 'none';
+
+      // Clear and rebuild grid
+      imagesGrid.querySelectorAll('.image-card').forEach(el => el.remove());
+
+      state.generatedImages.forEach((img, index) => {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        card.innerHTML = `
+          <img src="${img.url}" alt="Generated image">
+          <div class="overlay">
+            <div class="image-actions">
+              <button class="image-action-btn" onclick="downloadImage(${index})">Save</button>
+              <button class="image-action-btn primary" onclick="sendToGallery(${index})">Gallery</button>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', () => openLightbox(index));
+        imagesGrid.insertBefore(card, emptyState);
+      });
+    }
+
+    // ==========================================
+    // API Functions
+    // ==========================================
+    async function generateImages() {
+      const apiKey = state.apiKeys[state.provider];
+      if (!apiKey) {
+        showToast('Please configure API key first');
+        settingsPanel.classList.add('active');
+        settingsBtn.classList.add('active');
+        return;
+      }
+
+      if (!state.promptConfig?.prompt) {
+        showToast('Please set a prompt first');
+        return;
+      }
+
+      state.isGenerating = true;
+      generateBtn.disabled = true;
+      generationStatus.classList.add('active');
+      progressFill.style.width = '0%';
+      statusText.textContent = 'Starting generation...';
+
+      emitOutput('generationStarted', { prompt: state.promptConfig.prompt });
+      emitEvent('photo:generation-started', { prompt: state.promptConfig.prompt });
+
+      try {
+        const modelInfo = MODEL_REGISTRY[state.provider][state.model];
+        const modelId = modelInfo?.id || state.model;
+
+        let results;
+        switch (state.provider) {
+          case 'replicate':
+            results = await generateReplicate(apiKey, modelId);
+            break;
+          case 'openai':
+            results = await generateOpenAI(apiKey, modelId);
+            break;
+          case 'stability':
+            results = await generateStability(apiKey, modelId);
+            break;
+          case 'fal':
+            results = await generateFal(apiKey, modelId);
+            break;
+          default:
+            throw new Error('Unsupported provider');
+        }
+
+        // Add generated images
+        results.forEach(url => {
+          const img = {
+            id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            url,
+            prompt: state.promptConfig.prompt,
+            settings: { ...state.promptConfig },
+            timestamp: Date.now(),
+            model: state.model,
+            provider: state.provider
+          };
+          state.generatedImages.unshift(img);
+          addToHistory(img);
+          emitOutput('imageGenerated', img);
+          emitEvent('photo:generated', img);
+        });
+
+        updateImagesUI();
+        showToast(`Generated ${results.length} image${results.length !== 1 ? 's' : ''}`);
+      } catch (error) {
+        console.error('Generation failed:', error);
+        emitOutput('generationFailed', { error: error.message, prompt: state.promptConfig?.prompt });
+        emitEvent('photo:generation-failed', { error: error.message });
+        showToast('Generation failed: ' + error.message);
+      } finally {
+        state.isGenerating = false;
+        generateBtn.disabled = false;
+        generationStatus.classList.remove('active');
+      }
+    }
+
+    async function generateReplicate(apiKey, modelId) {
+      const input = {
+        prompt: state.promptConfig.prompt,
+      };
+
+      if (state.promptConfig.negativePrompt) input.negative_prompt = state.promptConfig.negativePrompt;
+      if (state.promptConfig.width) input.width = state.promptConfig.width;
+      if (state.promptConfig.height) input.height = state.promptConfig.height;
+      if (state.numOutputs > 1) input.num_outputs = state.numOutputs;
+      if (state.promptConfig.guidanceScale) input.guidance_scale = state.promptConfig.guidanceScale;
+      if (state.promptConfig.numInferenceSteps) input.num_inference_steps = state.promptConfig.numInferenceSteps;
+      if (state.promptConfig.seed) input.seed = state.promptConfig.seed;
+      if (state.promptConfig.lora?.url) {
+        input.extra_lora = state.promptConfig.lora.url;
+        input.extra_lora_scale = state.promptConfig.loraScale || 1.0;
+      }
+
+      const isVersioned = modelId.includes(':');
+      const endpoint = isVersioned
+        ? 'https://api.replicate.com/v1/predictions'
+        : `https://api.replicate.com/v1/models/${modelId}/predictions`;
+
+      const body = isVersioned
+        ? { version: modelId.split(':')[1], input }
+        : { input };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'wait',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Replicate API error: ${response.status}`);
+      }
+
+      let result = await response.json();
+
+      // Poll if still processing
+      let progress = 10;
+      while (result.status === 'starting' || result.status === 'processing') {
+        progress = Math.min(progress + 10, 90);
+        progressFill.style.width = `${progress}%`;
+        statusText.textContent = `Processing... (${result.status})`;
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+        result = await pollResponse.json();
+      }
+
+      progressFill.style.width = '100%';
+
+      if (result.status === 'failed') {
+        throw new Error(result.error || 'Generation failed');
+      }
+
+      return Array.isArray(result.output) ? result.output : [result.output];
+    }
+
+    async function generateOpenAI(apiKey, modelId) {
+      const body = {
+        model: modelId,
+        prompt: state.promptConfig.prompt,
+        n: state.numOutputs,
+        size: `${state.promptConfig.width || 1024}x${state.promptConfig.height || 1024}`,
+        response_format: 'url',
+      };
+
+      if (modelId === 'dall-e-3') {
+        body.quality = 'hd';
+      }
+
+      progressFill.style.width = '30%';
+      statusText.textContent = 'Generating with OpenAI...';
+
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'OpenAI API error');
+      }
+
+      progressFill.style.width = '100%';
+      const result = await response.json();
+      return result.data.map(img => img.url);
+    }
+
+    async function generateStability(apiKey, modelId) {
+      const formData = new FormData();
+      formData.append('prompt', state.promptConfig.prompt);
+      if (state.promptConfig.negativePrompt) formData.append('negative_prompt', state.promptConfig.negativePrompt);
+      formData.append('output_format', 'png');
+
+      progressFill.style.width = '30%';
+      statusText.textContent = 'Generating with Stability AI...';
+
+      const response = await fetch(`https://api.stability.ai/v2beta/stable-image/generate/${modelId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'image/*',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Stability API error: ${response.status}`);
+      }
+
+      progressFill.style.width = '100%';
+      const blob = await response.blob();
+      const base64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+
+      return [base64];
+    }
+
+    async function generateFal(apiKey, modelId) {
+      const input = {
+        prompt: state.promptConfig.prompt,
+        image_size: {
+          width: state.promptConfig.width || 1024,
+          height: state.promptConfig.height || 1024,
+        },
+        num_images: state.numOutputs,
+      };
+
+      if (state.promptConfig.negativePrompt) input.negative_prompt = state.promptConfig.negativePrompt;
+      if (state.promptConfig.guidanceScale) input.guidance_scale = state.promptConfig.guidanceScale;
+      if (state.promptConfig.numInferenceSteps) input.num_inference_steps = state.promptConfig.numInferenceSteps;
+      if (state.promptConfig.seed) input.seed = state.promptConfig.seed;
+
+      progressFill.style.width = '30%';
+      statusText.textContent = 'Generating with Fal.ai...';
+
+      const response = await fetch(`https://fal.run/${modelId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Key ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Fal API error: ${response.status}`);
+      }
+
+      progressFill.style.width = '100%';
+      const result = await response.json();
+      return result.images?.map(img => img.url) || [];
+    }
+
+    // ==========================================
+    // Image Actions
+    // ==========================================
+    function openLightbox(index) {
+      state.lightboxIndex = index;
+      lightboxImage.src = state.generatedImages[index].url;
+      lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      state.lightboxIndex = -1;
+    }
+
+    function downloadImage(index) {
+      const img = state.generatedImages[index];
+      const a = document.createElement('a');
+      a.href = img.url;
+      a.download = `generated_${Date.now()}.png`;
+      a.click();
+      showToast('Download started');
+    }
+
+    function sendToGallery(index) {
+      const img = state.generatedImages[index];
+      emitOutput('sendToGallery', { url: img.url, name: `Generated ${new Date().toLocaleTimeString()}` });
+      showToast('Sent to Gallery');
+    }
+
+    // ==========================================
+    // Tab Switching
+    // ==========================================
+    function switchTab(tabName) {
+      state.currentTab = tabName;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === tabName + 'Tab');
+      });
+    }
+
+    // ==========================================
+    // History Functions
+    // ==========================================
+    function loadHistory() {
+      try {
+        const saved = localStorage.getItem('photoGenHistory');
+        if (saved) {
+          state.generationHistory = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('Failed to load history:', e);
+      }
+    }
+
+    function saveHistory() {
+      try {
+        // Keep only last 50 items
+        if (state.generationHistory.length > 50) {
+          state.generationHistory = state.generationHistory.slice(0, 50);
+        }
+        localStorage.setItem('photoGenHistory', JSON.stringify(state.generationHistory));
+      } catch (e) {
+        console.error('Failed to save history:', e);
+      }
+    }
+
+    function addToHistory(img) {
+      state.generationHistory.unshift({
+        ...img,
+        historyId: 'hist_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      });
+      saveHistory();
+      updateHistoryUI();
+    }
+
+    function clearHistory() {
+      if (confirm('Clear all generation history?')) {
+        state.generationHistory = [];
+        saveHistory();
+        updateHistoryUI();
+        showToast('History cleared');
+      }
+    }
+
+    function updateHistoryUI() {
+      const historyList = document.getElementById('historyList');
+      const historyEmpty = document.getElementById('historyEmptyState');
+      const count = state.generationHistory.length;
+
+      historyEmpty.style.display = count === 0 ? 'block' : 'none';
+
+      // Clear existing items
+      historyList.querySelectorAll('.history-item').forEach(el => el.remove());
+
+      state.generationHistory.forEach((item, index) => {
+        const timeAgo = getTimeAgo(item.timestamp);
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+          <img class="history-thumb" src="${item.url}" alt="">
+          <div class="history-info">
+            <div class="history-prompt">${item.prompt || 'No prompt'}</div>
+            <div class="history-meta">
+              <span>${item.settings?.width || 1024}x${item.settings?.height || 1024}</span>
+              <span>•</span>
+              <span>${timeAgo}</span>
+            </div>
+          </div>
+          <div class="history-actions">
+            <button class="history-action-btn" onclick="reusePrompt(${index})">Reuse</button>
+            <button class="history-action-btn upscale" onclick="openUpscaleFromHistory(${index})">Upscale</button>
+          </div>
+        `;
+        historyItem.addEventListener('click', (e) => {
+          if (!e.target.closest('button')) {
+            openHistoryLightbox(index);
+          }
+        });
+        historyList.insertBefore(historyItem, historyEmpty);
+      });
+    }
+
+    function getTimeAgo(timestamp) {
+      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+      if (seconds < 60) return 'Just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      return `${Math.floor(seconds / 86400)}d ago`;
+    }
+
+    function reusePrompt(index) {
+      const item = state.generationHistory[index];
+      if (item?.settings) {
+        state.promptConfig = { ...item.settings, prompt: item.prompt };
+        updatePromptPreview();
+        switchTab('generate');
+        showToast('Prompt loaded');
+      }
+    }
+
+    function openHistoryLightbox(index) {
+      const item = state.generationHistory[index];
+      lightboxImage.src = item.url;
+      lightbox.classList.add('active');
+      state.lightboxIndex = -1;
+      state.upscaleImageIndex = index;
+    }
+
+    // ==========================================
+    // Upscale Functions
+    // ==========================================
+    function openUpscale(index) {
+      state.upscaleImageIndex = index;
+      const img = state.generatedImages[index];
+      document.getElementById('upscaleOriginal').src = img.url;
+      document.getElementById('upscaleResult').style.display = 'none';
+      document.getElementById('upscaleResultPlaceholder').style.display = 'block';
+      document.getElementById('upscaleModal').classList.add('active');
+      closeLightbox();
+    }
+
+    function openUpscaleFromHistory(index) {
+      state.upscaleImageIndex = index;
+      const img = state.generationHistory[index];
+      document.getElementById('upscaleOriginal').src = img.url;
+      document.getElementById('upscaleResult').style.display = 'none';
+      document.getElementById('upscaleResultPlaceholder').style.display = 'block';
+      document.getElementById('upscaleModal').classList.add('active');
+    }
+
+    function closeUpscale() {
+      document.getElementById('upscaleModal').classList.remove('active');
+      state.upscaleImageIndex = -1;
+    }
+
+    function setUpscaleScale(scale) {
+      state.upscaleScale = scale;
+      document.querySelectorAll('.scale-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.scale) === scale);
+      });
+    }
+
+    async function startUpscale() {
+      const apiKey = state.apiKeys.replicate;
+      if (!apiKey) {
+        showToast('Please configure Replicate API key first');
+        return;
+      }
+
+      const img = state.upscaleImageIndex >= 0 ?
+        (state.lightboxIndex >= 0 ? state.generatedImages[state.upscaleImageIndex] : state.generationHistory[state.upscaleImageIndex]) :
+        state.generatedImages[state.lightboxIndex];
+
+      if (!img) {
+        showToast('No image selected');
+        return;
+      }
+
+      state.isUpscaling = true;
+      const progress = document.getElementById('upscaleProgress');
+      const progressText = document.getElementById('upscaleProgressText');
+      const startBtn = document.getElementById('upscaleStartBtn');
+
+      progress.classList.add('active');
+      startBtn.disabled = true;
+      progressText.textContent = 'Initializing upscale...';
+
+      try {
+        const modelKey = document.getElementById('upscaleModel').value;
+        const modelId = UPSCALE_MODELS[modelKey]?.id || UPSCALE_MODELS['real-esrgan'].id;
+        const faceEnhance = document.getElementById('upscaleFaceEnhance').value;
+
+        const input = {
+          image: img.url,
+          scale: state.upscaleScale,
+        };
+
+        if (faceEnhance !== 'none') {
+          input.face_enhance = true;
+        }
+
+        progressText.textContent = 'Sending to Replicate...';
+
+        const [owner, modelName] = modelId.split('/');
+        const version = modelName.includes(':') ? modelName.split(':')[1] : null;
+        const endpoint = version ?
+          'https://api.replicate.com/v1/predictions' :
+          `https://api.replicate.com/v1/models/${modelId}/predictions`;
+
+        const body = version ?
+          { version, input } :
+          { input };
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'wait'
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        let result = await response.json();
+
+        while (result.status === 'starting' || result.status === 'processing') {
+          progressText.textContent = `Upscaling... (${result.status})`;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+          });
+          result = await pollRes.json();
+        }
+
+        if (result.status === 'failed') {
+          throw new Error(result.error || 'Upscale failed');
+        }
+
+        const upscaledUrl = Array.isArray(result.output) ? result.output[0] : result.output;
+
+        // Show result
+        const resultImg = document.getElementById('upscaleResult');
+        const placeholder = document.getElementById('upscaleResultPlaceholder');
+        resultImg.src = upscaledUrl;
+        resultImg.style.display = 'block';
+        placeholder.style.display = 'none';
+
+        // Add to images and history
+        const upscaledImg = {
+          id: 'upscaled_' + Date.now(),
+          url: upscaledUrl,
+          prompt: img.prompt + ` (upscaled ${state.upscaleScale}x)`,
+          settings: img.settings,
+          timestamp: Date.now(),
+          isUpscaled: true
+        };
+        state.generatedImages.unshift(upscaledImg);
+        addToHistory(upscaledImg);
+        updateImagesUI();
+
+        showToast(`Image upscaled ${state.upscaleScale}x successfully!`);
+        emitOutput('imageUpscaled', upscaledImg);
+        emitEvent('photo:upscaled', upscaledImg);
+
+      } catch (error) {
+        console.error('Upscale failed:', error);
+        showToast('Upscale failed: ' + error.message);
+      } finally {
+        state.isUpscaling = false;
+        progress.classList.remove('active');
+        startBtn.disabled = false;
+      }
+    }
+
+    // Make functions available globally
+    window.downloadImage = downloadImage;
+    window.sendToGallery = sendToGallery;
+    window.reusePrompt = reusePrompt;
+    window.openUpscaleFromHistory = openUpscaleFromHistory;
+
+    // ==========================================
+    // Event Listeners
+    // ==========================================
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.toggle('active');
+      settingsBtn.classList.toggle('active');
+    });
+
+    saveKeyBtn.addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      if (key && key !== '********') {
+        state.apiKeys[state.provider] = key;
+        localStorage.setItem('photoGenApiKeys', JSON.stringify(state.apiKeys));
+        updateKeyStatus();
+        showToast('API key saved');
+      }
+    });
+
+    providerSelect.addEventListener('change', (e) => {
+      state.provider = e.target.value;
+      updateModelOptions();
+      updateKeyStatus();
+      apiKeyInput.value = state.apiKeys[state.provider] ? '********' : '';
+    });
+
+    modelSelect.addEventListener('change', (e) => {
+      state.model = e.target.value;
+    });
+
+    document.getElementById('editPromptBtn').addEventListener('click', () => {
+      emitEvent('prompt:edit-requested', {});
+      showToast('Edit request sent to Prompt Options');
+    });
+
+    document.getElementById('numDecBtn').addEventListener('click', () => {
+      if (state.numOutputs > 1) {
+        state.numOutputs--;
+        numDisplay.textContent = state.numOutputs;
+      }
+    });
+
+    document.getElementById('numIncBtn').addEventListener('click', () => {
+      if (state.numOutputs < 10) {
+        state.numOutputs++;
+        numDisplay.textContent = state.numOutputs;
+      }
+    });
+
+    generateBtn.addEventListener('click', generateImages);
+
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      // Cancel would need to track the prediction ID
+      showToast('Generation canceled');
+      state.isGenerating = false;
+      generateBtn.disabled = false;
+      generationStatus.classList.remove('active');
+    });
+
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      if (state.lightboxIndex >= 0) downloadImage(state.lightboxIndex);
+    });
+
+    document.getElementById('sendToGalleryBtn').addEventListener('click', () => {
+      if (state.lightboxIndex >= 0) {
+        sendToGallery(state.lightboxIndex);
+        closeLightbox();
+      }
+    });
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Clear history
+    document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
+
+    // Upscale button in lightbox
+    document.getElementById('upscaleBtn').addEventListener('click', () => {
+      if (state.lightboxIndex >= 0) {
+        openUpscale(state.lightboxIndex);
+      } else if (state.upscaleImageIndex >= 0) {
+        openUpscaleFromHistory(state.upscaleImageIndex);
+        closeLightbox();
+      }
+    });
+
+    // Upscale modal controls
+    document.getElementById('upscaleClose').addEventListener('click', closeUpscale);
+    document.getElementById('upscaleCancelBtn').addEventListener('click', closeUpscale);
+    document.getElementById('upscaleStartBtn').addEventListener('click', startUpscale);
+
+    // Scale buttons
+    document.querySelectorAll('.scale-btn').forEach(btn => {
+      btn.addEventListener('click', () => setUpscaleScale(parseInt(btn.dataset.scale)));
+    });
+
+    // ==========================================
+    // Message Handling
+    // ==========================================
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'generate':
+            if (value) {
+              state.promptConfig = value;
+              updatePromptPreview();
+              generateImages();
+            }
+            break;
+          case 'setApiKey':
+            if (value?.provider && value?.apiKey) {
+              state.apiKeys[value.provider] = value.apiKey;
+              localStorage.setItem('photoGenApiKeys', JSON.stringify(state.apiKeys));
+              if (value.provider === state.provider) updateKeyStatus();
+            }
+            break;
+          case 'setModel':
+            if (value && MODEL_REGISTRY[state.provider]?.[value]) {
+              state.model = value;
+              modelSelect.value = value;
+            }
+            break;
+          case 'setProvider':
+            if (value && MODEL_REGISTRY[value]) {
+              state.provider = value;
+              providerSelect.value = value;
+              updateModelOptions();
+              updateKeyStatus();
+            }
+            break;
+          case 'syncPrompt':
+            if (value) {
+              state.promptConfig = value;
+              updatePromptPreview();
+            }
+            break;
+          case 'cancel':
+            if (state.isGenerating) {
+              state.isGenerating = false;
+              generateBtn.disabled = false;
+              generationStatus.classList.remove('active');
+            }
+            break;
+        }
+        return;
+      }
+
+      // Handle canvas events
+      if (data.type === 'widget:event') {
+        const eventType = data.payload?.type;
+        const payload = data.payload?.payload;
+
+        switch (eventType) {
+          case 'prompt:changed':
+            if (payload) {
+              state.promptConfig = payload;
+              updatePromptPreview();
+            }
+            break;
+          case 'prompt:generate-requested':
+            if (payload?.type === 'image' && payload?.config) {
+              state.promptConfig = payload.config;
+              updatePromptPreview();
+              generateImages();
+            }
+            break;
+        }
+      }
+    });
+
+    // ==========================================
+    // Initialization
+    // ==========================================
+    function init() {
+      // Load API keys from localStorage
+      try {
+        const saved = localStorage.getItem('photoGenApiKeys');
+        if (saved) {
+          state.apiKeys = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('Failed to load API keys:', e);
+      }
+
+      // Load history
+      loadHistory();
+
+      updateKeyStatus();
+      updateModelOptions();
+      updatePromptPreview();
+      updateImagesUI();
+      updateHistoryUI();
+    }
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+    init();
+  </script>
+</body>
+</html>

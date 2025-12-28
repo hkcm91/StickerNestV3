@@ -1,0 +1,29 @@
+{
+    "id": "business-card-generator",
+    "name": "Business Card Generator Workflow",
+    "steps": [
+        {
+            "id": "step-1-form",
+            "widgetId": "form-flow-instance-1",
+            "triggerEvent": "formflow:submitted",
+            "nextStepId": "step-2-layout"
+        },
+        {
+            "id": "step-2-layout",
+            "widgetId": "layout-pipeline-instance-1",
+            "triggerEvent": "businesscard:layout.ready",
+            "nextStepId": "step-3-image"
+        },
+        {
+            "id": "step-3-image",
+            "widgetId": "image-gen-instance-1",
+            "triggerEvent": "businesscard:image.ready",
+            "nextStepId": "step-4-preview"
+        },
+        {
+            "id": "step-4-preview",
+            "widgetId": "preview-widget-instance-1",
+            "triggerEvent": "preview:export.completed"
+        }
+    ]
+}

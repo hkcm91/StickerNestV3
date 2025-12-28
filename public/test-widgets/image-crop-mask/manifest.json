@@ -1,0 +1,78 @@
+{
+  "id": "image-crop-mask",
+  "name": "Image Crop & Mask",
+  "version": "1.0.0",
+  "description": "Advanced image cropping with shape masks including circle, heart, star, polygon, and custom aspect ratios for creative image framing",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "image",
+  "tags": ["image", "crop", "mask", "frame", "photo", "shape", "design"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["image"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "image.load": {
+      "type": "string",
+      "description": "Load image from URL or data URL"
+    },
+    "mask.set": {
+      "type": "string",
+      "description": "Set mask shape (rect, circle, ellipse, heart, star, hexagon, triangle, blob)"
+    },
+    "aspect.set": {
+      "type": "string",
+      "description": "Set aspect ratio (1:1, 4:3, 16:9, 9:16, story, post)"
+    },
+    "image.export": {
+      "type": "object",
+      "description": "Export masked image (format: png, jpeg, webp)"
+    }
+  },
+  "outputs": {
+    "image.loaded": {
+      "type": "object",
+      "description": "Emitted when image is loaded with dimensions"
+    },
+    "mask.changed": {
+      "type": "object",
+      "description": "Emitted when mask or crop settings change"
+    },
+    "image.exported": {
+      "type": "string",
+      "description": "Emitted with exported image data URL"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["asset:image-selected"],
+    "emits": ["image:cropped", "image:masked"]
+  },
+  "config": {
+    "defaultMask": "rect",
+    "defaultAspect": "1:1",
+    "maxImageSize": 4096,
+    "exportQuality": 0.92
+  },
+  "size": {
+    "width": 400,
+    "height": 540,
+    "minWidth": 340,
+    "minHeight": 450,
+    "maxWidth": 700,
+    "maxHeight": 900
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" },
+    { "name": "canvasBg", "type": "color", "variable": "--canvas-bg" }
+  ]
+}

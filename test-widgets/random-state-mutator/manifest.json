@@ -1,0 +1,23 @@
+{
+    "id": "debug-random-state-mutator",
+    "name": "Random State Mutator",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "state-update": {
+            "type": "event",
+            "description": "Receives state updates from other instances"
+        }
+    },
+    "outputs": {
+        "state-diff": {
+            "type": "event",
+            "description": "Broadcasts state diffs"
+        }
+    }
+}

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random State Mutator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+        .status {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .status.running { background: #2ecc71; color: #000; }
+        .status.stopped { background: #e74c3c; color: #fff; }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        .btn-start { background: #2ecc71; color: #000; }
+        .btn-stop { background: #e74c3c; color: #fff; }
+        .btn-reset { background: #3498db; color: #fff; }
+        .btn-mutate { background: #9b59b6; color: #fff; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+        .stat-label {
+            font-size: 9px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .state-display {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .state-display h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .state-tree {
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+        }
+        .state-key {
+            color: #79c0ff;
+        }
+        .state-value-str { color: #a5d6ff; }
+        .state-value-num { color: #ffa657; }
+        .state-value-bool { color: #ff7b72; }
+        .diff-log {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .diff-log h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .diff-entry {
+            font-family: 'Consolas', monospace;
+            font-size: 9px;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+        }
+        .diff-entry:last-child { border-bottom: none; }
+        .diff-add { color: #2ecc71; }
+        .diff-remove { color: #e74c3c; }
+        .diff-change { color: #f39c12; }
+        .conflict-indicator {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #333;
+        }
+        .conflict-indicator.conflict {
+            background: #e74c3c;
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="conflict-indicator" id="conflictIndicator"></div>
+
+    <div class="header">
+        <h1>🎲 Random State Mutator</h1>
+        <span class="status stopped" id="status">Stopped</span>
+    </div>
+
+    <div class="controls">
+        <button class="btn-start" id="startBtn">Start</button>
+        <button class="btn-stop" id="stopBtn">Stop</button>
+        <button class="btn-mutate" id="mutateBtn">Mutate Now</button>
+        <button class="btn-reset" id="resetBtn">Reset</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-value" id="mutationCount">0</div>
+            <div class="stat-label">Mutations</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="conflictCount">0</div>
+            <div class="stat-label">Conflicts</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="remoteUpdates">0</div>
+            <div class="stat-label">Remote Updates</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="stateVersion">0</div>
+            <div class="stat-label">Version</div>
+        </div>
+    </div>
+
+    <div class="state-display">
+        <h3>Current State</h3>
+        <div class="state-tree" id="stateTree">No state yet</div>
+    </div>
+
+    <div class="diff-log">
+        <h3>Diff Log (last 20)</h3>
+        <div id="diffLog">No diffs yet</div>
+    </div>
+
+    <script>
+        // State management
+        let state = {
+            counter: 0,
+            flag: false,
+            label: 'initial',
+            nested: {
+                x: 0,
+                y: 0,
+                active: false
+            },
+            array: [1, 2, 3]
+        };
+        let stateVersion = 0;
+        let mutationCount = 0;
+        let conflictCount = 0;
+        let remoteUpdates = 0;
+        let running = false;
+        let interval = null;
+        const diffHistory = [];
+        const MAX_DIFF_HISTORY = 20;
+
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const mutationCountEl = document.getElementById('mutationCount');
+        const conflictCountEl = document.getElementById('conflictCount');
+        const remoteUpdatesEl = document.getElementById('remoteUpdates');
+        const stateVersionEl = document.getElementById('stateVersion');
+        const stateTreeEl = document.getElementById('stateTree');
+        const diffLogEl = document.getElementById('diffLog');
+        const conflictIndicator = document.getElementById('conflictIndicator');
+
+        // Random mutation generators
+        const mutators = [
+            () => ({ path: 'counter', value: state.counter + Math.floor(Math.random() * 10) - 5 }),
+            () => ({ path: 'flag', value: !state.flag }),
+            () => ({ path: 'label', value: ['alpha', 'beta', 'gamma', 'delta', 'epsilon'][Math.floor(Math.random() * 5)] }),
+            () => ({ path: 'nested.x', value: Math.floor(Math.random() * 100) }),
+            () => ({ path: 'nested.y', value: Math.floor(Math.random() * 100) }),
+            () => ({ path: 'nested.active', value: !state.nested.active }),
+            () => ({ path: 'array', value: [...state.array, Math.floor(Math.random() * 10)].slice(-5) })
+        ];
+
+        function setNestedValue(obj, path, value) {
+            const parts = path.split('.');
+            let current = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                current = current[parts[i]];
+            }
+            current[parts[parts.length - 1]] = value;
+        }
+
+        function getNestedValue(obj, path) {
+            const parts = path.split('.');
+            let current = obj;
+            for (const part of parts) {
+                current = current[part];
+            }
+            return current;
+        }
+
+        function generateMutation() {
+            const mutator = mutators[Math.floor(Math.random() * mutators.length)];
+            return mutator();
+        }
+
+        function applyMutation(mutation, isRemote = false) {
+            const oldValue = getNestedValue(state, mutation.path);
+
+            // Conflict detection: if remote update changes a value we just changed
+            if (isRemote && diffHistory.length > 0) {
+                const recentLocal = diffHistory.find(d =>
+                    !d.remote &&
+                    d.path === mutation.path &&
+                    Date.now() - d.timestamp < 500
+                );
+                if (recentLocal) {
+                    conflictCount++;
+                    conflictCountEl.textContent = conflictCount;
+                    conflictIndicator.classList.add('conflict');
+                    setTimeout(() => conflictIndicator.classList.remove('conflict'), 500);
+                }
+            }
+
+            setNestedValue(state, mutation.path, mutation.value);
+            stateVersion++;
+
+            const diff = {
+                timestamp: Date.now(),
+                path: mutation.path,
+                oldValue,
+                newValue: mutation.value,
+                version: stateVersion,
+                remote: isRemote
+            };
+
+            diffHistory.unshift(diff);
+            if (diffHistory.length > MAX_DIFF_HISTORY) {
+                diffHistory.pop();
+            }
+
+            if (!isRemote) {
+                mutationCount++;
+                mutationCountEl.textContent = mutationCount;
+
+                // Emit state diff
+                if (window.WidgetAPI) {
+                    window.WidgetAPI.emitEvent('state-diff', {
+                        path: mutation.path,
+                        oldValue,
+                        newValue: mutation.value,
+                        version: stateVersion,
+                        fullState: JSON.parse(JSON.stringify(state))
+                    });
+                }
+            } else {
+                remoteUpdates++;
+                remoteUpdatesEl.textContent = remoteUpdates;
+            }
+
+            stateVersionEl.textContent = stateVersion;
+            renderState();
+            renderDiffLog();
+        }
+
+        function renderState() {
+            function renderValue(val) {
+                if (typeof val === 'string') {
+                    return `<span class="state-value-str">"${val}"</span>`;
+                } else if (typeof val === 'number') {
+                    return `<span class="state-value-num">${val}</span>`;
+                } else if (typeof val === 'boolean') {
+                    return `<span class="state-value-bool">${val}</span>`;
+                } else if (Array.isArray(val)) {
+                    return `[${val.map(renderValue).join(', ')}]`;
+                } else if (typeof val === 'object' && val !== null) {
+                    const entries = Object.entries(val).map(([k, v]) =>
+                        `<span class="state-key">${k}</span>: ${renderValue(v)}`
+                    ).join(', ');
+                    return `{ ${entries} }`;
+                }
+                return String(val);
+            }
+
+            const entries = Object.entries(state).map(([k, v]) =>
+                `<div><span class="state-key">${k}</span>: ${renderValue(v)}</div>`
+            ).join('');
+            stateTreeEl.innerHTML = entries;
+        }
+
+        function renderDiffLog() {
+            if (diffHistory.length === 0) {
+                diffLogEl.textContent = 'No diffs yet';
+                return;
+            }
+
+            const entries = diffHistory.map(diff => {
+                const age = Date.now() - diff.timestamp;
+                const ageStr = age < 1000 ? `${age}ms` : `${(age/1000).toFixed(1)}s`;
+                const typeClass = diff.remote ? 'diff-add' : 'diff-change';
+                const source = diff.remote ? '← remote' : '→ local';
+
+                return `<div class="diff-entry ${typeClass}">
+                    v${diff.version} ${diff.path}: ${JSON.stringify(diff.oldValue)} → ${JSON.stringify(diff.newValue)}
+                    <span style="color:#666">(${ageStr} ${source})</span>
+                </div>`;
+            }).join('');
+
+            diffLogEl.innerHTML = entries;
+        }
+
+        function start() {
+            if (running) return;
+            running = true;
+            statusEl.textContent = 'Running';
+            statusEl.className = 'status running';
+
+            interval = setInterval(() => {
+                const mutation = generateMutation();
+                applyMutation(mutation);
+            }, 250);
+        }
+
+        function stop() {
+            if (!running) return;
+            running = false;
+            statusEl.textContent = 'Stopped';
+            statusEl.className = 'status stopped';
+
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        }
+
+        function reset() {
+            stop();
+            state = {
+                counter: 0,
+                flag: false,
+                label: 'initial',
+                nested: { x: 0, y: 0, active: false },
+                array: [1, 2, 3]
+            };
+            stateVersion = 0;
+            mutationCount = 0;
+            conflictCount = 0;
+            remoteUpdates = 0;
+            diffHistory.length = 0;
+
+            mutationCountEl.textContent = '0';
+            conflictCountEl.textContent = '0';
+            remoteUpdatesEl.textContent = '0';
+            stateVersionEl.textContent = '0';
+            renderState();
+            renderDiffLog();
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', start);
+        document.getElementById('stopBtn').addEventListener('click', stop);
+        document.getElementById('mutateBtn').addEventListener('click', () => {
+            const mutation = generateMutation();
+            applyMutation(mutation);
+        });
+        document.getElementById('resetBtn').addEventListener('click', reset);
+
+        // Listen for remote state updates
+        if (window.WidgetAPI) {
+            window.WidgetAPI.onEvent('state-update', (payload) => {
+                if (payload.path && payload.newValue !== undefined) {
+                    applyMutation({ path: payload.path, value: payload.newValue }, true);
+                } else if (payload.fullState) {
+                    // Full state sync
+                    state = JSON.parse(JSON.stringify(payload.fullState));
+                    stateVersion = payload.version || stateVersion + 1;
+                    stateVersionEl.textContent = stateVersion;
+                    remoteUpdates++;
+                    remoteUpdatesEl.textContent = remoteUpdates;
+                    renderState();
+                }
+            });
+        }
+
+        // Initial render
+        renderState();
+        renderDiffLog();
+    </script>
+</body>
+</html>

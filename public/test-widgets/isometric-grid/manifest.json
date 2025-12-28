@@ -1,0 +1,73 @@
+{
+  "id": "isometric-grid",
+  "name": "Isometric Grid",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Isometric game map widget for creating Habbo Hotel-like environments. Supports map editing and game modes with tile-based navigation.",
+  "tags": ["gaming", "isometric", "map", "habbo", "grid", "game"],
+  "author": "StickerNest",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "inputs": {
+    "setMap": {
+      "type": "object",
+      "description": "Set the entire map data (tiles, walls, furniture)"
+    },
+    "addCharacter": {
+      "type": "object",
+      "description": "Add a character to the map with id, position, and sprite data"
+    },
+    "removeCharacter": {
+      "type": "string",
+      "description": "Remove a character by ID"
+    },
+    "moveCharacter": {
+      "type": "object",
+      "description": "Move a character to a new position {id, x, y}"
+    },
+    "setTile": {
+      "type": "object",
+      "description": "Set a tile at position {x, y, type, elevation}"
+    },
+    "setMode": {
+      "type": "string",
+      "description": "Set mode: 'edit' or 'game'"
+    },
+    "loadTileset": {
+      "type": "object",
+      "description": "Load custom tileset {floors: [], walls: [], furniture: []}"
+    }
+  },
+  "outputs": {
+    "tileClicked": {
+      "type": "object",
+      "description": "Emitted when a tile is clicked {x, y, tile, mode}"
+    },
+    "mapChanged": {
+      "type": "object",
+      "description": "Emitted when map data changes"
+    },
+    "characterMoved": {
+      "type": "object",
+      "description": "Emitted when a character moves {id, from, to}"
+    },
+    "characterClicked": {
+      "type": "object",
+      "description": "Emitted when a character is clicked {id, character}"
+    },
+    "pathRequest": {
+      "type": "object",
+      "description": "Emitted when pathfinding is requested {characterId, from, to}"
+    }
+  },
+  "size": {
+    "width": 600,
+    "height": 500,
+    "minWidth": 400,
+    "minHeight": 350
+  }
+}

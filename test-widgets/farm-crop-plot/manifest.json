@@ -1,0 +1,35 @@
+{
+    "id": "farm-crop-plot",
+    "name": "Crop Plot",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "seed": {
+            "type": "event",
+            "description": "Receives a seed to plant"
+        },
+        "water": {
+            "type": "event",
+            "description": "Waters the crop"
+        },
+        "weather": {
+            "type": "event",
+            "description": "Receives weather conditions"
+        }
+    },
+    "outputs": {
+        "harvest": {
+            "type": "event",
+            "description": "Emits harvested crop data"
+        },
+        "status": {
+            "type": "event",
+            "description": "Emits current plot status"
+        }
+    }
+}

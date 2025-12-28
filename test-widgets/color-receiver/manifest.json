@@ -1,0 +1,21 @@
+{
+    "id": "test-color-receiver",
+    "name": "Color Box",
+    "version": "1.1.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "io": {
+        "inputs": [
+            {
+                "id": "color",
+                "type": "string",
+                "description": "Receives hex color to display"
+            }
+        ],
+        "outputs": []
+    }
+}

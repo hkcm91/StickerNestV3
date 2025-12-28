@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #111;
+            color: #0ff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .header {
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100px;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 10px;
+            flex: 1;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        button.active {
+            background: #0ff;
+            color: #000;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-btn {
+            background: #222;
+            color: #aaa;
+            text-align: center;
+            padding: 8px;
+            border: 1px dashed #555;
+            cursor: pointer;
+            font-size: 10px;
+            margin-bottom: 10px;
+        }
+
+        .file-btn:hover {
+            border-color: #0ff;
+            color: #0ff;
+        }
+
+        .params {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #888;
+        }
+
+        input[type="range"] {
+            width: 60%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">Audio Input</div>
+
+    <canvas id="visualizer"></canvas>
+
+    <div class="controls">
+        <button id="btn-play">PLAY</button>
+        <button id="btn-stop">STOP</button>
+        <button id="btn-mic">MIC</button>
+    </div>
+
+    <label class="file-btn">
+        CLICK TO LOAD MP3/WAV
+        <input type="file" id="file-input" accept="audio/*">
+    </label>
+
+    <div class="params">
+        <div class="param-row">
+            <span>GAIN</span>
+            <input type="range" id="gain" min="0" max="2" step="0.1" value="1">
+        </div>
+        <div class="param-row">
+            <span>SMOOTH</span>
+            <input type="range" id="smooth" min="0" max="0.95" step="0.05" value="0.8">
+        </div>
+        <div class="param-row">
+            <span>TARGET</span>
+            <select id="target" style="background:#222; color:#fff; border:none;">
+                <option value="blur">Blur</option>
+                <option value="glitch">Glitch</option>
+                <option value="brightness">Brightness</option>
+                <option value="hueRotate">Hue</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('file-input');
+        const btnPlay = document.getElementById('btn-play');
+        const btnStop = document.getElementById('btn-stop');
+        const btnMic = document.getElementById('btn-mic');
+        const gainInput = document.getElementById('gain');
+        const smoothInput = document.getElementById('smooth');
+        const targetInput = document.getElementById('target');
+
+        let audioCtx;
+        let analyser;
+        let source;
+        let gainNode;
+        let isPlaying = false;
+        let animationId;
+        let audioBuffer;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                gainNode = audioCtx.createGain();
+                gainNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            initAudio();
+            const arrayBuffer = await file.arrayBuffer();
+            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            playBuffer();
+        });
+
+        function playBuffer() {
+            if (source) source.stop();
+            source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.loop = true;
+            source.connect(gainNode);
+            source.start(0);
+            isPlaying = true;
+            btnPlay.classList.add('active');
+            draw();
+        }
+
+        btnPlay.addEventListener('click', () => {
+            if (audioBuffer) playBuffer();
+        });
+
+        btnStop.addEventListener('click', () => {
+            if (source) source.stop();
+            isPlaying = false;
+            btnPlay.classList.remove('active');
+            btnMic.classList.remove('active');
+        });
+
+        btnMic.addEventListener('click', async () => {
+            initAudio();
+            if (source) source.disconnect();
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                source = audioCtx.createMediaStreamSource(stream);
+                source.connect(gainNode);
+                // Mute local output to prevent feedback loop
+                gainNode.disconnect(audioCtx.destination);
+                isPlaying = true;
+                btnMic.classList.add('active');
+                draw();
+            } catch (err) {
+                console.error('Mic error:', err);
+            }
+        });
+
+        gainInput.addEventListener('input', (e) => {
+            if (gainNode) gainNode.gain.value = e.target.value;
+        });
+
+        smoothInput.addEventListener('input', (e) => {
+            if (analyser) analyser.smoothingTimeConstant = e.target.value;
+        });
+
+        function draw() {
+            if (!isPlaying) return;
+            animationId = requestAnimationFrame(draw);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            // Draw visualizer
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+
+            let sum = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i] / 2;
+                sum += dataArray[i];
+
+                ctx.fillStyle = `hsl(${i / bufferLength * 360}, 100%, 50%)`;
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+                x += barWidth + 1;
+            }
+
+            // Calculate average volume (0-1)
+            const average = sum / bufferLength / 255;
+
+            // Emit events
+            if (window.WidgetAPI) {
+                // 1. Emit raw analysis for Synth Master
+                // window.WidgetAPI.emitEvent('audio-analysis', {
+                //     frequency: Array.from(dataArray)
+                // });
+
+                // 2. Emit direct modulation for immediate effects
+                window.WidgetAPI.emitEvent('modulate', {
+                    target: targetInput.value,
+                    value: average * gainInput.value, // Boosted by gain
+                    timestamp: Date.now()
+                });
+            }
+        }
+
+        // Init
+        if (window.WidgetAPI) {
+            window.WidgetAPI.log('Audio Source initialized');
+        }
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+
+</html>

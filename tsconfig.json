@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "useDefineForClassFields": true,
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "module": "ESNext",
+        "skipLibCheck": true,
+        /* Bundler mode */
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        /* Linting - Core strict mode */
+        "strict": true,
+        "noFallthroughCasesInSwitch": true,
+        /* Linting - Unused code detection (recommended to enable progressively)
+         * TODO: Enable these flags and fix ~483 unused variable/parameter errors
+         * - Prefix intentionally unused params with underscore (_param)
+         * - Remove genuinely unused imports and variables
+         */
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        /* Additional strict checks (recommended for future) */
+        // "noImplicitReturns": true,
+        // "noUncheckedIndexedAccess": true,
+        /* Vite types */
+        "types": ["vite/client"]
+    },
+    "include": [
+        "src"
+    ],
+    "references": [
+        {
+            "path": "./tsconfig.node.json"
+        }
+    ]
+}

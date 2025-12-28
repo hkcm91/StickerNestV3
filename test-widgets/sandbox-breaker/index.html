@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandbox Breaker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #f44336;
+            font-weight: 600;
+        }
+        .warning {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid #f44336;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 10px;
+            font-size: 10px;
+            color: #ef9a9a;
+        }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .btn-run { background: #f44336; color: #fff; }
+        .btn-run-all { background: #ff5722; color: #fff; }
+        .btn-clear { background: #3498db; color: #fff; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .stat-value.blocked { color: #2ecc71; }
+        .stat-value.allowed { color: #e74c3c; }
+        .stat-value.error { color: #f39c12; }
+        .stat-label {
+            font-size: 9px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .test-section {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .test-section h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #222;
+        }
+        .test-item:last-child { border-bottom: none; }
+        .test-name {
+            font-size: 10px;
+            flex: 1;
+        }
+        .test-status {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 500;
+        }
+        .test-status.blocked { background: #2ecc71; color: #000; }
+        .test-status.allowed { background: #e74c3c; color: #fff; }
+        .test-status.error { background: #f39c12; color: #000; }
+        .test-status.pending { background: #666; color: #fff; }
+        .test-btn {
+            padding: 3px 8px;
+            font-size: 9px;
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+            color: #ef9a9a;
+            margin-left: 8px;
+        }
+        .test-btn:hover { background: rgba(244, 67, 54, 0.5); }
+        .log-section {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .log-section h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .log-entry {
+            font-family: 'Consolas', monospace;
+            font-size: 9px;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-entry.blocked { color: #2ecc71; }
+        .log-entry.allowed { color: #e74c3c; }
+        .log-entry.error { color: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔓 Sandbox Breaker</h1>
+    </div>
+
+    <div class="warning">
+        ⚠️ This widget tests sandbox security. All attempts should be BLOCKED.
+        If any test shows "ALLOWED", the sandbox has a vulnerability.
+    </div>
+
+    <div class="controls">
+        <button class="btn-run-all" id="runAllBtn">Run All Tests</button>
+        <button class="btn-clear" id="clearBtn">Clear Log</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-value blocked" id="blockedCount">0</div>
+            <div class="stat-label">Blocked ✓</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value allowed" id="allowedCount">0</div>
+            <div class="stat-label">Allowed ✗</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value error" id="errorCount">0</div>
+            <div class="stat-label">Errors</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>DOM Access Tests</h3>
+        <div id="domTests"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>API Access Tests</h3>
+        <div id="apiTests"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Storage Tests</h3>
+        <div id="storageTests"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Network Tests</h3>
+        <div id="networkTests"></div>
+    </div>
+
+    <div class="log-section">
+        <h3>Test Log</h3>
+        <div id="testLog">No tests run yet</div>
+    </div>
+
+    <script>
+        // Test definitions
+        const tests = {
+            dom: [
+                {
+                    name: 'Access parent window',
+                    test: () => {
+                        const parent = window.parent;
+                        if (parent === window) return { blocked: true, reason: 'Same as window' };
+                        try {
+                            const doc = parent.document;
+                            return { blocked: false, reason: 'Parent document accessible' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Access top window',
+                    test: () => {
+                        try {
+                            const top = window.top;
+                            if (top === window) return { blocked: true, reason: 'Same as window' };
+                            const doc = top.document;
+                            return { blocked: false, reason: 'Top document accessible' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Access opener window',
+                    test: () => {
+                        try {
+                            if (!window.opener) return { blocked: true, reason: 'No opener' };
+                            const doc = window.opener.document;
+                            return { blocked: false, reason: 'Opener accessible' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Escape iframe via frames',
+                    test: () => {
+                        try {
+                            if (!window.parent.frames) return { blocked: true, reason: 'No frames access' };
+                            for (let i = 0; i < window.parent.frames.length; i++) {
+                                if (window.parent.frames[i] !== window) {
+                                    const doc = window.parent.frames[i].document;
+                                    return { blocked: false, reason: 'Sibling frame accessible' };
+                                }
+                            }
+                            return { blocked: true, reason: 'No sibling frames' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                }
+            ],
+            api: [
+                {
+                    name: 'Access window.WidgetAPI internals',
+                    test: () => {
+                        if (!window.WidgetAPI) return { blocked: true, reason: 'No WidgetAPI' };
+                        try {
+                            // Try to access internal properties
+                            const proto = Object.getPrototypeOf(window.WidgetAPI);
+                            const keys = Object.keys(window.WidgetAPI);
+                            // Check if we can modify it
+                            const original = window.WidgetAPI.emitEvent;
+                            window.WidgetAPI.emitEvent = () => console.log('hijacked');
+                            if (window.WidgetAPI.emitEvent !== original) {
+                                window.WidgetAPI.emitEvent = original;
+                                return { blocked: false, reason: 'API is mutable' };
+                            }
+                            return { blocked: true, reason: 'API appears frozen' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Prototype pollution',
+                    test: () => {
+                        try {
+                            Object.prototype.polluted = true;
+                            const result = {}.polluted === true;
+                            delete Object.prototype.polluted;
+                            // This isn't really blockable but shows the capability
+                            return { blocked: false, reason: 'Prototype modified (expected in JS)' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'eval() execution',
+                    test: () => {
+                        try {
+                            const result = eval('1 + 1');
+                            return { blocked: false, reason: `eval returned ${result}` };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Function constructor',
+                    test: () => {
+                        try {
+                            const fn = new Function('return 42');
+                            return { blocked: false, reason: `Function returned ${fn()}` };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                }
+            ],
+            storage: [
+                {
+                    name: 'localStorage access',
+                    test: () => {
+                        try {
+                            localStorage.setItem('sandbox-test', 'value');
+                            const val = localStorage.getItem('sandbox-test');
+                            localStorage.removeItem('sandbox-test');
+                            return { blocked: false, reason: 'localStorage accessible' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'sessionStorage access',
+                    test: () => {
+                        try {
+                            sessionStorage.setItem('sandbox-test', 'value');
+                            const val = sessionStorage.getItem('sandbox-test');
+                            sessionStorage.removeItem('sandbox-test');
+                            return { blocked: false, reason: 'sessionStorage accessible' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'IndexedDB access',
+                    test: () => {
+                        try {
+                            if (!window.indexedDB) return { blocked: true, reason: 'No IndexedDB' };
+                            return { blocked: false, reason: 'IndexedDB exists' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Cookie access',
+                    test: () => {
+                        try {
+                            document.cookie = 'sandbox-test=value';
+                            const hasCookie = document.cookie.includes('sandbox-test');
+                            return { blocked: !hasCookie, reason: hasCookie ? 'Cookie set' : 'Cookie blocked' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                }
+            ],
+            network: [
+                {
+                    name: 'Fetch to external origin',
+                    test: async () => {
+                        try {
+                            const response = await fetch('https://httpbin.org/get', { mode: 'no-cors' });
+                            return { blocked: false, reason: 'Fetch completed (no-cors)' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'WebSocket to external',
+                    test: () => {
+                        try {
+                            const ws = new WebSocket('wss://echo.websocket.org');
+                            ws.close();
+                            return { blocked: false, reason: 'WebSocket created' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'postMessage to parent',
+                    test: () => {
+                        try {
+                            window.parent.postMessage({ type: 'sandbox-test' }, '*');
+                            return { blocked: false, reason: 'postMessage sent' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                },
+                {
+                    name: 'Navigator.sendBeacon',
+                    test: () => {
+                        try {
+                            if (!navigator.sendBeacon) return { blocked: true, reason: 'No sendBeacon' };
+                            return { blocked: false, reason: 'sendBeacon available' };
+                        } catch (e) {
+                            return { blocked: true, reason: e.message };
+                        }
+                    }
+                }
+            ]
+        };
+
+        // State
+        let blockedCount = 0;
+        let allowedCount = 0;
+        let errorCount = 0;
+        const testLog = [];
+
+        // DOM elements
+        const blockedCountEl = document.getElementById('blockedCount');
+        const allowedCountEl = document.getElementById('allowedCount');
+        const errorCountEl = document.getElementById('errorCount');
+        const testLogEl = document.getElementById('testLog');
+
+        function renderTests() {
+            Object.entries(tests).forEach(([category, categoryTests]) => {
+                const container = document.getElementById(`${category}Tests`);
+                container.innerHTML = categoryTests.map((test, i) => `
+                    <div class="test-item" data-category="${category}" data-index="${i}">
+                        <span class="test-name">${test.name}</span>
+                        <span class="test-status pending" id="status-${category}-${i}">Pending</span>
+                        <button class="test-btn" onclick="runSingleTest('${category}', ${i})">Run</button>
+                    </div>
+                `).join('');
+            });
+        }
+
+        function logResult(name, result) {
+            const entry = {
+                name,
+                result,
+                timestamp: Date.now()
+            };
+            testLog.unshift(entry);
+            if (testLog.length > 50) testLog.pop();
+
+            renderLog();
+        }
+
+        function renderLog() {
+            if (testLog.length === 0) {
+                testLogEl.textContent = 'No tests run yet';
+                return;
+            }
+
+            testLogEl.innerHTML = testLog.map(e => {
+                const cls = e.result.error ? 'error' : (e.result.blocked ? 'blocked' : 'allowed');
+                const status = e.result.error ? 'ERROR' : (e.result.blocked ? 'BLOCKED' : 'ALLOWED');
+                return `<div class="log-entry ${cls}">
+                    [${status}] ${e.name}: ${e.result.reason}
+                </div>`;
+            }).join('');
+        }
+
+        async function runSingleTest(category, index) {
+            const test = tests[category][index];
+            const statusEl = document.getElementById(`status-${category}-${index}`);
+
+            statusEl.textContent = 'Running...';
+            statusEl.className = 'test-status pending';
+
+            try {
+                const result = await test.test();
+
+                if (result.blocked) {
+                    blockedCount++;
+                    blockedCountEl.textContent = blockedCount;
+                    statusEl.textContent = 'BLOCKED ✓';
+                    statusEl.className = 'test-status blocked';
+                } else {
+                    allowedCount++;
+                    allowedCountEl.textContent = allowedCount;
+                    statusEl.textContent = 'ALLOWED ✗';
+                    statusEl.className = 'test-status allowed';
+                }
+
+                logResult(test.name, result);
+
+                // Report breach attempts
+                if (window.WidgetAPI) {
+                    window.WidgetAPI.emitEvent('breach-attempt', {
+                        test: test.name,
+                        category,
+                        blocked: result.blocked,
+                        reason: result.reason
+                    });
+                }
+            } catch (e) {
+                errorCount++;
+                errorCountEl.textContent = errorCount;
+                statusEl.textContent = 'ERROR';
+                statusEl.className = 'test-status error';
+                logResult(test.name, { error: true, reason: e.message });
+            }
+        }
+
+        window.runSingleTest = runSingleTest;
+
+        async function runAllTests() {
+            for (const [category, categoryTests] of Object.entries(tests)) {
+                for (let i = 0; i < categoryTests.length; i++) {
+                    await runSingleTest(category, i);
+                    await new Promise(r => setTimeout(r, 100)); // Small delay between tests
+                }
+            }
+        }
+
+        function clearResults() {
+            blockedCount = 0;
+            allowedCount = 0;
+            errorCount = 0;
+            blockedCountEl.textContent = '0';
+            allowedCountEl.textContent = '0';
+            errorCountEl.textContent = '0';
+            testLog.length = 0;
+            renderLog();
+
+            document.querySelectorAll('.test-status').forEach(el => {
+                el.textContent = 'Pending';
+                el.className = 'test-status pending';
+            });
+        }
+
+        // Event listeners
+        document.getElementById('runAllBtn').addEventListener('click', runAllTests);
+        document.getElementById('clearBtn').addEventListener('click', clearResults);
+
+        // Initial render
+        renderTests();
+    </script>
+</body>
+</html>

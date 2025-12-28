@@ -1,0 +1,35 @@
+{
+    "id": "kanban-board",
+    "name": "Kanban Board",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "task": {
+            "type": "event",
+            "description": "Receives new tasks to add"
+        },
+        "sync": {
+            "type": "event",
+            "description": "Sync board state"
+        }
+    },
+    "outputs": {
+        "task-moved": {
+            "type": "event",
+            "description": "Emits when task changes column"
+        },
+        "task-created": {
+            "type": "event",
+            "description": "Emits when new task created"
+        },
+        "task-completed": {
+            "type": "event",
+            "description": "Emits when task marked done"
+        }
+    }
+}

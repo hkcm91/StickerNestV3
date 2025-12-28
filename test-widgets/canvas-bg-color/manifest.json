@@ -1,0 +1,32 @@
+{
+    "id": "canvas-bg-color",
+    "name": "Canvas Background Color",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "size": {
+        "width": 280,
+        "height": 360,
+        "minWidth": 200,
+        "minHeight": 280,
+        "scaleMode": "contain"
+    },
+    "events": {
+        "emits": ["canvas:set-background-color"],
+        "listens": []
+    },
+    "io": {
+        "inputs": [],
+        "outputs": [
+            {
+                "id": "canvas:set-background-color",
+                "type": "object",
+                "description": "Sets the canvas background color"
+            }
+        ]
+    }
+}

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Message Sender</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      color: #e2e8f0;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #8b5cf6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #8b5cf6;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(15, 15, 25, 0.6);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    textarea {
+      resize: none;
+      height: 80px;
+    }
+
+    .scope-selector {
+      display: flex;
+      gap: 8px;
+    }
+
+    .scope-option {
+      flex: 1;
+      padding: 8px 12px;
+      background: rgba(15, 15, 25, 0.6);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 6px;
+      color: #94a3b8;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .scope-option:hover {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .scope-option.active {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #8b5cf6;
+      color: #a78bfa;
+    }
+
+    .send-btn {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .send-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+
+    .send-btn:active {
+      transform: translateY(0);
+    }
+
+    .send-btn.sending {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .status {
+      font-size: 11px;
+      color: #22c55e;
+      text-align: center;
+      padding: 8px;
+      background: rgba(34, 197, 94, 0.1);
+      border-radius: 6px;
+      display: none;
+    }
+
+    .status.visible {
+      display: block;
+      animation: fadeInOut 2s ease;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-5px); }
+      15% { opacity: 1; transform: translateY(0); }
+      85% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-5px); }
+    }
+
+    .message-count {
+      font-size: 11px;
+      color: #64748b;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Message Sender</h2>
+
+    <div class="input-group">
+      <label>Message Scope</label>
+      <div class="scope-selector">
+        <div class="scope-option active" data-scope="canvas">Canvas</div>
+        <div class="scope-option" data-scope="user">User</div>
+        <div class="scope-option" data-scope="global">Global</div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Message Content</label>
+      <textarea id="message" placeholder="Type your message here...">Hello from Canvas A!</textarea>
+    </div>
+
+    <button class="send-btn" id="sendBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+      </svg>
+      Send Message
+    </button>
+
+    <div class="status" id="status">Message sent!</div>
+    <div class="message-count" id="count">Messages sent: 0</div>
+  </div>
+
+  <script>
+    // Widget state
+    let messageCount = 0;
+    let selectedScope = 'canvas';
+
+    // Elements
+    const messageInput = document.getElementById('message');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusEl = document.getElementById('status');
+    const countEl = document.getElementById('count');
+    const scopeOptions = document.querySelectorAll('.scope-option');
+
+    // Handle scope selection
+    scopeOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        scopeOptions.forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        selectedScope = option.dataset.scope;
+      });
+    });
+
+    // Use the injected WidgetAPI (proper protocol)
+    const API = window.WidgetAPI;
+
+    // Handle widget mount
+    API.onMount(function(context) {
+      console.log('[MessageSender] Initialized with ID:', context.instanceId);
+
+      // Restore state if provided
+      if (context.state?.messageCount !== undefined) {
+        messageCount = context.state.messageCount;
+        countEl.textContent = `Messages sent: ${messageCount}`;
+      }
+    });
+
+    // Handle send button click
+    sendBtn.addEventListener('click', () => {
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      messageCount++;
+      countEl.textContent = `Messages sent: ${messageCount}`;
+
+      // Show status
+      statusEl.classList.remove('visible');
+      void statusEl.offsetWidth; // Trigger reflow
+      statusEl.classList.add('visible');
+
+      // Animate button
+      sendBtn.classList.add('sending');
+      setTimeout(() => sendBtn.classList.remove('sending'), 300);
+
+      // Emit the cross-canvas message event using proper WidgetAPI
+      const messagePayload = {
+        content: message,
+        timestamp: Date.now(),
+        senderId: API.instanceId,
+        scope: selectedScope,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+      };
+
+      // Emit as pipeline output for cross-canvas routing
+      API.emitOutput('cross.message', messagePayload);
+
+      // Also emit as regular event for local widgets
+      API.emit('message:sent', { message, count: messageCount }, 'canvas');
+
+      // Save state using proper WidgetAPI
+      API.setState({ messageCount: messageCount });
+
+      API.log('Message sent: ' + message);
+    });
+
+    // Allow sending with Enter key (Shift+Enter for new line)
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>

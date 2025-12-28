@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tamagotchi Todo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #25253a;
+      --bg-tertiary: #2f2f4a;
+      --accent: #a855f7;
+      --accent-hover: #c084fc;
+      --text-primary: #eee;
+      --text-secondary: #999;
+      --border: #3a3a5a;
+      --cat-hygiene: #5dade2;
+      --cat-nutrition: #58d68d;
+      --cat-hydration: #85c1e9;
+      --cat-productivity: #f39c12;
+      --cat-health: #e74c3c;
+      --cat-financial: #f1c40f;
+      --cat-general: #9b59b6;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: linear-gradient(135deg, #f39c12, #e74c3c);
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Add Task */
+    .add-task-section {
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .add-task-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .task-input {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+
+    .task-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .add-btn {
+      padding: 10px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .add-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .task-options {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .option-select {
+      flex: 1;
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 11px;
+    }
+
+    /* Filter tabs */
+    .filter-tabs {
+      display: flex;
+      padding: 8px 12px;
+      gap: 6px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .filter-tab {
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .filter-tab:hover {
+      background: var(--bg-secondary);
+    }
+
+    .filter-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    /* Task List */
+    .task-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+    }
+
+    .task-group {
+      margin-bottom: 12px;
+    }
+
+    .task-group-title {
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .task-group-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      border-left: 3px solid var(--cat-general);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .task-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .task-item.completed {
+      opacity: 0.5;
+    }
+
+    .task-item.completed .task-text {
+      text-decoration: line-through;
+    }
+
+    /* Category colors */
+    .task-item[data-category="hygiene"] { border-left-color: var(--cat-hygiene); }
+    .task-item[data-category="nutrition"] { border-left-color: var(--cat-nutrition); }
+    .task-item[data-category="hydration"] { border-left-color: var(--cat-hydration); }
+    .task-item[data-category="productivity"] { border-left-color: var(--cat-productivity); }
+    .task-item[data-category="health"] { border-left-color: var(--cat-health); }
+    .task-item[data-category="financial"] { border-left-color: var(--cat-financial); }
+
+    .task-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .task-checkbox:hover {
+      border-color: var(--accent);
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .task-checkbox.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .task-checkbox.checked::after {
+      content: '\\2713';
+      color: white;
+      font-size: 14px;
+    }
+
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-text {
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .task-tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    .task-recurring {
+      font-size: 10px;
+      color: var(--accent);
+    }
+
+    .task-priority {
+      font-size: 10px;
+    }
+
+    .task-priority.high { color: #e74c3c; }
+    .task-priority.medium { color: #f39c12; }
+    .task-priority.low { color: #3498db; }
+
+    .task-delete {
+      padding: 4px 8px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      opacity: 0;
+      transition: all 0.2s;
+    }
+
+    .task-item:hover .task-delete {
+      opacity: 1;
+    }
+
+    .task-delete:hover {
+      color: #e74c3c;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .empty-state .text {
+      font-size: 14px;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-btn {
+      flex: 1;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .footer-btn:hover {
+      background: var(--accent);
+    }
+
+    /* Animations */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .task-item {
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .celebrate {
+      animation: celebrate 0.3s ease;
+    }
+
+    @keyframes confetti {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-50px) rotate(360deg); opacity: 0; }
+    }
+
+    .confetti {
+      position: absolute;
+      pointer-events: none;
+      animation: confetti 1s ease forwards;
+    }
+
+    /* Suggested tasks */
+    .suggestions {
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .suggestions-title {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .suggestion-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .suggestion-chip {
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .suggestion-chip:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <div class="header-title">
+        <span>&#x1F4DD; Tasks</span>
+      </div>
+      <div class="streak-badge">
+        <span>&#x1F525;</span>
+        <span id="streakCount">0</span>
+        <span>day streak</span>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <div class="progress-label">
+      <span id="progressText">0 of 0 completed</span>
+      <span id="progressPercent">0%</span>
+    </div>
+  </div>
+
+  <div class="add-task-section">
+    <div class="add-task-row">
+      <input type="text" class="task-input" id="taskInput" placeholder="Add a new task...">
+      <button class="add-btn" id="addBtn">+</button>
+    </div>
+    <div class="task-options">
+      <select class="option-select" id="categorySelect">
+        <option value="general">General</option>
+        <option value="hygiene">Hygiene</option>
+        <option value="nutrition">Nutrition</option>
+        <option value="hydration">Hydration</option>
+        <option value="productivity">Productivity</option>
+        <option value="health">Health</option>
+        <option value="financial">Financial</option>
+      </select>
+      <select class="option-select" id="prioritySelect">
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+        <option value="low">Low</option>
+      </select>
+      <select class="option-select" id="recurringSelect">
+        <option value="">One-time</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="suggestions" id="suggestions" style="display: none;">
+    <div class="suggestions-title">Suggested based on your moodlets:</div>
+    <div class="suggestion-chips" id="suggestionChips"></div>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">All</button>
+    <button class="filter-tab" data-filter="active">Active</button>
+    <button class="filter-tab" data-filter="completed">Done</button>
+    <button class="filter-tab" data-filter="hygiene">&#x1F6BF;</button>
+    <button class="filter-tab" data-filter="nutrition">&#x1F957;</button>
+    <button class="filter-tab" data-filter="health">&#x1F3E5;</button>
+    <button class="filter-tab" data-filter="productivity">&#x2705;</button>
+    <button class="filter-tab" data-filter="financial">&#x1F4B0;</button>
+  </div>
+
+  <div class="task-list" id="taskList"></div>
+
+  <div class="footer">
+    <button class="footer-btn" id="btnClearCompleted">Clear Done</button>
+    <button class="footer-btn" id="btnExport">Export</button>
+    <button class="footer-btn" id="btnResetDaily">Reset Daily</button>
+  </div>
+
+  <script>
+    // ===== CATEGORY CONFIG =====
+    const categoryConfig = {
+      general: { icon: '&#x1F4DD;', label: 'General', color: '#9b59b6' },
+      hygiene: { icon: '&#x1F6BF;', label: 'Hygiene', color: '#5dade2' },
+      nutrition: { icon: '&#x1F957;', label: 'Nutrition', color: '#58d68d' },
+      hydration: { icon: '&#x1F4A7;', label: 'Hydration', color: '#85c1e9' },
+      productivity: { icon: '&#x2705;', label: 'Productivity', color: '#f39c12' },
+      health: { icon: '&#x1F3E5;', label: 'Health', color: '#e74c3c' },
+      financial: { icon: '&#x1F4B0;', label: 'Financial', color: '#f1c40f' }
+    };
+
+    // ===== SUGGESTED TASKS =====
+    const suggestedTasks = {
+      hygiene: ['Take a shower', 'Brush teeth', 'Wash face', 'Do laundry'],
+      nutrition: ['Eat breakfast', 'Have a healthy lunch', 'Prep meals', 'Eat vegetables'],
+      hydration: ['Drink water', 'Refill water bottle', 'Drink 8 glasses', 'Have herbal tea'],
+      productivity: ['Clear inbox', 'Finish project', 'Make to-do list', 'Clean desk'],
+      health: ['Exercise 30 min', 'Take vitamins', 'Schedule checkup', 'Go for a walk'],
+      financial: ['Check budget', 'Pay bills', 'Review spending', 'Save $10']
+    };
+
+    // ===== STATE =====
+    const state = {
+      tasks: [],
+      filter: 'all',
+      streak: 0,
+      lastCompletedDate: null,
+      moodletData: null
+    };
+
+    // Load from localStorage
+    try {
+      const saved = localStorage.getItem('tamagotchi-todo-state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        state.tasks = parsed.tasks || [];
+        state.streak = parsed.streak || 0;
+        state.lastCompletedDate = parsed.lastCompletedDate;
+      }
+    } catch (e) {}
+
+    // ===== TASK MANAGEMENT =====
+    function generateId() {
+      return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function addTask(title, category = 'general', priority = 'medium', recurring = '') {
+      if (!title.trim()) return;
+
+      const task = {
+        id: generateId(),
+        title: title.trim(),
+        category,
+        priority,
+        recurring,
+        completed: false,
+        createdAt: Date.now(),
+        completedAt: null
+      };
+
+      state.tasks.unshift(task);
+      saveState();
+      renderTasks();
+      updateProgress();
+
+      emit('taskAdded', task);
+
+      return task;
+    }
+
+    function completeTask(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      task.completed = !task.completed;
+      task.completedAt = task.completed ? Date.now() : null;
+
+      if (task.completed) {
+        // Update streak
+        const today = new Date().toDateString();
+        if (state.lastCompletedDate !== today) {
+          const yesterday = new Date(Date.now() - 86400000).toDateString();
+          if (state.lastCompletedDate === yesterday) {
+            state.streak++;
+          } else if (state.lastCompletedDate !== today) {
+            state.streak = 1;
+          }
+          state.lastCompletedDate = today;
+        }
+
+        // Emit completion
+        emit('taskCompleted', {
+          id: task.id,
+          title: task.title,
+          category: task.category,
+          impact: task.priority === 'high' ? 0.5 : task.priority === 'medium' ? 0.3 : 0.2
+        });
+
+        // Show confetti
+        createConfetti(event);
+      }
+
+      saveState();
+      renderTasks();
+      updateProgress();
+      updateStreak();
+    }
+
+    function deleteTask(taskId) {
+      state.tasks = state.tasks.filter(t => t.id !== taskId);
+      saveState();
+      renderTasks();
+      updateProgress();
+    }
+
+    function clearCompleted() {
+      // Handle recurring tasks
+      state.tasks = state.tasks.filter(t => {
+        if (t.completed && t.recurring) {
+          // Reset recurring task instead of deleting
+          t.completed = false;
+          t.completedAt = null;
+          return true;
+        }
+        return !t.completed;
+      });
+      saveState();
+      renderTasks();
+      updateProgress();
+    }
+
+    function resetDailyTasks() {
+      state.tasks.forEach(t => {
+        if (t.recurring === 'daily') {
+          t.completed = false;
+          t.completedAt = null;
+        }
+      });
+      saveState();
+      renderTasks();
+      updateProgress();
+    }
+
+    // ===== RENDERING =====
+    function renderTasks() {
+      const container = document.getElementById('taskList');
+      const filtered = getFilteredTasks();
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">&#x1F4CB;</div>
+            <div class="text">${state.filter === 'all' ? 'No tasks yet. Add one above!' : 'No tasks in this category'}</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Group by completion status
+      const active = filtered.filter(t => !t.completed);
+      const completed = filtered.filter(t => t.completed);
+
+      let html = '';
+
+      if (active.length > 0) {
+        html += `<div class="task-group">
+          <div class="task-group-title">Active (${active.length})</div>
+          ${active.map(t => renderTaskItem(t)).join('')}
+        </div>`;
+      }
+
+      if (completed.length > 0) {
+        html += `<div class="task-group">
+          <div class="task-group-title">Completed (${completed.length})</div>
+          ${completed.map(t => renderTaskItem(t)).join('')}
+        </div>`;
+      }
+
+      container.innerHTML = html;
+
+      // Add event listeners
+      container.querySelectorAll('.task-checkbox').forEach(cb => {
+        cb.onclick = (e) => {
+          e.stopPropagation();
+          completeTask(cb.dataset.id);
+        };
+      });
+
+      container.querySelectorAll('.task-delete').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          deleteTask(btn.dataset.id);
+        };
+      });
+    }
+
+    function renderTaskItem(task) {
+      const cat = categoryConfig[task.category] || categoryConfig.general;
+      const priorityLabel = task.priority === 'high' ? '!!!' : task.priority === 'low' ? '!' : '!!';
+
+      return `
+        <div class="task-item ${task.completed ? 'completed' : ''}" data-category="${task.category}">
+          <div class="task-checkbox ${task.completed ? 'checked' : ''}" data-id="${task.id}"></div>
+          <div class="task-content">
+            <div class="task-text">${escapeHtml(task.title)}</div>
+            <div class="task-meta">
+              <span class="task-tag">${cat.icon} ${cat.label}</span>
+              ${task.recurring ? `<span class="task-recurring">&#x1F501; ${task.recurring}</span>` : ''}
+              <span class="task-priority ${task.priority}">${priorityLabel}</span>
+            </div>
+          </div>
+          <button class="task-delete" data-id="${task.id}">&#x1F5D1;</button>
+        </div>
+      `;
+    }
+
+    function getFilteredTasks() {
+      switch (state.filter) {
+        case 'active':
+          return state.tasks.filter(t => !t.completed);
+        case 'completed':
+          return state.tasks.filter(t => t.completed);
+        case 'hygiene':
+        case 'nutrition':
+        case 'hydration':
+        case 'productivity':
+        case 'health':
+        case 'financial':
+          return state.tasks.filter(t => t.category === state.filter);
+        default:
+          return state.tasks;
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ===== PROGRESS =====
+    function updateProgress() {
+      const total = state.tasks.length;
+      const completed = state.tasks.filter(t => t.completed).length;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      document.getElementById('progressFill').style.width = percent + '%';
+      document.getElementById('progressText').textContent = `${completed} of ${total} completed`;
+      document.getElementById('progressPercent').textContent = percent + '%';
+
+      // Emit daily progress
+      emit('dailyProgress', {
+        total,
+        completed,
+        percent,
+        byCategory: getCategoryStats()
+      });
+    }
+
+    function getCategoryStats() {
+      const stats = {};
+      for (const cat of Object.keys(categoryConfig)) {
+        const catTasks = state.tasks.filter(t => t.category === cat);
+        stats[cat] = {
+          total: catTasks.length,
+          completed: catTasks.filter(t => t.completed).length
+        };
+      }
+      return stats;
+    }
+
+    function updateStreak() {
+      document.getElementById('streakCount').textContent = state.streak;
+    }
+
+    // ===== SUGGESTIONS =====
+    function updateSuggestions(moodletData) {
+      state.moodletData = moodletData;
+
+      if (!moodletData || !moodletData.moodlets) {
+        document.getElementById('suggestions').style.display = 'none';
+        return;
+      }
+
+      const suggestions = [];
+
+      // Find low moodlets and suggest tasks
+      for (const [category, moodlet] of Object.entries(moodletData.moodlets)) {
+        if (moodlet.value < 0 && suggestedTasks[category]) {
+          const categoryTasks = suggestedTasks[category];
+          const randomTask = categoryTasks[Math.floor(Math.random() * categoryTasks.length)];
+          suggestions.push({ category, task: randomTask });
+        }
+      }
+
+      if (suggestions.length === 0) {
+        document.getElementById('suggestions').style.display = 'none';
+        return;
+      }
+
+      const chipsHtml = suggestions.map(s =>
+        `<button class="suggestion-chip" data-category="${s.category}" data-task="${s.task}">
+          ${categoryConfig[s.category]?.icon || ''} ${s.task}
+        </button>`
+      ).join('');
+
+      document.getElementById('suggestionChips').innerHTML = chipsHtml;
+      document.getElementById('suggestions').style.display = 'block';
+
+      // Add click handlers
+      document.querySelectorAll('.suggestion-chip').forEach(chip => {
+        chip.onclick = () => {
+          addTask(chip.dataset.task, chip.dataset.category);
+          chip.remove();
+          if (document.querySelectorAll('.suggestion-chip').length === 0) {
+            document.getElementById('suggestions').style.display = 'none';
+          }
+        };
+      });
+    }
+
+    // ===== CONFETTI =====
+    function createConfetti(event) {
+      const colors = ['#a855f7', '#f39c12', '#58d68d', '#5dade2', '#e74c3c'];
+      const container = document.getElementById('taskList');
+
+      for (let i = 0; i < 8; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.innerHTML = ['&#x2728;', '&#x1F31F;', '&#x2B50;', '&#x1F389;'][Math.floor(Math.random() * 4)];
+        confetti.style.left = (event?.clientX || 100) + (Math.random() - 0.5) * 60 + 'px';
+        confetti.style.top = (event?.clientY || 100) + 'px';
+        confetti.style.fontSize = (12 + Math.random() * 12) + 'px';
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 1000);
+      }
+    }
+
+    // ===== PERSISTENCE =====
+    function saveState() {
+      try {
+        localStorage.setItem('tamagotchi-todo-state', JSON.stringify({
+          tasks: state.tasks,
+          streak: state.streak,
+          lastCompletedDate: state.lastCompletedDate
+        }));
+      } catch (e) {}
+    }
+
+    // ===== EMIT =====
+    function emit(type, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type, payload }
+      }, '*');
+    }
+
+    // ===== EVENT HANDLERS =====
+    // Add task
+    document.getElementById('addBtn').onclick = () => {
+      const input = document.getElementById('taskInput');
+      const category = document.getElementById('categorySelect').value;
+      const priority = document.getElementById('prioritySelect').value;
+      const recurring = document.getElementById('recurringSelect').value;
+
+      addTask(input.value, category, priority, recurring);
+      input.value = '';
+    };
+
+    document.getElementById('taskInput').onkeypress = (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('addBtn').click();
+      }
+    };
+
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        state.filter = tab.dataset.filter;
+        renderTasks();
+      };
+    });
+
+    // Footer buttons
+    document.getElementById('btnClearCompleted').onclick = clearCompleted;
+    document.getElementById('btnResetDaily').onclick = resetDailyTasks;
+    document.getElementById('btnExport').onclick = () => {
+      emit('tasksExport', state.tasks);
+    };
+
+    // ===== MESSAGE HANDLING =====
+    window.addEventListener('message', (event) => {
+      const { type, portName, value } = event.data;
+
+      if (type === 'pipeline:input') {
+        switch (portName) {
+          case 'addTask':
+            addTask(value.title, value.category, value.priority, value.recurring);
+            break;
+
+          case 'completeTask':
+            completeTask(value);
+            break;
+
+          case 'deleteTask':
+            deleteTask(value);
+            break;
+
+          case 'importTasks':
+            if (Array.isArray(value)) {
+              state.tasks = [...value, ...state.tasks];
+              saveState();
+              renderTasks();
+              updateProgress();
+            }
+            break;
+
+          case 'moodletSync':
+            updateSuggestions(value);
+            break;
+        }
+      }
+    });
+
+    // ===== INIT =====
+    renderTasks();
+    updateProgress();
+    updateStreak();
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

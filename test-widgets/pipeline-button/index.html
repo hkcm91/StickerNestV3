@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 16px;
+        }
+        .title {
+            color: rgba(255,255,255,0.9);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button {
+            padding: 16px 32px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        button:active {
+            transform: translateY(0) scale(0.98);
+        }
+        .counter {
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+            margin-top: 12px;
+        }
+        .status {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Pipeline Button</div>
+    <button id="btn">Click Me!</button>
+    <div class="counter">Clicks: <span id="count">0</span></div>
+    <div class="status" id="status"></div>
+
+    <script>
+        let clickCount = 0;
+        const btn = document.getElementById('btn');
+        const countEl = document.getElementById('count');
+        const statusEl = document.getElementById('status');
+
+        // Emit event to host
+        function emit(portName, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portName,
+                    payload: payload
+                }
+            }, '*');
+
+            // Flash status indicator
+            statusEl.style.background = '#fbbf24';
+            setTimeout(() => statusEl.style.background = '#22c55e', 200);
+        }
+
+        btn.addEventListener('click', () => {
+            clickCount++;
+            countEl.textContent = clickCount;
+
+            // Emit trigger (simple signal)
+            emit('clicked', { triggered: true });
+
+            // Emit click data (rich data)
+            emit('clickData', {
+                count: clickCount,
+                timestamp: Date.now(),
+                message: `Button clicked ${clickCount} time(s)`
+            });
+
+            // Visual feedback
+            btn.textContent = 'Clicked!';
+            btn.style.background = '#22c55e';
+            btn.style.color = 'white';
+            setTimeout(() => {
+                btn.textContent = 'Click Me!';
+                btn.style.background = 'white';
+                btn.style.color = '#667eea';
+            }, 300);
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

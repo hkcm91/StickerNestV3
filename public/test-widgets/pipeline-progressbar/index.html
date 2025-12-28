@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+        .title {
+            color: rgba(255,255,255,0.7);
+            font-size: 10px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .progress-container {
+            width: 100%;
+            max-width: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 20px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 6px;
+            transition: width 0.1s ease-out;
+            position: relative;
+        }
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255,255,255,0.2) 50%,
+                transparent 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .value-display {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+        .stats {
+            color: rgba(255,255,255,0.4);
+            font-size: 10px;
+            margin-top: 8px;
+        }
+        .complete-badge {
+            display: none;
+            background: #22c55e;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .complete-badge.show {
+            display: block;
+            animation: pop 0.3s ease;
+        }
+        @keyframes pop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Pipeline Progress</div>
+    <div class="progress-container">
+        <div class="progress-bar" id="bar" style="width: 0%"></div>
+    </div>
+    <div class="value-display"><span id="value">0</span>%</div>
+    <div class="stats">Updates: <span id="updates">0</span></div>
+    <div class="complete-badge" id="badge">Complete!</div>
+
+    <script>
+        let value = 0;
+        let updateCount = 0;
+        let wasComplete = false;
+
+        const barEl = document.getElementById('bar');
+        const valueEl = document.getElementById('value');
+        const updatesEl = document.getElementById('updates');
+        const badgeEl = document.getElementById('badge');
+
+        // Emit event to host
+        function emit(portName, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portName,
+                    payload: payload
+                }
+            }, '*');
+        }
+
+        function setValue(newValue) {
+            // Clamp to 0-100
+            value = Math.max(0, Math.min(100, Math.round(newValue)));
+            updateCount++;
+
+            barEl.style.width = value + '%';
+            valueEl.textContent = value;
+            updatesEl.textContent = updateCount;
+
+            emit('valueChanged', value);
+
+            // Check for completion
+            if (value >= 100 && !wasComplete) {
+                wasComplete = true;
+                badgeEl.classList.add('show');
+                emit('complete', { triggered: true });
+            } else if (value < 100) {
+                wasComplete = false;
+                badgeEl.classList.remove('show');
+            }
+        }
+
+        // Listen for incoming events
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            if (data.type === 'widget:event') {
+                const eventType = data.payload.type;
+                const payload = data.payload.payload;
+
+                console.log('[Progress Bar] Received:', eventType, payload);
+
+                // Handle setValue input (number)
+                if (eventType === 'setValue' || eventType.endsWith(':setValue') ||
+                    eventType === 'tick' || eventType.endsWith(':tick')) {
+                    if (typeof payload === 'number') {
+                        setValue(payload);
+                    } else if (payload && typeof payload === 'object' && 'value' in payload) {
+                        setValue(payload.value);
+                    }
+                }
+
+                // Handle setData input (object)
+                if (eventType === 'setData' || eventType.endsWith(':setData') ||
+                    eventType === 'tickEvent' || eventType.endsWith(':tickEvent')) {
+                    if (payload && typeof payload === 'object') {
+                        setValue(payload.value ?? payload.progress ?? 0);
+                    }
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'widget:ready' }, '*');
+    </script>
+</body>
+</html>

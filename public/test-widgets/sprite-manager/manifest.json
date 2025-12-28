@@ -1,0 +1,65 @@
+{
+  "id": "sprite-manager",
+  "name": "Sprite Manager",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Sprite sheet manager for game development. Upload sprite sheets, define animations, and export sprite data for characters and objects.",
+  "tags": ["gaming", "sprite", "animation", "character", "game", "habbo"],
+  "author": "StickerNest",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "inputs": {
+    "loadSpriteSheet": {
+      "type": "object",
+      "description": "Load a sprite sheet {imageData, name, config?}"
+    },
+    "setFrameConfig": {
+      "type": "object",
+      "description": "Set frame configuration {rows, cols, frameWidth, frameHeight}"
+    },
+    "addAnimation": {
+      "type": "object",
+      "description": "Add an animation definition {name, frames, fps, loop}"
+    },
+    "playAnimation": {
+      "type": "string",
+      "description": "Play animation by name"
+    },
+    "stopAnimation": {
+      "type": "boolean",
+      "description": "Stop current animation"
+    },
+    "importFromGenerator": {
+      "type": "object",
+      "description": "Import sprite data from AI generator widget"
+    }
+  },
+  "outputs": {
+    "spriteData": {
+      "type": "object",
+      "description": "Complete sprite data including sheet and animations"
+    },
+    "frameSelected": {
+      "type": "object",
+      "description": "Emitted when a frame is selected {index, x, y, width, height}"
+    },
+    "animationCreated": {
+      "type": "object",
+      "description": "Emitted when an animation is created"
+    },
+    "spriteReady": {
+      "type": "object",
+      "description": "Emitted when sprite is ready to be used by other widgets"
+    }
+  },
+  "size": {
+    "width": 500,
+    "height": 450,
+    "minWidth": 400,
+    "minHeight": 350
+  }
+}

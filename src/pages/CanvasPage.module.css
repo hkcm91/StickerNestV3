@@ -1,0 +1,493 @@
+/**
+ * StickerNest v2 - Canvas Page Styles
+ *
+ * Styles for the main canvas editing page
+ */
+
+/* =============================================================================
+   Container
+   ============================================================================= */
+
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =============================================================================
+   Header
+   ============================================================================= */
+
+.header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+  background: var(--sn-bg-secondary, #1a1a2e);
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.headerMobile {
+  padding: 8px 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+/* =============================================================================
+   Mode Selector
+   ============================================================================= */
+
+.modeSelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modeLabel {
+  color: var(--sn-text-secondary, #94a3b8);
+  font-size: 12px;
+}
+
+.modeSelect {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+  background: var(--sn-bg-tertiary, #252538);
+  color: var(--sn-text-primary, #e2e8f0);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modeSelectMobile {
+  padding: 10px 12px;
+  font-size: 14px;
+  min-height: 44px;
+}
+
+/* =============================================================================
+   Divider
+   ============================================================================= */
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+  flex-shrink: 0;
+}
+
+/* =============================================================================
+   Action Buttons
+   ============================================================================= */
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.saveButton,
+.loadButton,
+.shareButton {
+  padding: 6px 12px;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.saveButton {
+  background: var(--sn-accent-success, #22c55e);
+}
+
+.saveButton:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.loadButton {
+  background: var(--sn-accent-info, #06b6d4);
+}
+
+.loadButton:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.shareButton {
+  background: var(--sn-accent-primary, #8b5cf6);
+}
+
+.secondaryButton {
+  padding: 6px 12px;
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--sn-accent-primary, #8b5cf6);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.secondaryButton:hover {
+  background: rgba(139, 92, 246, 0.3);
+}
+
+.secondaryButton.active {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: #fff;
+}
+
+/* =============================================================================
+   Status Message
+   ============================================================================= */
+
+.statusMessage {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.statusMessage.success {
+  color: var(--sn-accent-success, #22c55e);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.statusMessage.error {
+  color: var(--sn-accent-error, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* =============================================================================
+   Properties Toggle
+   ============================================================================= */
+
+.propertiesToggle {
+  padding: 6px 12px;
+  background: var(--sn-bg-tertiary, #252538);
+  color: var(--sn-text-secondary, #94a3b8);
+  border: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.propertiesToggle.active {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: #fff;
+}
+
+/* =============================================================================
+   User Menu
+   ============================================================================= */
+
+.userMenu {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.username {
+  font-size: 12px;
+  color: var(--sn-text-secondary, #94a3b8);
+}
+
+.devBadge {
+  font-size: 10px;
+  padding: 4px 8px;
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--sn-accent-primary, #8b5cf6);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.authButton {
+  padding: 6px 12px;
+  border: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.authButton.signIn {
+  background: var(--sn-accent-primary, #8b5cf6);
+  color: #fff;
+}
+
+.authButton.signOut {
+  background: var(--sn-bg-tertiary, #252538);
+  color: var(--sn-text-secondary, #94a3b8);
+}
+
+.authButton.signOut:hover {
+  background: var(--sn-accent-error, #ef4444);
+  color: #fff;
+}
+
+/* =============================================================================
+   Canvas Area
+   ============================================================================= */
+
+.canvasArea {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.creativeToolbarWrapper {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+}
+
+/* =============================================================================
+   Sticker Library Panel
+   ============================================================================= */
+
+.stickerLibraryPanel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 320px;
+  height: 100%;
+  background: var(--sn-bg-secondary, #1a1a2e);
+  border-left: 1px solid rgba(139, 92, 246, 0.2);
+  z-index: 100;
+  overflow: hidden;
+}
+
+/* =============================================================================
+   Docked Widget
+   ============================================================================= */
+
+.dockedWidgetContainer {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  overflow: hidden;
+}
+
+.dockedWidgetPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  flex-direction: column;
+  padding: 8px;
+  text-align: center;
+}
+
+.placeholderTitle {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.placeholderId {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* =============================================================================
+   Mobile
+   ============================================================================= */
+
+.mobileLibraryContent {
+  padding: 16px;
+}
+
+.mobileToast {
+  position: fixed;
+  bottom: 80px;
+  left: 16px;
+  right: 16px;
+  padding: 12px 16px;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+  z-index: 1000;
+  animation: slideUp 0.2s ease;
+}
+
+.mobileToast.success {
+  background: var(--sn-accent-success, #22c55e);
+}
+
+.mobileToast.error {
+  background: var(--sn-accent-error, #ef4444);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =============================================================================
+   Fullscreen Mode
+   ============================================================================= */
+
+.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: var(--sn-bg-primary, #0f0f19);
+}
+
+.fullscreen .canvasArea {
+  height: 100vh;
+}
+
+/* Fullscreen Controls - Glass Neumorphism Style */
+.fullscreenControls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.canvasArea:hover .fullscreenControls,
+.fullscreenControls:focus-within {
+  opacity: 1;
+}
+
+.fullscreenControlsInner {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: var(--sn-glass-bg, rgba(15, 15, 36, 0.85));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.3));
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.fullscreenControlButton {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--sn-text-primary, #e2e8f0);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fullscreenControlButton:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: scale(1.05);
+}
+
+.fullscreenControlButton:active {
+  transform: scale(0.95);
+}
+
+.fullscreenControlButton.exitButton {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--sn-accent-error, #ef4444);
+}
+
+.fullscreenControlButton.exitButton:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.fullscreenDivider {
+  width: 1px;
+  height: 24px;
+  background: var(--sn-border-primary, rgba(139, 92, 246, 0.3));
+  margin: 6px 4px;
+}
+
+.fullscreenHint {
+  font-size: 11px;
+  color: var(--sn-text-secondary, #94a3b8);
+  background: var(--sn-glass-bg, rgba(15, 15, 36, 0.7));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
+}
+
+/* Legacy exit button - kept for backward compatibility */
+.exitFullscreenButton {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  opacity: 0;
+}
+
+.exitFullscreenButton:hover,
+.canvasArea:hover .exitFullscreenButton {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .header {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .saveButton,
+  .loadButton,
+  .shareButton {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+}

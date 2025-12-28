@@ -1,0 +1,222 @@
+{
+  "id": "corporate-classic-reactive",
+  "name": "Corporate Classic (Reactive)",
+  "category": "business-card",
+  "description": "Elegant, professional corporate design with reactive text zones. Ideal for executives and established businesses.",
+
+  "dimensions": {
+    "width": 1050,
+    "height": 600,
+    "dpi": 300,
+    "bleed": 0
+  },
+
+  "zones": [
+    {
+      "id": "name",
+      "type": "text",
+      "bounds": {
+        "x": 30,
+        "y": 30,
+        "width": 40,
+        "height": 14,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 10,
+      "textConfig": {
+        "fieldMapping": "fullName",
+        "fontSize": 38,
+        "fontWeight": "semibold",
+        "alignment": "center",
+        "color": "primary",
+        "lineHeight": 1.1
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 32,
+        "maxWidth": 50,
+        "growDirection": "both",
+        "contentPadding": 12
+      }
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "bounds": {
+        "x": 30,
+        "y": 48,
+        "width": 40,
+        "height": 8,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "jobTitle",
+        "fontSize": 18,
+        "fontWeight": "medium",
+        "alignment": "center",
+        "color": "secondary",
+        "lineHeight": 1.2
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 28,
+        "maxWidth": 48,
+        "growDirection": "right",
+        "contentPadding": 8
+      }
+    },
+    {
+      "id": "company",
+      "type": "text",
+      "bounds": {
+        "x": 30,
+        "y": 58,
+        "width": 40,
+        "height": 6,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 6,
+      "textConfig": {
+        "fieldMapping": "businessName",
+        "fontSize": 16,
+        "fontWeight": "normal",
+        "alignment": "center",
+        "color": "text",
+        "lineHeight": 1.3
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 25,
+        "maxWidth": 50,
+        "growDirection": "right",
+        "contentPadding": 6
+      }
+    },
+    {
+      "id": "divider",
+      "type": "shape",
+      "bounds": {
+        "x": 35,
+        "y": 67,
+        "width": 30,
+        "height": 1,
+        "unit": "percent"
+      },
+      "zIndex": 15,
+      "maskValue": 0,
+      "maskPadding": 4
+    },
+    {
+      "id": "contact-block",
+      "type": "text",
+      "bounds": {
+        "x": 25,
+        "y": 72,
+        "width": 50,
+        "height": 20,
+        "unit": "percent"
+      },
+      "zIndex": 20,
+      "maskValue": 0,
+      "maskPadding": 10,
+      "textConfig": {
+        "fieldMapping": "contactInfo",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "alignment": "center",
+        "color": "text",
+        "lineHeight": 1.6
+      },
+      "reactiveRules": {
+        "reactive": true,
+        "minWidth": 35,
+        "maxWidth": 55,
+        "minHeight": 16,
+        "maxHeight": 24,
+        "growDirection": "both",
+        "contentPadding": 10
+      }
+    },
+    {
+      "id": "logo",
+      "type": "logo",
+      "bounds": {
+        "x": 40,
+        "y": 5,
+        "width": 20,
+        "height": 20,
+        "unit": "percent"
+      },
+      "zIndex": 25,
+      "maskValue": 0,
+      "maskPadding": 10,
+      "imageConfig": {
+        "fieldMapping": "logo",
+        "fit": "contain"
+      }
+    },
+    {
+      "id": "design-space-left",
+      "type": "shape",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 100,
+        "unit": "percent"
+      },
+      "zIndex": 1,
+      "maskValue": 255,
+      "maskPadding": 0
+    },
+    {
+      "id": "design-space-right",
+      "type": "shape",
+      "bounds": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 100,
+        "unit": "percent"
+      },
+      "zIndex": 1,
+      "maskValue": 255,
+      "maskPadding": 0
+    }
+  ],
+
+  "promptTemplate": "elegant corporate business card background, sophisticated symmetrical design, gold and {{primaryColor}} accents, subtle marble or brushed metal texture, professional luxury aesthetic, executive feel, {{stylePrompt}}, refined patterns on edges, print quality 300 DPI",
+
+  "negativePromptBase": "text, words, letters, numbers, watermark, signature, face, cartoon, childish, unprofessional, low quality, blurry, pixelated, loud, busy",
+
+  "compositorPrompt": "This is a CORPORATE CLASSIC business card mask. The CENTER (black area) is reserved for text content - logo at top, name, title, company, and contact info all centered. The LEFT and RIGHT edges (white areas) should have elegant, sophisticated design elements - think gold accents, subtle marble textures, refined geometric borders. Design should feel expensive and executive.",
+
+  "styleHints": [
+    "corporate",
+    "elegant",
+    "sophisticated",
+    "luxury",
+    "executive",
+    "refined",
+    "classic"
+  ],
+
+  "defaultColors": {
+    "primary": "#1e3a5f",
+    "secondary": "#c9a227",
+    "accent": "#8b7355",
+    "background": "#fafafa",
+    "text": "#1f2937"
+  },
+
+  "author": "StickerNest",
+  "version": "2.0.0",
+  "tags": ["corporate", "classic", "elegant", "professional", "executive", "reactive"]
+}

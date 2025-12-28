@@ -1,0 +1,75 @@
+{
+  "id": "vector-editor",
+  "name": "Vector Editor",
+  "version": "1.0.0",
+  "description": "Simple vector drawing editor widget with shape tools",
+  "kind": "2d",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["vector"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "shape.add": {
+      "type": "object",
+      "description": "Add a shape (type: rect, circle, line, path)"
+    },
+    "shape.remove": {
+      "type": "string",
+      "description": "Remove shape by ID"
+    },
+    "shape.update": {
+      "type": "object",
+      "description": "Update shape properties"
+    },
+    "canvas.clear": {
+      "type": "event",
+      "description": "Clear all shapes"
+    },
+    "tool.set": {
+      "type": "string",
+      "description": "Set active tool: select, rect, circle, line, pen"
+    },
+    "color.set": {
+      "type": "string",
+      "description": "Set current drawing color"
+    }
+  },
+  "outputs": {
+    "shape.created": {
+      "type": "object",
+      "description": "Emitted when a new shape is created"
+    },
+    "shape.selected": {
+      "type": "object",
+      "description": "Emitted when a shape is selected"
+    },
+    "shape.modified": {
+      "type": "object",
+      "description": "Emitted when a shape is modified"
+    },
+    "canvas.changed": {
+      "type": "array",
+      "description": "Emitted when canvas content changes"
+    },
+    "editor.ready": {
+      "type": "event",
+      "description": "Emitted when editor is initialized"
+    }
+  },
+  "config": {
+    "gridSize": 10,
+    "showGrid": true,
+    "snapToGrid": true,
+    "defaultColor": "#8b5cf6"
+  },
+  "skinSlots": [
+    { "name": "canvasBg", "type": "color", "variable": "--canvas-bg" },
+    { "name": "gridColor", "type": "color", "variable": "--grid-color" },
+    { "name": "toolbarBg", "type": "color", "variable": "--toolbar-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" }
+  ]
+}

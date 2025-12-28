@@ -1,0 +1,62 @@
+{
+  "id": "image-editor",
+  "name": "Image Editor",
+  "version": "1.0.0",
+  "description": "Simple image editor widget with filters and adjustments",
+  "kind": "2d",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["image"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "image.load": {
+      "type": "string",
+      "description": "Load image from URL or data URL"
+    },
+    "filter.apply": {
+      "type": "object",
+      "description": "Apply filter (brightness, contrast, saturation, blur, etc.)"
+    },
+    "filter.reset": {
+      "type": "event",
+      "description": "Reset all filters to defaults"
+    },
+    "image.export": {
+      "type": "object",
+      "description": "Export current image (format: png, jpeg, webp)"
+    }
+  },
+  "outputs": {
+    "image.loaded": {
+      "type": "object",
+      "description": "Emitted when an image is loaded"
+    },
+    "filter.changed": {
+      "type": "object",
+      "description": "Emitted when filter values change"
+    },
+    "image.exported": {
+      "type": "string",
+      "description": "Emitted with exported image data URL"
+    },
+    "editor.ready": {
+      "type": "event",
+      "description": "Emitted when editor is initialized"
+    }
+  },
+  "config": {
+    "defaultImage": "",
+    "maxImageSize": 2048,
+    "exportQuality": 0.9
+  },
+  "skinSlots": [
+    { "name": "editorBg", "type": "color", "variable": "--editor-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" },
+    { "name": "sliderTrack", "type": "color", "variable": "--slider-track" }
+  ]
+}

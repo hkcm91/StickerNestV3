@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://stickernest.io/schemas/manifest.v1.json",
+  "title": "StickerNest Widget Manifest",
+  "description": "Schema for StickerNest widget manifest files (Protocol v1)",
+  "type": "object",
+  "required": ["id", "name", "version", "kind", "entry"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique widget identifier",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "minLength": 2,
+      "maxLength": 64
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable widget name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (e.g., 1.0.0)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Widget rendering type",
+      "enum": ["2d", "3d", "audio", "video", "hybrid"]
+    },
+    "entry": {
+      "type": "string",
+      "description": "Entry file path relative to bundle root",
+      "pattern": "^[a-zA-Z0-9_./-]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Widget description for discovery and AI context",
+      "maxLength": 500
+    },
+    "author": {
+      "type": "string",
+      "description": "Author name or organization",
+      "maxLength": 100
+    },
+    "tags": {
+      "type": "array",
+      "description": "Categorization tags",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$",
+        "maxLength": 32
+      },
+      "maxItems": 10
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Input port definitions",
+      "additionalProperties": {
+        "$ref": "#/definitions/PortSchema"
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Output port definitions",
+      "additionalProperties": {
+        "$ref": "#/definitions/PortSchema"
+      }
+    },
+    "capabilities": {
+      "$ref": "#/definitions/WidgetCapabilities"
+    },
+    "io": {
+      "$ref": "#/definitions/CapabilityDeclaration"
+    },
+    "assets": {
+      "type": "array",
+      "description": "Additional asset file paths",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9_./-]+$"
+      }
+    },
+    "sandbox": {
+      "type": "boolean",
+      "description": "Run in sandbox (default: true)",
+      "default": true
+    },
+    "skin": {
+      "$ref": "#/definitions/SkinManifest"
+    },
+    "protocolVersion": {
+      "type": "integer",
+      "description": "Protocol version number",
+      "minimum": 1,
+      "default": 1
+    }
+  },
+  "definitions": {
+    "PortSchema": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Data type",
+          "enum": ["string", "number", "boolean", "object", "array", "trigger", "any"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Port description",
+          "maxLength": 200
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether input is required (inputs only)"
+        },
+        "default": {
+          "description": "Default value (inputs only)"
+        }
+      }
+    },
+    "WidgetCapabilities": {
+      "type": "object",
+      "properties": {
+        "draggable": {
+          "type": "boolean",
+          "description": "Can be dragged on canvas",
+          "default": true
+        },
+        "resizable": {
+          "type": "boolean",
+          "description": "Can be resized",
+          "default": true
+        },
+        "rotatable": {
+          "type": "boolean",
+          "description": "Can be rotated"
+        },
+        "supports3d": {
+          "type": "boolean",
+          "description": "Supports 3D rendering"
+        },
+        "supportsAudio": {
+          "type": "boolean",
+          "description": "Supports audio playback"
+        }
+      }
+    },
+    "CapabilityDeclaration": {
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "description": "Input capability IDs",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+\\.[a-zA-Z]+$"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Output capability IDs",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+\\.[a-zA-Z]+$"
+          }
+        },
+        "entityTypes": {
+          "type": "array",
+          "description": "Entity types this widget works with",
+          "items": {
+            "type": "string"
+          }
+        },
+        "customInputs": {
+          "type": "array",
+          "description": "Custom input capability definitions",
+          "items": {
+            "$ref": "#/definitions/CapabilityDefinition"
+          }
+        },
+        "customOutputs": {
+          "type": "array",
+          "description": "Custom output capability definitions",
+          "items": {
+            "$ref": "#/definitions/CapabilityDefinition"
+          }
+        }
+      }
+    },
+    "CapabilityDefinition": {
+      "type": "object",
+      "required": ["id", "name", "description", "direction"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Capability ID",
+          "pattern": "^[a-z]+\\.[a-zA-Z]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Capability description"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["input", "output"]
+        },
+        "payload": {
+          "type": "array",
+          "description": "Payload field definitions",
+          "items": {
+            "$ref": "#/definitions/PayloadField"
+          }
+        }
+      }
+    },
+    "PayloadField": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Field name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "object", "array", "any"]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {
+          "description": "Default value"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "SkinManifest": {
+      "type": "object",
+      "properties": {
+        "slots": {
+          "type": "array",
+          "description": "Skin slots exposed for customization",
+          "items": {
+            "type": "object"
+          }
+        },
+        "defaultSkin": {
+          "type": "string",
+          "description": "Default skin ID"
+        },
+        "themeable": {
+          "type": "boolean",
+          "description": "Whether widget supports theming"
+        },
+        "usesVariables": {
+          "type": "array",
+          "description": "CSS variables the widget uses",
+          "items": {
+            "type": "string",
+            "pattern": "^--[a-z-]+$"
+          }
+        }
+      }
+    }
+  }
+}

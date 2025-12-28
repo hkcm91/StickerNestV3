@@ -1,0 +1,23 @@
+{
+    "id": "debug-identity-debugger",
+    "name": "Identity Debugger",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "identity-update": {
+            "type": "event",
+            "description": "Receives identity updates"
+        }
+    },
+    "outputs": {
+        "identity-query": {
+            "type": "event",
+            "description": "Queries identity information"
+        }
+    }
+}

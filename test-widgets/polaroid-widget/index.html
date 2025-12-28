@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polaroid Widget</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=Permanent+Marker&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      padding: 15px;
+      overflow: hidden;
+    }
+
+    .polaroid-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1000px;
+    }
+
+    .polaroid {
+      background: linear-gradient(145deg, #fefefe 0%, #f5f5f5 100%);
+      padding: 12px 12px 50px 12px;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 8px 16px rgba(0, 0, 0, 0.1),
+        0 16px 32px rgba(0, 0, 0, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      transform-style: preserve-3d;
+    }
+
+    .polaroid::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        transparent 40%,
+        transparent 60%,
+        rgba(0, 0, 0, 0.02) 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .polaroid:hover {
+      box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.15),
+        0 16px 32px rgba(0, 0, 0, 0.15),
+        0 24px 48px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Frame Styles */
+    .polaroid.style-classic {
+      background: linear-gradient(145deg, #fefefe 0%, #f0f0f0 100%);
+    }
+
+    .polaroid.style-vintage {
+      background: linear-gradient(145deg, #f5f0e6 0%, #e8e0d0 100%);
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 8px 16px rgba(0, 0, 0, 0.12),
+        inset 0 0 20px rgba(139, 119, 87, 0.1);
+    }
+
+    .polaroid.style-dark {
+      background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%);
+    }
+
+    .polaroid.style-dark .caption {
+      color: #ccc;
+    }
+
+    .polaroid.style-pink {
+      background: linear-gradient(145deg, #fff0f5 0%, #ffe4ec 100%);
+    }
+
+    .polaroid.style-blue {
+      background: linear-gradient(145deg, #f0f8ff 0%, #e0f0ff 100%);
+    }
+
+    /* Decoration styles */
+    .decoration {
+      position: absolute;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Tape */
+    .tape {
+      width: 70px;
+      height: 24px;
+      background: linear-gradient(180deg,
+        rgba(255, 245, 200, 0.95) 0%,
+        rgba(255, 235, 180, 0.9) 100%
+      );
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-2deg);
+      box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+      border-radius: 1px;
+    }
+
+    .tape::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        transparent 12px,
+        rgba(255, 255, 255, 0.4) 12px,
+        rgba(255, 255, 255, 0.4) 14px
+      );
+    }
+
+    /* Washi Tape */
+    .washi-tape {
+      width: 80px;
+      height: 26px;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%) rotate(1deg);
+      opacity: 0.9;
+    }
+
+    .washi-tape.pink {
+      background: repeating-linear-gradient(
+        45deg,
+        #ffb6c1 0px,
+        #ffb6c1 10px,
+        #ffc0cb 10px,
+        #ffc0cb 20px
+      );
+    }
+
+    .washi-tape.mint {
+      background: repeating-linear-gradient(
+        -45deg,
+        #98d8c8 0px,
+        #98d8c8 8px,
+        #b8e8d8 8px,
+        #b8e8d8 16px
+      );
+    }
+
+    .washi-tape.gold {
+      background: linear-gradient(135deg, #d4a574 0%, #c9a227 50%, #d4a574 100%);
+    }
+
+    /* Pin */
+    .pin {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b);
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+        inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    }
+
+    .pin::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      background: radial-gradient(circle at 30% 30%, #fff, #ddd);
+      border-radius: 50%;
+    }
+
+    /* Clip */
+    .clip {
+      width: 30px;
+      height: 50px;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 3px solid #666;
+      border-radius: 15px 15px 0 0;
+      border-bottom: none;
+      background: transparent;
+    }
+
+    .clip::before {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 30px;
+      border: 3px solid #666;
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+      background: #fff;
+    }
+
+    /* Image container */
+    .image-container {
+      flex: 1;
+      background: #e8e8e8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 100px;
+      position: relative;
+      border-radius: 2px;
+    }
+
+    .image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .polaroid:hover .image-container img {
+      transform: scale(1.02);
+    }
+
+    /* Image Filters */
+    .image-container.filter-none img { filter: none; }
+    .image-container.filter-vintage img {
+      filter: sepia(30%) contrast(110%) saturate(80%) brightness(105%);
+    }
+    .image-container.filter-bw img { filter: grayscale(100%) contrast(110%); }
+    .image-container.filter-warm img {
+      filter: sepia(20%) saturate(120%) brightness(105%) hue-rotate(-10deg);
+    }
+    .image-container.filter-cool img {
+      filter: saturate(90%) brightness(105%) hue-rotate(10deg);
+    }
+    .image-container.filter-fade img {
+      filter: contrast(90%) saturate(80%) brightness(110%);
+    }
+
+    .placeholder {
+      color: #aaa;
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .placeholder .icon {
+      font-size: 36px;
+      opacity: 0.4;
+    }
+
+    /* Caption area */
+    .caption-area {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      right: 12px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .caption {
+      width: 100%;
+      text-align: center;
+      font-size: 15px;
+      color: #333;
+      font-style: italic;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'Caveat', cursive;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .caption::placeholder {
+      color: #bbb;
+      font-style: italic;
+    }
+
+    .caption:focus {
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 4px;
+    }
+
+    .caption.font-marker {
+      font-family: 'Permanent Marker', cursive;
+      font-size: 13px;
+    }
+
+    .caption.font-handwriting {
+      font-family: 'Caveat', cursive;
+      font-size: 16px;
+    }
+
+    .caption.font-typewriter {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      font-style: normal;
+      letter-spacing: 1px;
+    }
+
+    /* Date stamp */
+    .date-stamp {
+      position: absolute;
+      bottom: 50px;
+      right: 14px;
+      font-size: 9px;
+      color: #ff6b35;
+      font-family: 'Courier New', monospace;
+      opacity: 0.8;
+      letter-spacing: 1px;
+    }
+
+    .date-stamp.style-printed {
+      color: #666;
+      font-size: 8px;
+      opacity: 0.6;
+    }
+
+    /* Controls overlay */
+    .controls {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      padding: 6px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 8px;
+      opacity: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+      margin-bottom: 8px;
+    }
+
+    .polaroid-wrapper:hover .controls {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .control-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .control-btn.active {
+      background: rgba(233, 69, 96, 0.6);
+    }
+
+    /* Shake animation */
+    @keyframes shake {
+      0%, 100% { transform: rotate(var(--rotation)); }
+      25% { transform: rotate(calc(var(--rotation) - 3deg)); }
+      75% { transform: rotate(calc(var(--rotation) + 3deg)); }
+    }
+
+    .polaroid.shake {
+      animation: shake 0.3s ease-in-out;
+    }
+
+    /* Develop animation */
+    @keyframes develop {
+      0% { filter: brightness(2) contrast(0.5) saturate(0); }
+      100% { filter: brightness(1) contrast(1) saturate(1); }
+    }
+
+    .image-container.developing img {
+      animation: develop 1.5s ease-out forwards;
+    }
+
+    /* Heart decoration */
+    .heart {
+      position: absolute;
+      bottom: 52px;
+      left: 14px;
+      font-size: 14px;
+      opacity: 0;
+      color: #e94560;
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 5;
+    }
+
+    .polaroid:hover .heart {
+      opacity: 0.6;
+    }
+
+    .heart:hover {
+      opacity: 1 !important;
+      transform: scale(1.2);
+    }
+
+    .heart.liked {
+      opacity: 1 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="polaroid-wrapper">
+    <div class="controls" id="controls">
+      <button class="control-btn" id="styleBtn" title="Frame style">&#9632;</button>
+      <button class="control-btn" id="filterBtn" title="Photo filter">&#9788;</button>
+      <button class="control-btn" id="decorBtn" title="Decoration">&#9733;</button>
+      <button class="control-btn" id="fontBtn" title="Caption font">A</button>
+      <button class="control-btn" id="rotateBtn" title="Random rotation">&#8635;</button>
+    </div>
+
+    <div class="polaroid style-classic" id="polaroid" style="--rotation: 0deg;">
+      <div class="decoration tape" id="decoration"></div>
+      <div class="image-container filter-none" id="imageContainer">
+        <div class="placeholder" id="placeholder">
+          <span class="icon">+</span>
+          <span>Connect to Gallery<br>or drop image</span>
+        </div>
+        <img id="image" style="display: none;" alt="Polaroid photo">
+      </div>
+      <span class="heart" id="heartBtn">&#9825;</span>
+      <div class="date-stamp" id="dateStamp"></div>
+      <div class="caption-area">
+        <input type="text" class="caption font-handwriting" id="caption" placeholder="Write a caption..." maxlength="40">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentImage = null;
+    let rotation = (Math.random() * 8 - 4);
+    let frameStyle = 0;
+    let filterStyle = 0;
+    let decorStyle = 0;
+    let fontStyle = 0;
+    let liked = false;
+
+    const frameStyles = ['style-classic', 'style-vintage', 'style-dark', 'style-pink', 'style-blue'];
+    const filterStyles = ['filter-none', 'filter-vintage', 'filter-bw', 'filter-warm', 'filter-cool', 'filter-fade'];
+    const decorStyles = ['tape', 'washi-tape pink', 'washi-tape mint', 'washi-tape gold', 'pin', 'clip'];
+    const fontStyles = ['font-handwriting', 'font-marker', 'font-typewriter'];
+
+    // DOM Elements
+    const polaroid = document.getElementById('polaroid');
+    const imageContainer = document.getElementById('imageContainer');
+    const placeholder = document.getElementById('placeholder');
+    const image = document.getElementById('image');
+    const caption = document.getElementById('caption');
+    const dateStamp = document.getElementById('dateStamp');
+    const decoration = document.getElementById('decoration');
+    const styleBtn = document.getElementById('styleBtn');
+    const filterBtn = document.getElementById('filterBtn');
+    const decorBtn = document.getElementById('decorBtn');
+    const fontBtn = document.getElementById('fontBtn');
+    const rotateBtn = document.getElementById('rotateBtn');
+    const heartBtn = document.getElementById('heartBtn');
+
+    // Initialize
+    polaroid.style.setProperty('--rotation', `${rotation}deg`);
+    polaroid.style.transform = `rotate(${rotation}deg)`;
+    updateDateStamp();
+
+    function updateDateStamp() {
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const year = String(now.getFullYear()).slice(-2);
+      dateStamp.textContent = `${month} . ${day} . ${year}`;
+    }
+
+    // Utility: Emit output
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    // Utility: Emit event
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload: payload }
+      }, '*');
+    }
+
+    // Shake animation
+    function shake() {
+      polaroid.classList.remove('shake');
+      void polaroid.offsetWidth; // Trigger reflow
+      polaroid.classList.add('shake');
+    }
+
+    // Set image
+    function setImage(imageData) {
+      if (!imageData) return;
+
+      const url = typeof imageData === 'string' ? imageData : imageData.url;
+      const captionText = imageData.caption || imageData.name || '';
+
+      if (!url) return;
+
+      currentImage = { url, caption: captionText };
+
+      image.src = url;
+      image.style.display = 'block';
+      placeholder.style.display = 'none';
+
+      // Develop animation
+      imageContainer.classList.add('developing');
+      setTimeout(() => imageContainer.classList.remove('developing'), 1500);
+
+      if (captionText && !caption.value) {
+        caption.value = captionText;
+      }
+
+      shake();
+      emitOutput('imageSet', currentImage);
+    }
+
+    // Clear image
+    function clearImage() {
+      currentImage = null;
+      image.style.display = 'none';
+      image.src = '';
+      placeholder.style.display = 'flex';
+      caption.value = '';
+    }
+
+    // Set rotation
+    function setRotation(angle) {
+      rotation = Math.max(-15, Math.min(15, angle));
+      polaroid.style.setProperty('--rotation', `${rotation}deg`);
+      polaroid.style.transform = `rotate(${rotation}deg)`;
+    }
+
+    // Cycle frame style
+    function cycleFrameStyle() {
+      frameStyle = (frameStyle + 1) % frameStyles.length;
+      polaroid.className = 'polaroid ' + frameStyles[frameStyle];
+      shake();
+    }
+
+    // Cycle filter
+    function cycleFilter() {
+      filterStyle = (filterStyle + 1) % filterStyles.length;
+      imageContainer.className = 'image-container ' + filterStyles[filterStyle];
+    }
+
+    // Cycle decoration
+    function cycleDecor() {
+      decorStyle = (decorStyle + 1) % decorStyles.length;
+      decoration.className = 'decoration ' + decorStyles[decorStyle];
+    }
+
+    // Cycle font
+    function cycleFont() {
+      fontStyle = (fontStyle + 1) % fontStyles.length;
+      caption.className = 'caption ' + fontStyles[fontStyle];
+    }
+
+    // Random rotation
+    function randomRotation() {
+      setRotation((Math.random() * 12 - 6));
+      shake();
+    }
+
+    // Toggle like
+    function toggleLike() {
+      liked = !liked;
+      heartBtn.innerHTML = liked ? '&#9829;' : '&#9825;';
+      heartBtn.classList.toggle('liked', liked);
+    }
+
+    // Event listeners
+    styleBtn.onclick = (e) => { e.stopPropagation(); cycleFrameStyle(); };
+    filterBtn.onclick = (e) => { e.stopPropagation(); cycleFilter(); };
+    decorBtn.onclick = (e) => { e.stopPropagation(); cycleDecor(); };
+    fontBtn.onclick = (e) => { e.stopPropagation(); cycleFont(); };
+    rotateBtn.onclick = (e) => { e.stopPropagation(); randomRotation(); };
+    heartBtn.onclick = (e) => { e.stopPropagation(); toggleLike(); };
+
+    polaroid.addEventListener('click', (e) => {
+      if (e.target === caption) return;
+      if (currentImage) {
+        emitOutput('clicked', {
+          url: currentImage.url,
+          caption: caption.value || currentImage.caption,
+          liked: liked
+        });
+        emitEvent('polaroid:clicked', {
+          url: currentImage.url,
+          caption: caption.value || currentImage.caption
+        });
+      }
+    });
+
+    caption.addEventListener('change', () => {
+      if (currentImage) currentImage.caption = caption.value;
+    });
+
+    caption.addEventListener('click', (e) => e.stopPropagation());
+
+    // Drag and drop
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (ev) => setImage({ url: ev.target.result, name: file.name });
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Handle incoming messages
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'setImage':
+          case 'imageSelected':
+            setImage(value);
+            break;
+          case 'setCaption':
+            if (typeof value === 'string') {
+              caption.value = value;
+              if (currentImage) currentImage.caption = value;
+            }
+            break;
+          case 'setRotation':
+            if (typeof value === 'number') setRotation(value);
+            break;
+          case 'setStyle':
+            if (typeof value === 'string') {
+              const idx = frameStyles.indexOf('style-' + value);
+              if (idx >= 0) {
+                frameStyle = idx;
+                polaroid.className = 'polaroid ' + frameStyles[frameStyle];
+              }
+            }
+            break;
+          case 'setFilter':
+            if (typeof value === 'string') {
+              const idx = filterStyles.indexOf('filter-' + value);
+              if (idx >= 0) {
+                filterStyle = idx;
+                imageContainer.className = 'image-container ' + filterStyles[filterStyle];
+              }
+            }
+            break;
+          case 'clear':
+            clearImage();
+            break;
+        }
+        return;
+      }
+
+      if (data.type === 'widget:event') {
+        const portName = data.payload?.type;
+        const value = data.payload?.payload;
+        switch (portName) {
+          case 'setImage':
+          case 'imageSelected':
+            setImage(value);
+            break;
+          case 'setCaption':
+            if (typeof value === 'string') {
+              caption.value = value;
+              if (currentImage) currentImage.caption = value;
+            }
+            break;
+          case 'setRotation':
+            if (typeof value === 'number') setRotation(value);
+            break;
+          case 'clear':
+            clearImage();
+            break;
+        }
+      }
+
+      // Handle broadcast events (legacy format)
+      if (data.type === 'broadcast' && data.payload) {
+        if (data.payload.type === 'gallery:image-selected') {
+          setImage(data.payload.payload);
+        }
+      }
+
+      // Handle EVENT type (new format) - canvas-scoped events from other widgets
+      if (data.type === 'EVENT' && data.payload) {
+        const evt = data.payload;
+        if (evt.type === 'gallery:image-selected' && evt.scope === 'canvas') {
+          setImage(evt.payload);
+        }
+      }
+    });
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

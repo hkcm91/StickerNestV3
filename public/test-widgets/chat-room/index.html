@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1e1e2e;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #cdd6f4;
+        }
+        .header {
+            background: #313244;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #45475a;
+        }
+        .room-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #cba6f7, #89b4fa);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .room-info { flex: 1; }
+        .room-name { font-weight: 600; font-size: 14px; }
+        .room-status {
+            font-size: 11px;
+            color: #a6adc8;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .online-dot {
+            width: 6px;
+            height: 6px;
+            background: #a6e3a1;
+            border-radius: 50%;
+        }
+        .members-btn {
+            background: none;
+            border: none;
+            color: #a6adc8;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .members-btn:hover { background: #45475a; }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            display: flex;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.own { flex-direction: row-reverse; }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .message-content { max-width: 75%; }
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .message.own .message-header { flex-direction: row-reverse; }
+        .sender-name { font-size: 12px; font-weight: 600; }
+        .message-time { font-size: 10px; color: #6c7086; }
+        .message-bubble {
+            background: #313244;
+            padding: 10px 14px;
+            border-radius: 16px;
+            border-top-left-radius: 4px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .message.own .message-bubble {
+            background: #89b4fa;
+            color: #1e1e2e;
+            border-radius: 16px;
+            border-top-right-radius: 4px;
+        }
+        .message-reactions {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .reaction {
+            background: #45475a;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .reaction:hover { background: #585b70; }
+
+        .typing-indicator {
+            padding: 0 15px 10px;
+            font-size: 11px;
+            color: #6c7086;
+            min-height: 20px;
+        }
+        .typing-dots {
+            display: inline-flex;
+            gap: 3px;
+        }
+        .typing-dots span {
+            width: 4px;
+            height: 4px;
+            background: #6c7086;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
+
+        .input-area {
+            padding: 12px 15px;
+            background: #313244;
+            border-top: 1px solid #45475a;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .input-wrapper {
+            flex: 1;
+            background: #1e1e2e;
+            border-radius: 20px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .message-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #cdd6f4;
+            font-size: 13px;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            line-height: 1.4;
+        }
+        .message-input::placeholder { color: #6c7086; }
+        .emoji-btn, .attach-btn {
+            background: none;
+            border: none;
+            color: #6c7086;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+        }
+        .emoji-btn:hover, .attach-btn:hover { color: #cdd6f4; }
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #cba6f7, #89b4fa);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .send-btn:hover { transform: scale(1.1); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .system-message {
+            text-align: center;
+            font-size: 11px;
+            color: #6c7086;
+            padding: 8px;
+        }
+
+        .emoji-picker {
+            position: absolute;
+            bottom: 70px;
+            left: 15px;
+            background: #313244;
+            border-radius: 12px;
+            padding: 10px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 5px;
+            width: 200px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .emoji-picker.open { display: flex; }
+        .emoji-option {
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 6px;
+        }
+        .emoji-option:hover { background: #45475a; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="room-icon">💬</div>
+        <div class="room-info">
+            <div class="room-name">Widget Chat</div>
+            <div class="room-status">
+                <span class="online-dot"></span>
+                <span id="onlineCount">3 online</span>
+            </div>
+        </div>
+        <button class="members-btn" onclick="toggleMembers()">👥</button>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="typing-indicator" id="typing"></div>
+
+    <div class="emoji-picker" id="emojiPicker"></div>
+
+    <div class="input-area">
+        <div class="input-container">
+            <div class="input-wrapper">
+                <button class="emoji-btn" onclick="toggleEmoji()">😊</button>
+                <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"
+                    onkeydown="handleKeyDown(event)" oninput="handleInput()"></textarea>
+                <button class="attach-btn">📎</button>
+            </div>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>➤</button>
+        </div>
+    </div>
+
+    <script>
+        const USERS = [
+            { id: 'user1', name: 'Alice', color: '#f38ba8', avatar: '👩' },
+            { id: 'user2', name: 'Bob', color: '#89b4fa', avatar: '👨' },
+            { id: 'user3', name: 'Charlie', color: '#a6e3a1', avatar: '🧑' },
+            { id: 'system', name: 'System', color: '#6c7086', avatar: '🤖' }
+        ];
+
+        const EMOJIS = ['😊', '😂', '❤️', '👍', '🎉', '🔥', '💯', '✨', '🚀', '💪', '🤔', '😎'];
+
+        let state = {
+            myUser: USERS[0],
+            messages: [],
+            typingUsers: [],
+            onlineUsers: USERS.slice(0, 3)
+        };
+
+        let instanceId = '';
+        let typingTimeout = null;
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload: { ...payload, instanceId } });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addMessage(msg) {
+            state.messages.push(msg);
+            renderMessages();
+            scrollToBottom();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messages');
+            container.innerHTML = state.messages.map(msg => {
+                if (msg.type === 'system') {
+                    return `<div class="system-message">${msg.text}</div>`;
+                }
+                const isOwn = msg.user.id === state.myUser.id;
+                return `
+                    <div class="message ${isOwn ? 'own' : ''}">
+                        <div class="avatar" style="background: ${msg.user.color}">${msg.user.avatar}</div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="sender-name" style="color: ${msg.user.color}">${msg.user.name}</span>
+                                <span class="message-time">${formatTime(msg.time)}</span>
+                            </div>
+                            <div class="message-bubble">${escapeHtml(msg.text)}</div>
+                            ${msg.reactions?.length ? `
+                                <div class="message-reactions">
+                                    ${msg.reactions.map(r => `<span class="reaction">${r.emoji} ${r.count}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderTyping() {
+            const container = document.getElementById('typing');
+            if (state.typingUsers.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            const names = state.typingUsers.map(u => u.name).join(', ');
+            container.innerHTML = `
+                ${names} ${state.typingUsers.length === 1 ? 'is' : 'are'} typing
+                <span class="typing-dots"><span></span><span></span><span></span></span>
+            `;
+        }
+
+        function toggleEmoji() {
+            const picker = document.getElementById('emojiPicker');
+            picker.classList.toggle('open');
+            if (picker.classList.contains('open') && picker.innerHTML === '') {
+                picker.innerHTML = EMOJIS.map(e =>
+                    `<span class="emoji-option" onclick="insertEmoji('${e}')">${e}</span>`
+                ).join('');
+            }
+        }
+
+        function insertEmoji(emoji) {
+            const input = document.getElementById('messageInput');
+            input.value += emoji;
+            input.focus();
+            handleInput();
+            toggleEmoji();
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function handleInput() {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = !input.value.trim();
+
+            // Auto-resize
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+
+            // Emit typing indicator
+            clearTimeout(typingTimeout);
+            emit('chat:typing', { user: state.myUser, isTyping: true });
+            typingTimeout = setTimeout(() => {
+                emit('chat:typing', { user: state.myUser, isTyping: false });
+            }, 2000);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const message = {
+                id: Date.now().toString(),
+                user: state.myUser,
+                text: text,
+                time: new Date(),
+                reactions: []
+            };
+
+            addMessage(message);
+            input.value = '';
+            input.style.height = 'auto';
+            document.getElementById('sendBtn').disabled = true;
+
+            log('Message sent: ' + text.substring(0, 50));
+            emit('chat:message', { message });
+
+            // Clear typing
+            clearTimeout(typingTimeout);
+            emit('chat:typing', { user: state.myUser, isTyping: false });
+        }
+
+        function toggleMembers() {
+            log('Members: ' + state.onlineUsers.map(u => u.name).join(', '));
+        }
+
+        function simulateActivity() {
+            // Simulate other users typing/sending
+            const otherUsers = USERS.filter(u => u.id !== state.myUser.id && u.id !== 'system');
+
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    const user = otherUsers[Math.floor(Math.random() * otherUsers.length)];
+                    state.typingUsers = [user];
+                    renderTyping();
+
+                    setTimeout(() => {
+                        state.typingUsers = [];
+                        renderTyping();
+
+                        if (Math.random() > 0.5) {
+                            const messages = [
+                                'Hey there!',
+                                'How\'s it going?',
+                                'Nice widget!',
+                                'This is cool 🎉',
+                                'Anyone here?',
+                                '👋'
+                            ];
+                            addMessage({
+                                id: Date.now().toString(),
+                                user: user,
+                                text: messages[Math.floor(Math.random() * messages.length)],
+                                time: new Date(),
+                                reactions: []
+                            });
+                        }
+                    }, 2000 + Math.random() * 2000);
+                }
+            }, 8000);
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            // Get unique instance ID
+            instanceId = Math.random().toString(36).substring(7);
+
+            // Assign random user
+            state.myUser = USERS[Math.floor(Math.random() * 3)];
+
+            log('Chat Room ready - User: ' + state.myUser.name);
+
+            // Add welcome message
+            addMessage({
+                type: 'system',
+                text: `Welcome to the chat, ${state.myUser.name}!`
+            });
+
+            // Initialize emoji picker
+            document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
+                `<span class="emoji-option" onclick="insertEmoji('${e}')">${e}</span>`
+            ).join('');
+
+            document.getElementById('onlineCount').textContent = state.onlineUsers.length + ' online';
+
+            simulateActivity();
+
+            window.WidgetAPI.onEvent('*', (event) => {
+                // Ignore own messages
+                if (event.payload?.instanceId === instanceId) return;
+
+                if (event.type === 'chat:message') {
+                    addMessage(event.payload.message);
+                }
+                if (event.type === 'chat:typing') {
+                    const { user, isTyping } = event.payload;
+                    if (isTyping) {
+                        if (!state.typingUsers.find(u => u.id === user.id)) {
+                            state.typingUsers.push(user);
+                        }
+                    } else {
+                        state.typingUsers = state.typingUsers.filter(u => u.id !== user.id);
+                    }
+                    renderTyping();
+                }
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

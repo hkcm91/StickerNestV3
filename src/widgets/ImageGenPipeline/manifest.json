@@ -1,0 +1,35 @@
+{
+    "id": "stickernest.image-gen-pipeline",
+    "name": "Image Generator Pipeline",
+    "version": "1.0.0",
+    "kind": "hybrid",
+    "entry": "index.tsx",
+    "description": "Generates images from layout configurations.",
+    "author": "StickerNest",
+    "tags": [
+        "image",
+        "generation",
+        "pipeline"
+    ],
+    "inputs": {
+        "layoutConfig": {
+            "type": "object",
+            "description": "Layout configuration",
+            "required": true
+        }
+    },
+    "outputs": {
+        "businesscard:image.ready": {
+            "type": "event",
+            "description": "Emitted when image is generated"
+        }
+    },
+    "capabilities": {
+        "draggable": true,
+        "resizable": false
+    },
+    "size": {
+        "width": 200,
+        "height": 100
+    }
+}

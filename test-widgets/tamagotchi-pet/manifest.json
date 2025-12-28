@@ -1,0 +1,73 @@
+{
+  "id": "tamagotchi-pet",
+  "name": "Tamagotchi Pet",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Virtual pet widget that displays Lottie animations, videos, or sprite sheets. Reacts to mood changes from connected moodlet widgets to show different emotional states.",
+  "tags": ["tamagotchi", "pet", "virtual-pet", "lottie", "animation", "sprite", "mood", "gamification"],
+  "author": "StickerNest",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "inputs": {
+    "setMood": {
+      "type": "object",
+      "description": "Set pet mood from moodlet widget {mood: string, intensity: number, moodlets: object}"
+    },
+    "triggerAnimation": {
+      "type": "string",
+      "description": "Trigger a specific animation (idle, happy, sad, hungry, tired, sick, celebrating, eating, drinking, sleeping, exercising)"
+    },
+    "setLottie": {
+      "type": "object",
+      "description": "Load Lottie animation data {url?: string, data?: object, animationMap?: object}"
+    },
+    "setVideo": {
+      "type": "object",
+      "description": "Load video source {url: string, videoMap?: object}"
+    },
+    "setSprite": {
+      "type": "object",
+      "description": "Load sprite sheet {imageUrl: string, config: object, animations: object}"
+    },
+    "setPetName": {
+      "type": "string",
+      "description": "Set the pet's display name"
+    },
+    "interact": {
+      "type": "string",
+      "description": "Interact with pet (pet, feed, play, sleep)"
+    },
+    "taskCompleted": {
+      "type": "object",
+      "description": "Notify pet that a task was completed {category: string, task: string}"
+    }
+  },
+  "outputs": {
+    "petStatus": {
+      "type": "object",
+      "description": "Current pet status {mood, happiness, energy, hunger}"
+    },
+    "animationChanged": {
+      "type": "object",
+      "description": "Emitted when pet animation changes"
+    },
+    "petInteraction": {
+      "type": "object",
+      "description": "Emitted when user interacts with pet"
+    },
+    "requestMoodSync": {
+      "type": "object",
+      "description": "Request mood data from moodlet widget"
+    }
+  },
+  "size": {
+    "width": 320,
+    "height": 380,
+    "minWidth": 200,
+    "minHeight": 250
+  }
+}

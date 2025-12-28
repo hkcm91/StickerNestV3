@@ -1,0 +1,21 @@
+{
+    "id": "test-ping-receiver",
+    "name": "Ping Receiver",
+    "version": "1.1.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "io": {
+        "inputs": [
+            {
+                "id": "ping",
+                "type": "event",
+                "description": "Receives ping events"
+            }
+        ],
+        "outputs": []
+    }
+}

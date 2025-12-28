@@ -1,0 +1,286 @@
+/**
+ * StickerNest v2 - Canvas Header Styles
+ *
+ * Styles for the top toolbar component
+ */
+
+/* =============================================================================
+   Header Container
+   ============================================================================= */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--color-surface, #1a1a2e);
+  border-bottom: 1px solid var(--color-border, #333);
+  min-height: 48px;
+  flex-shrink: 0;
+}
+
+.headerMobile {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  min-height: 56px;
+}
+
+/* =============================================================================
+   Mode Selector
+   ============================================================================= */
+
+.modeSelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modeLabel {
+  color: var(--color-text-muted, #888);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modeSelect {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #444);
+  background: var(--color-surface-elevated, #252540);
+  color: var(--color-text, #fff);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.modeSelect:hover {
+  border-color: var(--color-primary, #6366f1);
+}
+
+.modeSelect:focus {
+  outline: none;
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.modeSelectMobile {
+  padding: 10px 16px;
+  font-size: 14px;
+  min-height: 44px;
+}
+
+/* =============================================================================
+   Dividers
+   ============================================================================= */
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border, #444);
+  flex-shrink: 0;
+}
+
+/* =============================================================================
+   Action Buttons
+   ============================================================================= */
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.saveButton,
+.loadButton,
+.shareButton {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.saveButton {
+  background: var(--color-primary, #6366f1);
+  color: white;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: var(--color-primary-hover, #5558e3);
+}
+
+.saveButton:disabled {
+  cursor: not-allowed;
+}
+
+.loadButton {
+  background: var(--color-surface-elevated, #252540);
+  color: var(--color-text, #fff);
+  border: 1px solid var(--color-border, #444);
+}
+
+.loadButton:hover:not(:disabled) {
+  background: var(--color-surface-hover, #2a2a4a);
+  border-color: var(--color-primary, #6366f1);
+}
+
+.loadButton:disabled {
+  cursor: not-allowed;
+}
+
+.shareButton {
+  background: var(--color-success, #10b981);
+  color: white;
+}
+
+.shareButton:hover {
+  background: var(--color-success-hover, #059669);
+}
+
+.secondaryButton {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #444);
+  background: transparent;
+  color: var(--color-text-muted, #aaa);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.secondaryButton:hover {
+  background: var(--color-surface-elevated, #252540);
+  color: var(--color-text, #fff);
+  border-color: var(--color-primary, #6366f1);
+}
+
+.secondaryButton.active {
+  background: var(--color-primary, #6366f1);
+  color: white;
+  border-color: var(--color-primary, #6366f1);
+}
+
+/* =============================================================================
+   Status Message
+   ============================================================================= */
+
+.statusMessage {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  animation: fadeIn 0.3s ease;
+}
+
+.statusMessage.success {
+  color: var(--color-success, #10b981);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.statusMessage.error {
+  color: var(--color-error, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =============================================================================
+   Properties Toggle
+   ============================================================================= */
+
+.propertiesToggle {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #444);
+  background: transparent;
+  color: var(--color-text-muted, #aaa);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.propertiesToggle:hover {
+  background: var(--color-surface-elevated, #252540);
+  color: var(--color-text, #fff);
+}
+
+.propertiesToggle.active {
+  background: var(--color-primary, #6366f1);
+  color: white;
+  border-color: var(--color-primary, #6366f1);
+}
+
+/* =============================================================================
+   User Menu
+   ============================================================================= */
+
+.userMenu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.username {
+  color: var(--color-text-muted, #888);
+  font-size: 13px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.devBadge {
+  padding: 4px 8px;
+  background: var(--color-warning, #f59e0b);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.authButton {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.authButton.signIn {
+  background: var(--color-primary, #6366f1);
+  color: white;
+}
+
+.authButton.signIn:hover {
+  background: var(--color-primary-hover, #5558e3);
+}
+
+.authButton.signOut {
+  background: transparent;
+  border: 1px solid var(--color-border, #444);
+  color: var(--color-text-muted, #aaa);
+}
+
+.authButton.signOut:hover {
+  background: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
+  color: white;
+}

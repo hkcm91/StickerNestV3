@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+        h3 {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .export-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .export-btn:last-child {
+            margin-bottom: 0;
+        }
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .export-btn:active {
+            transform: scale(0.98);
+        }
+        .export-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        .btn-svg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-png {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .btn-copy {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        .btn-preview {
+            background: #f3f4f6;
+            color: #333;
+        }
+        .preview-container {
+            background: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 10px 10px;
+            border-radius: 8px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .preview-container svg {
+            max-width: 100%;
+            max-height: 120px;
+        }
+        .preview-placeholder {
+            color: #999;
+            font-size: 11px;
+            text-align: center;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .option-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .option-item label {
+            font-size: 10px;
+            color: #666;
+        }
+        .option-item input, .option-item select {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        .status {
+            background: rgba(0,0,0,0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .status.success {
+            background: rgba(34, 197, 94, 0.3);
+        }
+        .status.error {
+            background: rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h3>SVG Export</h3>
+
+    <!-- Export Options -->
+    <div class="section">
+        <div class="section-title">Export Options</div>
+        <div class="options-grid">
+            <div class="option-item">
+                <label>Width</label>
+                <input type="number" id="exportWidth" value="800" min="100" max="4000">
+            </div>
+            <div class="option-item">
+                <label>Height</label>
+                <input type="number" id="exportHeight" value="600" min="100" max="4000">
+            </div>
+            <div class="option-item">
+                <label>Background</label>
+                <select id="bgOption">
+                    <option value="transparent">Transparent</option>
+                    <option value="white">White</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="option-item">
+                <label>BG Color</label>
+                <input type="color" id="bgColor" value="#ffffff" disabled>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Actions -->
+    <div class="section">
+        <div class="section-title">Export As</div>
+        <button class="export-btn btn-svg" onclick="exportSVG()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Download SVG
+        </button>
+        <button class="export-btn btn-png" onclick="exportPNG()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Download PNG
+        </button>
+        <button class="export-btn btn-copy" onclick="copyToClipboard()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy SVG Code
+        </button>
+    </div>
+
+    <!-- Preview -->
+    <div class="section">
+        <div class="section-title">Preview</div>
+        <button class="export-btn btn-preview" onclick="requestPreview()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Refresh Preview
+        </button>
+        <div class="preview-container" id="previewContainer">
+            <div class="preview-placeholder">Click "Refresh Preview" to see canvas</div>
+        </div>
+    </div>
+
+    <div class="status" id="status">Ready to export</div>
+
+    <script>
+        const exportWidth = document.getElementById('exportWidth');
+        const exportHeight = document.getElementById('exportHeight');
+        const bgOption = document.getElementById('bgOption');
+        const bgColor = document.getElementById('bgColor');
+        const previewContainer = document.getElementById('previewContainer');
+        const status = document.getElementById('status');
+
+        let svgData = null;
+
+        // Enable/disable bg color based on selection
+        bgOption.addEventListener('change', () => {
+            bgColor.disabled = bgOption.value !== 'custom';
+        });
+
+        function emitEvent(type, payload) {
+            console.log('[Export] Emitting:', type, payload);
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+        }
+
+        function requestPreview() {
+            status.textContent = 'Requesting SVG data...';
+            status.className = 'status';
+            emitEvent('vector:get-svg', {});
+        }
+
+        function getBackground() {
+            switch (bgOption.value) {
+                case 'transparent': return 'none';
+                case 'white': return '#ffffff';
+                case 'custom': return bgColor.value;
+                default: return 'none';
+            }
+        }
+
+        function wrapSvg(svgContent, width, height) {
+            const bg = getBackground();
+            const bgRect = bg !== 'none' ?
+                `<rect width="100%" height="100%" fill="${bg}"/>` : '';
+
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+${bgRect}
+${svgContent}
+</svg>`;
+        }
+
+        function exportSVG() {
+            if (!svgData) {
+                requestPreview();
+                status.textContent = 'Click again after preview loads';
+                return;
+            }
+
+            const width = parseInt(exportWidth.value) || 800;
+            const height = parseInt(exportHeight.value) || 600;
+            const fullSvg = wrapSvg(svgData, width, height);
+
+            const blob = new Blob([fullSvg], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'vector-export.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            status.textContent = 'SVG downloaded!';
+            status.className = 'status success';
+        }
+
+        function exportPNG() {
+            if (!svgData) {
+                requestPreview();
+                status.textContent = 'Click again after preview loads';
+                return;
+            }
+
+            const width = parseInt(exportWidth.value) || 800;
+            const height = parseInt(exportHeight.value) || 600;
+            const fullSvg = wrapSvg(svgData, width, height);
+
+            // Create canvas and render SVG
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            const img = new Image();
+            const svgBlob = new Blob([fullSvg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+
+                canvas.toBlob((blob) => {
+                    const pngUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = pngUrl;
+                    a.download = 'vector-export.png';
+                    a.click();
+                    URL.revokeObjectURL(pngUrl);
+
+                    status.textContent = 'PNG downloaded!';
+                    status.className = 'status success';
+                }, 'image/png');
+            };
+
+            img.onerror = () => {
+                status.textContent = 'PNG export failed';
+                status.className = 'status error';
+            };
+
+            img.src = url;
+        }
+
+        async function copyToClipboard() {
+            if (!svgData) {
+                requestPreview();
+                status.textContent = 'Click again after preview loads';
+                return;
+            }
+
+            const width = parseInt(exportWidth.value) || 800;
+            const height = parseInt(exportHeight.value) || 600;
+            const fullSvg = wrapSvg(svgData, width, height);
+
+            try {
+                await navigator.clipboard.writeText(fullSvg);
+                status.textContent = 'SVG copied to clipboard!';
+                status.className = 'status success';
+            } catch (err) {
+                status.textContent = 'Failed to copy';
+                status.className = 'status error';
+            }
+        }
+
+        // Listen for SVG data
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            console.log('[Export] Message:', data);
+
+            if (data.type === 'widget:event' && data.payload?.type === 'vector:svg-data') {
+                const payload = data.payload.payload;
+                svgData = payload.svg || '';
+
+                if (svgData) {
+                    // Update preview
+                    const width = parseInt(exportWidth.value) || 800;
+                    const height = parseInt(exportHeight.value) || 600;
+                    previewContainer.innerHTML = `
+                        <svg viewBox="0 0 ${payload.width || width} ${payload.height || height}"
+                             style="max-width: 100%; max-height: 120px;">
+                            ${svgData}
+                        </svg>
+                    `;
+                    status.textContent = 'Preview updated - ready to export';
+                    status.className = 'status success';
+                } else {
+                    previewContainer.innerHTML = '<div class="preview-placeholder">Canvas is empty</div>';
+                    status.textContent = 'No shapes to export';
+                    status.className = 'status';
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+        console.log('[Export] Ready');
+    </script>
+</body>
+</html>

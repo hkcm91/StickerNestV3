@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .video-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+        }
+
+        video {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .controls {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        select {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 4px;
+            font-size: 11px;
+            flex: 1;
+        }
+
+        input[type="file"] {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .status {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        #analysis-canvas {
+            display: none;
+            /* Hidden canvas for analysis */
+        }
+
+        .meter-container {
+            height: 4px;
+            background: #333;
+            width: 100%;
+            margin-top: 4px;
+            position: relative;
+        }
+
+        .meter-bar {
+            height: 100%;
+            background: #0f0;
+            width: 0%;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="video-container">
+        <video id="video" loop playsinline crossorigin="anonymous"></video>
+    </div>
+
+    <canvas id="analysis-canvas"></canvas>
+
+    <div class="controls">
+        <div class="row">
+            <input type="file" id="file-input" accept="video/*">
+        </div>
+        <div class="row">
+            <button id="play-btn">Play</button>
+            <button id="pause-btn">Pause</button>
+            <select id="target-select">
+                <option value="glitch">Target: Glitch</option>
+                <option value="blur">Target: Blur</option>
+                <option value="hueRotate">Target: Hue</option>
+                <option value="invert">Target: Invert</option>
+                <option value="brightness">Target: Brightness</option>
+            </select>
+        </div>
+        <div class="status">
+            Signal: <span id="signal-val">0.00</span>
+            <div class="meter-container">
+                <div class="meter-bar" id="meter"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('analysis-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const fileInput = document.getElementById('file-input');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const targetSelect = document.getElementById('target-select');
+        const signalVal = document.getElementById('signal-val');
+        const meter = document.getElementById('meter');
+
+        let isPlaying = false;
+        let animationFrameId;
+
+        // Load default video if available or just wait for upload
+        // video.src = '...'; 
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                video.play().then(() => {
+                    isPlaying = true;
+                    analyze();
+                }).catch(err => console.error("Play error", err));
+            }
+        });
+
+        playBtn.addEventListener('click', () => {
+            video.play();
+            isPlaying = true;
+            analyze();
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            video.pause();
+            isPlaying = false;
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        function analyze() {
+            if (!isPlaying || video.paused || video.ended) return;
+
+            // Set canvas size to small for performance
+            if (canvas.width !== 32) {
+                canvas.width = 32;
+                canvas.height = 32;
+            }
+
+            // Draw video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Get pixel data
+            const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = frame.data;
+            let totalBrightness = 0;
+
+            // Calculate average brightness
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                // Simple luminance formula
+                const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                totalBrightness += brightness;
+            }
+
+            const avgBrightness = totalBrightness / (data.length / 4);
+
+            // Update UI
+            signalVal.textContent = avgBrightness.toFixed(2);
+            meter.style.width = (avgBrightness * 100) + '%';
+
+            // Emit modulate event
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent('modulate', {
+                    target: targetSelect.value,
+                    value: avgBrightness,
+                    timestamp: Date.now()
+                });
+            }
+
+            animationFrameId = requestAnimationFrame(analyze);
+        }
+
+        // Initialize
+        if (window.WidgetAPI) {
+            window.WidgetAPI.log('Video Source initialized');
+        }
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+
+</html>

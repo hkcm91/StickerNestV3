@@ -1,0 +1,92 @@
+{
+  "id": "stickernest.modular-toolbar",
+  "name": "Modular Toolbar",
+  "version": "1.1.0",
+  "kind": "interactive",
+  "entry": "index.tsx",
+  "description": "A modular toolbar with dark neon UI that spawns text, shapes, and anchor points directly on the canvas",
+  "author": "StickerNest",
+  "tags": ["toolbar", "design", "ui", "canvas-tool", "glassmorphic", "modular", "drawing"],
+  "inputs": {
+    "activeTool": {
+      "type": "string",
+      "description": "Currently active tool: select, move, text, pen, shapes, bucket, eraser",
+      "default": "select"
+    },
+    "theme": {
+      "type": "string",
+      "description": "Theme mode: light or dark",
+      "default": "dark"
+    },
+    "canvasClick": {
+      "type": "object",
+      "description": "Receives canvas click events with position for tool actions"
+    }
+  },
+  "outputs": {
+    "tool:changed": {
+      "type": "object",
+      "description": "Emitted when a tool is selected"
+    },
+    "tool:mode": {
+      "type": "object",
+      "description": "Emits current tool mode for canvas interaction"
+    },
+    "spawn:text": {
+      "type": "object",
+      "description": "Spawn a text element on the canvas"
+    },
+    "spawn:shape": {
+      "type": "object",
+      "description": "Spawn a shape (rect, circle, triangle, etc.) on the canvas"
+    },
+    "spawn:anchor": {
+      "type": "object",
+      "description": "Spawn an anchor point for pen/path tool"
+    },
+    "spawn:path": {
+      "type": "object",
+      "description": "Spawn a path/line element"
+    },
+    "canvas:fill": {
+      "type": "object",
+      "description": "Fill canvas or selected element with color"
+    },
+    "canvas:erase": {
+      "type": "object",
+      "description": "Erase element at position"
+    },
+    "theme:changed": {
+      "type": "object",
+      "description": "Emitted when theme is toggled"
+    },
+    "toolbar:saved": {
+      "type": "object",
+      "description": "Emitted when save button is clicked"
+    }
+  },
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "io": {
+    "inputs": ["canvas.click", "canvas.mode", "state.set"],
+    "outputs": [
+      "tool.mode",
+      "spawn.text",
+      "spawn.shape",
+      "spawn.anchor",
+      "spawn.path",
+      "canvas.fill",
+      "canvas.erase"
+    ]
+  },
+  "size": {
+    "width": 88,
+    "height": 520,
+    "minWidth": 88,
+    "minHeight": 400,
+    "scaleMode": "crop"
+  }
+}

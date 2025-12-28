@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Scrollbar Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .scrollbar-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .viewport-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .viewport-info span {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .scrollbar-viewport {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            min-height: 60px;
+            overflow: hidden;
+        }
+
+        .canvas-preview {
+            position: absolute;
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 4px;
+            transition: all 0.1s ease;
+        }
+
+        .viewport-indicator {
+            position: absolute;
+            background: rgba(139, 92, 246, 0.5);
+            border: 2px solid #8b5cf6;
+            border-radius: 4px;
+            cursor: grab;
+            transition: background 0.15s ease;
+        }
+
+        .viewport-indicator:hover {
+            background: rgba(139, 92, 246, 0.7);
+        }
+
+        .viewport-indicator.dragging {
+            cursor: grabbing;
+            background: rgba(139, 92, 246, 0.8);
+            border-color: #a78bfa;
+        }
+
+        .scrollbar-track {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+
+        .scrollbar-track.horizontal {
+            bottom: 0;
+            left: 0;
+            right: 20px;
+            height: 10px;
+        }
+
+        .scrollbar-track.vertical {
+            right: 0;
+            top: 0;
+            bottom: 20px;
+            width: 10px;
+        }
+
+        .scrollbar-thumb {
+            position: absolute;
+            background: rgba(139, 92, 246, 0.7);
+            border-radius: 4px;
+            cursor: grab;
+            transition: background 0.15s ease;
+        }
+
+        .scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.9);
+        }
+
+        .scrollbar-thumb.dragging {
+            cursor: grabbing;
+            background: #8b5cf6;
+        }
+
+        .scrollbar-thumb.horizontal {
+            height: 6px;
+            top: 2px;
+            min-width: 20px;
+        }
+
+        .scrollbar-thumb.vertical {
+            width: 6px;
+            left: 2px;
+            min-height: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(139, 92, 246, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(139, 92, 246, 0.5);
+            color: white;
+        }
+
+        .control-btn:active {
+            background: rgba(139, 92, 246, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="scrollbar-container">
+        <div class="viewport-info">
+            <span id="zoomLevel">100%</span>
+            <span id="panPosition">0, 0</span>
+        </div>
+
+        <div class="scrollbar-viewport" id="viewportArea">
+            <div class="canvas-preview" id="canvasPreview"></div>
+            <div class="viewport-indicator" id="viewportIndicator"></div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="fitBtn">Fit</button>
+            <button class="control-btn" id="centerBtn">Center</button>
+            <button class="control-btn" id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // State
+            let viewport = { panX: 0, panY: 0, zoom: 1 };
+            let canvasSize = { width: 1920, height: 1080 };
+            let containerSize = { width: 800, height: 600 };
+            let isDragging = false;
+            let dragStart = { x: 0, y: 0, panX: 0, panY: 0 };
+
+            // DOM elements
+            const viewportArea = document.getElementById('viewportArea');
+            const canvasPreview = document.getElementById('canvasPreview');
+            const viewportIndicator = document.getElementById('viewportIndicator');
+            const zoomLevel = document.getElementById('zoomLevel');
+            const panPosition = document.getElementById('panPosition');
+            const fitBtn = document.getElementById('fitBtn');
+            const centerBtn = document.getElementById('centerBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // Wait for WidgetAPI
+            function initWidget() {
+                if (!window.WidgetAPI) {
+                    setTimeout(initWidget, 50);
+                    return;
+                }
+
+                const API = window.WidgetAPI;
+
+                // Handle initialization
+                API.onMount((context) => {
+                    API.log('Canvas Scrollbar widget mounted');
+
+                    if (context.state) {
+                        if (context.state.viewport) viewport = context.state.viewport;
+                        if (context.state.canvasSize) canvasSize = context.state.canvasSize;
+                        if (context.state.containerSize) containerSize = context.state.containerSize;
+                        updateDisplay();
+                    }
+                });
+
+                // Handle viewport input
+                API.onInput('viewport', (data) => {
+                    if (data) {
+                        viewport = { ...viewport, ...data };
+                        updateDisplay();
+                    }
+                });
+
+                // Handle canvas size input
+                API.onInput('canvasSize', (data) => {
+                    if (data) {
+                        canvasSize = { ...canvasSize, ...data };
+                        updateDisplay();
+                    }
+                });
+
+                // Handle container size input
+                API.onInput('containerSize', (data) => {
+                    if (data) {
+                        containerSize = { ...containerSize, ...data };
+                        updateDisplay();
+                    }
+                });
+
+                // Listen for viewport updates from canvas
+                API.onEvent('canvas:viewport', (data) => {
+                    if (data) {
+                        viewport = { ...viewport, ...data };
+                        updateDisplay();
+                    }
+                });
+
+                // Control buttons
+                fitBtn.addEventListener('click', () => {
+                    API.emit('canvas:viewport:fit', { action: 'fit' });
+                });
+
+                centerBtn.addEventListener('click', () => {
+                    API.emit('canvas:viewport:center', { action: 'center' });
+                });
+
+                resetBtn.addEventListener('click', () => {
+                    API.emit('canvas:viewport:reset', { action: 'reset' });
+                    viewport = { panX: 0, panY: 0, zoom: 1 };
+                    updateDisplay();
+                    emitPan();
+                });
+            }
+
+            // Calculate positions and sizes
+            function calculateLayout() {
+                const areaRect = viewportArea.getBoundingClientRect();
+                const areaWidth = areaRect.width;
+                const areaHeight = areaRect.height;
+
+                // Scaled canvas size
+                const scaledCanvasWidth = canvasSize.width * viewport.zoom;
+                const scaledCanvasHeight = canvasSize.height * viewport.zoom;
+
+                // Total scrollable area with padding
+                const padding = Math.max(containerSize.width, containerSize.height) * 0.5;
+                const totalWidth = scaledCanvasWidth + padding * 2;
+                const totalHeight = scaledCanvasHeight + padding * 2;
+
+                // Scale factor to fit in preview area
+                const scale = Math.min(
+                    (areaWidth - 20) / totalWidth,
+                    (areaHeight - 20) / totalHeight,
+                    1
+                );
+
+                // Canvas preview position and size
+                const previewWidth = scaledCanvasWidth * scale;
+                const previewHeight = scaledCanvasHeight * scale;
+                const previewLeft = (areaWidth - totalWidth * scale) / 2 + padding * scale;
+                const previewTop = (areaHeight - totalHeight * scale) / 2 + padding * scale;
+
+                // Viewport indicator position and size
+                const indicatorWidth = Math.max(20, containerSize.width * scale);
+                const indicatorHeight = Math.max(20, containerSize.height * scale);
+
+                // Pan range
+                const minPanX = -(scaledCanvasWidth - containerSize.width + padding);
+                const maxPanX = padding;
+                const minPanY = -(scaledCanvasHeight - containerSize.height + padding);
+                const maxPanY = padding;
+
+                // Normalize pan position
+                const panRangeX = maxPanX - minPanX;
+                const panRangeY = maxPanY - minPanY;
+                const normalizedPanX = panRangeX > 0 ? (viewport.panX - minPanX) / panRangeX : 0.5;
+                const normalizedPanY = panRangeY > 0 ? (viewport.panY - minPanY) / panRangeY : 0.5;
+
+                // Indicator position
+                const indicatorLeft = previewLeft - padding * scale + (totalWidth * scale - indicatorWidth) * (1 - normalizedPanX);
+                const indicatorTop = previewTop - padding * scale + (totalHeight * scale - indicatorHeight) * (1 - normalizedPanY);
+
+                return {
+                    areaWidth,
+                    areaHeight,
+                    scale,
+                    totalWidth: totalWidth * scale,
+                    totalHeight: totalHeight * scale,
+                    previewWidth,
+                    previewHeight,
+                    previewLeft,
+                    previewTop,
+                    indicatorWidth,
+                    indicatorHeight,
+                    indicatorLeft,
+                    indicatorTop,
+                    minPanX,
+                    maxPanX,
+                    minPanY,
+                    maxPanY,
+                    padding
+                };
+            }
+
+            // Update display
+            function updateDisplay() {
+                const layout = calculateLayout();
+
+                // Update canvas preview
+                canvasPreview.style.width = layout.previewWidth + 'px';
+                canvasPreview.style.height = layout.previewHeight + 'px';
+                canvasPreview.style.left = layout.previewLeft + 'px';
+                canvasPreview.style.top = layout.previewTop + 'px';
+
+                // Update viewport indicator
+                viewportIndicator.style.width = layout.indicatorWidth + 'px';
+                viewportIndicator.style.height = layout.indicatorHeight + 'px';
+                viewportIndicator.style.left = Math.max(0, Math.min(layout.areaWidth - layout.indicatorWidth, layout.indicatorLeft)) + 'px';
+                viewportIndicator.style.top = Math.max(0, Math.min(layout.areaHeight - layout.indicatorHeight, layout.indicatorTop)) + 'px';
+
+                // Update info displays
+                zoomLevel.textContent = Math.round(viewport.zoom * 100) + '%';
+                panPosition.textContent = Math.round(viewport.panX) + ', ' + Math.round(viewport.panY);
+            }
+
+            // Emit pan event
+            function emitPan() {
+                if (window.WidgetAPI) {
+                    window.WidgetAPI.emitOutput('viewport:pan', {
+                        panX: viewport.panX,
+                        panY: viewport.panY
+                    });
+                    window.WidgetAPI.emit('canvas:viewport:pan', {
+                        panX: viewport.panX,
+                        panY: viewport.panY
+                    });
+                }
+            }
+
+            // Drag handling for viewport indicator
+            viewportIndicator.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                viewportIndicator.classList.add('dragging');
+                viewportIndicator.setPointerCapture(e.pointerId);
+
+                dragStart = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    panX: viewport.panX,
+                    panY: viewport.panY
+                };
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+
+                const layout = calculateLayout();
+                const deltaX = e.clientX - dragStart.x;
+                const deltaY = e.clientY - dragStart.y;
+
+                // Convert pixel delta to pan delta
+                const panDeltaX = -deltaX / layout.scale;
+                const panDeltaY = -deltaY / layout.scale;
+
+                // Update pan with clamping
+                viewport.panX = Math.max(layout.minPanX, Math.min(layout.maxPanX, dragStart.panX + panDeltaX));
+                viewport.panY = Math.max(layout.minPanY, Math.min(layout.maxPanY, dragStart.panY + panDeltaY));
+
+                updateDisplay();
+                emitPan();
+            });
+
+            document.addEventListener('pointerup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    viewportIndicator.classList.remove('dragging');
+                }
+            });
+
+            // Click on viewport area to jump
+            viewportArea.addEventListener('click', (e) => {
+                if (e.target === viewportIndicator) return;
+
+                const rect = viewportArea.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                const layout = calculateLayout();
+
+                // Calculate normalized position
+                const normalizedX = clickX / layout.areaWidth;
+                const normalizedY = clickY / layout.areaHeight;
+
+                // Calculate new pan position
+                const panRangeX = layout.maxPanX - layout.minPanX;
+                const panRangeY = layout.maxPanY - layout.minPanY;
+
+                viewport.panX = layout.maxPanX - normalizedX * panRangeX;
+                viewport.panY = layout.maxPanY - normalizedY * panRangeY;
+
+                // Clamp
+                viewport.panX = Math.max(layout.minPanX, Math.min(layout.maxPanX, viewport.panX));
+                viewport.panY = Math.max(layout.minPanY, Math.min(layout.maxPanY, viewport.panY));
+
+                updateDisplay();
+                emitPan();
+            });
+
+            // Handle resize
+            window.addEventListener('resize', updateDisplay);
+
+            // Initialize
+            updateDisplay();
+            initWidget();
+        })();
+    </script>
+</body>
+</html>

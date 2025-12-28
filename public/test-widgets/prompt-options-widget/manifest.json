@@ -1,0 +1,77 @@
+{
+  "id": "prompt-options-widget",
+  "name": "Prompt Options",
+  "version": "1.0.0",
+  "description": "Central prompt configuration widget with sliders, reference images, and generation settings. Syncs with photo and video generation widgets.",
+  "kind": "2d",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "setPrompt": {
+      "type": "string",
+      "description": "Set the main prompt text"
+    },
+    "setNegativePrompt": {
+      "type": "string",
+      "description": "Set the negative prompt text"
+    },
+    "setSettings": {
+      "type": "object",
+      "description": "Set multiple settings at once { guidanceScale, steps, width, height, etc. }"
+    },
+    "addReferenceImage": {
+      "type": "object",
+      "description": "Add a reference image { url, strength }"
+    },
+    "clearReferenceImages": {
+      "type": "trigger",
+      "description": "Clear all reference images"
+    },
+    "setLora": {
+      "type": "object",
+      "description": "Set LoRA configuration { url, scale, name }"
+    },
+    "loadPreset": {
+      "type": "string",
+      "description": "Load a saved preset by name"
+    }
+  },
+  "outputs": {
+    "promptChanged": {
+      "type": "object",
+      "description": "Emitted when any prompt setting changes { prompt, negativePrompt, settings, referenceImages, lora }"
+    },
+    "generateRequested": {
+      "type": "object",
+      "description": "Emitted when user clicks generate { type: 'image'|'video', config }"
+    },
+    "presetSaved": {
+      "type": "object",
+      "description": "Emitted when a preset is saved { name, config }"
+    },
+    "referenceImageAdded": {
+      "type": "object",
+      "description": "Emitted when reference image is added"
+    },
+    "currentConfig": {
+      "type": "object",
+      "description": "Full current configuration object"
+    }
+  },
+  "events": {
+    "listens": ["gallery:image-selected", "lora:selected"],
+    "emits": ["prompt:changed", "prompt:generate-requested"]
+  },
+  "size": {
+    "width": 380,
+    "height": 600,
+    "minWidth": 320,
+    "minHeight": 450,
+    "maxWidth": 600,
+    "maxHeight": 900
+  }
+}

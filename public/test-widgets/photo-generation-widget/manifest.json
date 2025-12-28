@@ -1,0 +1,81 @@
+{
+  "id": "photo-generation-widget",
+  "name": "Photo Generator",
+  "version": "1.1.0",
+  "description": "AI-powered image generation with history and upscaling. Model agnostic - supports Replicate, OpenAI, Stability AI, Fal.ai. Syncs with Prompt Options widget.",
+  "kind": "2d",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "generate": {
+      "type": "object",
+      "description": "Generate images with config { prompt, negativePrompt, width, height, etc. }"
+    },
+    "setApiKey": {
+      "type": "object",
+      "description": "Set API key { provider, apiKey }"
+    },
+    "setModel": {
+      "type": "string",
+      "description": "Set the model to use for generation"
+    },
+    "setProvider": {
+      "type": "string",
+      "description": "Set the AI provider (replicate, openai, stability, fal)"
+    },
+    "cancel": {
+      "type": "trigger",
+      "description": "Cancel current generation"
+    },
+    "syncPrompt": {
+      "type": "object",
+      "description": "Sync prompt configuration from Prompt Options widget"
+    },
+    "upscale": {
+      "type": "object",
+      "description": "Upscale an image { url, scale, model }"
+    }
+  },
+  "outputs": {
+    "imageGenerated": {
+      "type": "object",
+      "description": "Emitted when image is generated { url, prompt, settings }"
+    },
+    "imageUpscaled": {
+      "type": "object",
+      "description": "Emitted when image is upscaled { url, originalUrl, scale }"
+    },
+    "generationStarted": {
+      "type": "object",
+      "description": "Emitted when generation starts { id, prompt }"
+    },
+    "generationProgress": {
+      "type": "object",
+      "description": "Emitted with generation progress { id, progress, status }"
+    },
+    "generationFailed": {
+      "type": "object",
+      "description": "Emitted when generation fails { error, prompt }"
+    },
+    "sendToGallery": {
+      "type": "object",
+      "description": "Send generated image to gallery { url, name }"
+    }
+  },
+  "events": {
+    "listens": ["prompt:changed", "prompt:generate-requested"],
+    "emits": ["photo:generated", "photo:generation-started", "photo:generation-failed", "photo:upscaled"]
+  },
+  "size": {
+    "width": 420,
+    "height": 580,
+    "minWidth": 350,
+    "minHeight": 450,
+    "maxWidth": 800,
+    "maxHeight": 900
+  }
+}

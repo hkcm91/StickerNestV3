@@ -1,0 +1,23 @@
+{
+  "id": "source-video",
+  "name": "Video Source",
+  "version": "1.0.0",
+  "kind": "video",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": true
+  },
+  "size": {
+    "width": 320,
+    "height": 240
+  },
+  "inputs": {},
+  "outputs": {
+    "modulate": {
+      "type": "object",
+      "description": "Emits modulation signal based on video brightness"
+    }
+  }
+}

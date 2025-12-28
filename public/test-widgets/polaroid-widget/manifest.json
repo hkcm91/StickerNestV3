@@ -1,0 +1,56 @@
+{
+  "id": "polaroid-widget",
+  "name": "Polaroid",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Display an image in a classic polaroid frame style",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "setImage": {
+      "type": "object",
+      "description": "Set the polaroid image { url: string, caption?: string }"
+    },
+    "imageSelected": {
+      "type": "object",
+      "description": "Receive image from Gallery widget { id, url, name }"
+    },
+    "setCaption": {
+      "type": "string",
+      "description": "Set the caption text"
+    },
+    "setRotation": {
+      "type": "number",
+      "description": "Set rotation angle in degrees (-15 to 15)"
+    },
+    "clear": {
+      "type": "trigger",
+      "description": "Clear the polaroid image"
+    }
+  },
+  "outputs": {
+    "imageSet": {
+      "type": "object",
+      "description": "Emitted when image is set { url, caption }"
+    },
+    "clicked": {
+      "type": "object",
+      "description": "Emitted when polaroid is clicked { url, caption }"
+    }
+  },
+  "events": {
+    "listens": ["gallery:image-selected"],
+    "emits": ["polaroid:clicked"]
+  },
+  "size": {
+    "width": 240,
+    "height": 290,
+    "minWidth": 180,
+    "minHeight": 220,
+    "maxWidth": 400,
+    "maxHeight": 480
+  }
+}

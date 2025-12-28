@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+        h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+        .control-row label {
+            font-size: 11px;
+            color: #333;
+            min-width: 60px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #ddd;
+            border-radius: 3px;
+        }
+        .control-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .value-display {
+            font-size: 12px;
+            color: #333;
+            min-width: 40px;
+            text-align: right;
+            font-weight: 500;
+        }
+        .stroke-preview {
+            height: 40px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .stroke-preview line {
+            stroke: #333;
+        }
+        .opacity-preview {
+            height: 60px;
+            border-radius: 8px;
+            margin-top: 8px;
+            background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .opacity-preview-inner {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .preset-btns {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .preset-btn {
+            padding: 8px 4px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 10px;
+            color: #666;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .preset-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        .selection-status {
+            background: rgba(0,0,0,0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #333;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h3>Style Panel</h3>
+
+    <!-- Stroke Width Section -->
+    <div class="section">
+        <div class="section-title">Stroke Width</div>
+        <div class="control-row">
+            <label>Width:</label>
+            <input type="range" id="strokeWidth" min="0" max="20" step="0.5" value="2">
+            <span class="value-display" id="strokeWidthVal">2px</span>
+        </div>
+        <div class="preset-btns">
+            <button class="preset-btn" onclick="setStrokeWidth(0)">None</button>
+            <button class="preset-btn active" onclick="setStrokeWidth(1)">1px</button>
+            <button class="preset-btn" onclick="setStrokeWidth(2)">2px</button>
+            <button class="preset-btn" onclick="setStrokeWidth(4)">4px</button>
+        </div>
+        <div class="stroke-preview">
+            <svg width="100%" height="30">
+                <line id="strokePreviewLine" x1="20" y1="15" x2="calc(100% - 20px)" y2="15" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Opacity Section -->
+    <div class="section">
+        <div class="section-title">Opacity</div>
+        <div class="control-row">
+            <label>Opacity:</label>
+            <input type="range" id="opacity" min="0" max="100" step="5" value="100">
+            <span class="value-display" id="opacityVal">100%</span>
+        </div>
+        <div class="preset-btns">
+            <button class="preset-btn" onclick="setOpacity(25)">25%</button>
+            <button class="preset-btn" onclick="setOpacity(50)">50%</button>
+            <button class="preset-btn" onclick="setOpacity(75)">75%</button>
+            <button class="preset-btn active" onclick="setOpacity(100)">100%</button>
+        </div>
+        <div class="opacity-preview">
+            <div class="opacity-preview-inner" id="opacityPreview" style="background: rgba(102, 126, 234, 1);">
+                <svg width="60" height="40" viewBox="0 0 60 40">
+                    <rect x="5" y="5" width="30" height="30" fill="#667eea" rx="4"/>
+                    <circle cx="40" cy="20" r="15" fill="#22c55e"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="selection-status" id="status">No selection</div>
+
+    <script>
+        const strokeWidth = document.getElementById('strokeWidth');
+        const strokeWidthVal = document.getElementById('strokeWidthVal');
+        const strokePreviewLine = document.getElementById('strokePreviewLine');
+        const opacity = document.getElementById('opacity');
+        const opacityVal = document.getElementById('opacityVal');
+        const opacityPreview = document.getElementById('opacityPreview');
+        const status = document.getElementById('status');
+
+        let selectedEntity = null;
+
+        function updateStrokePreview() {
+            const val = parseFloat(strokeWidth.value);
+            strokeWidthVal.textContent = val + 'px';
+            strokePreviewLine.setAttribute('stroke-width', val);
+
+            // Update preset buttons
+            document.querySelectorAll('.section:first-of-type .preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function updateOpacityPreview() {
+            const val = parseInt(opacity.value);
+            opacityVal.textContent = val + '%';
+            opacityPreview.style.opacity = val / 100;
+
+            // Update preset buttons
+            document.querySelectorAll('.section:last-of-type .preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        strokeWidth.addEventListener('input', () => {
+            updateStrokePreview();
+            emitStrokeWidth();
+        });
+
+        opacity.addEventListener('input', () => {
+            updateOpacityPreview();
+            emitOpacity();
+        });
+
+        function emitEvent(type, payload) {
+            console.log('[Style Panel] Emitting:', type, payload);
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+        }
+
+        function emitStrokeWidth() {
+            emitEvent('vector:set-stroke-width', {
+                strokeWidth: parseFloat(strokeWidth.value)
+            });
+        }
+
+        function emitOpacity() {
+            emitEvent('vector:set-opacity', {
+                opacity: parseInt(opacity.value) / 100
+            });
+        }
+
+        function setStrokeWidth(val) {
+            strokeWidth.value = val;
+            updateStrokePreview();
+            emitStrokeWidth();
+
+            // Highlight active preset
+            document.querySelectorAll('.section:first-of-type .preset-btn').forEach((btn, i) => {
+                const presets = [0, 1, 2, 4];
+                if (presets[i] === val) btn.classList.add('active');
+            });
+        }
+
+        function setOpacity(val) {
+            opacity.value = val;
+            updateOpacityPreview();
+            emitOpacity();
+
+            // Highlight active preset
+            document.querySelectorAll('.section:last-of-type .preset-btn').forEach((btn, i) => {
+                const presets = [25, 50, 75, 100];
+                if (presets[i] === val) btn.classList.add('active');
+            });
+        }
+
+        // Listen for selection changes
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            console.log('[Style Panel] Message:', data);
+
+            if (data.type === 'widget:event' && data.payload?.type === 'vector:selection-changed') {
+                const selection = data.payload.payload;
+                if (selection && selection.id) {
+                    selectedEntity = selection;
+                    status.textContent = `Selected: ${selection.type || 'entity'}`;
+                    status.style.background = 'rgba(34, 197, 94, 0.2)';
+
+                    // Update controls to match selection
+                    if (selection.strokeWidth !== undefined) {
+                        strokeWidth.value = selection.strokeWidth;
+                        updateStrokePreview();
+                    }
+                    if (selection.opacity !== undefined) {
+                        opacity.value = selection.opacity * 100;
+                        updateOpacityPreview();
+                    }
+                } else {
+                    selectedEntity = null;
+                    status.textContent = 'No selection';
+                    status.style.background = 'rgba(0,0,0,0.1)';
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+        console.log('[Style Panel] Ready');
+    </script>
+</body>
+</html>

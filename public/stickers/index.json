@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "description": "StickerNest default sticker library",
+  "packs": [
+    {
+      "id": "emoji-essentials",
+      "name": "Emoji Essentials",
+      "description": "Core emoji stickers for everyday use",
+      "category": "emoji",
+      "thumbnail": "/stickers/emoji/pack-thumbnail.png",
+      "stickers": [
+        { "id": "emoji-star", "file": "star.svg", "name": "Star", "tags": ["star", "favorite", "rating"] },
+        { "id": "emoji-heart", "file": "heart.svg", "name": "Heart", "tags": ["heart", "love", "like"] },
+        { "id": "emoji-rocket", "file": "rocket.svg", "name": "Rocket", "tags": ["rocket", "launch", "fast"] },
+        { "id": "emoji-fire", "file": "fire.svg", "name": "Fire", "tags": ["fire", "hot", "trending"] },
+        { "id": "emoji-sparkle", "file": "sparkle.svg", "name": "Sparkle", "tags": ["sparkle", "magic", "new"] }
+      ]
+    },
+    {
+      "id": "media-controls",
+      "name": "Media Controls",
+      "description": "Playback control stickers",
+      "category": "controls",
+      "thumbnail": "/stickers/controls/pack-thumbnail.png",
+      "stickers": [
+        { "id": "control-play", "file": "play.svg", "name": "Play", "tags": ["play", "start", "media"] },
+        { "id": "control-pause", "file": "pause.svg", "name": "Pause", "tags": ["pause", "stop", "media"] },
+        { "id": "control-next", "file": "next.svg", "name": "Next", "tags": ["next", "forward", "skip"] },
+        { "id": "control-prev", "file": "prev.svg", "name": "Previous", "tags": ["prev", "back", "rewind"] }
+      ]
+    },
+    {
+      "id": "lottie-animations",
+      "name": "Animated Stickers",
+      "description": "Lottie animation stickers",
+      "category": "lottie",
+      "thumbnail": "/stickers/lottie/pack-thumbnail.png",
+      "stickers": [
+        { "id": "lottie-loading", "file": "loading.json", "name": "Loading Spinner", "tags": ["loading", "spinner", "wait"], "isAnimated": true },
+        { "id": "lottie-success", "file": "success.json", "name": "Success Check", "tags": ["success", "check", "done"], "isAnimated": true },
+        { "id": "lottie-confetti", "file": "confetti.json", "name": "Confetti", "tags": ["confetti", "celebration", "party"], "isAnimated": true }
+      ]
+    }
+  ],
+  "widgetAssociations": {
+    "emoji-music": { "widgetId": "spotify-playlist-widget", "behavior": "toggle-widget" },
+    "emoji-video": { "widgetId": "youtube-playlist-widget", "behavior": "toggle-widget" },
+    "emoji-camera": { "widgetId": "photobooth-widget", "behavior": "toggle-widget" },
+    "emoji-palette": { "widgetId": "gradient-maker", "behavior": "toggle-widget" },
+    "emoji-chart": { "widgetId": "dashboard-analytics", "behavior": "toggle-widget" },
+    "emoji-calendar": { "widgetId": "time-tracker", "behavior": "toggle-widget" },
+    "emoji-folder": { "widgetId": "folder-widget", "behavior": "toggle-widget" },
+    "emoji-chat": { "widgetId": "chat-room", "behavior": "toggle-widget" },
+    "emoji-bell": { "widgetId": "notification-center", "behavior": "toggle-widget" },
+    "emoji-gamepad": { "widgetId": "game-character", "behavior": "toggle-widget" },
+    "emoji-robot": { "widgetId": "ai-widget-generator", "behavior": "toggle-widget" },
+    "emoji-brain": { "widgetId": "prompt-options-widget", "behavior": "toggle-widget" },
+    "icon-play": { "widgetId": "transport-monitor", "behavior": "emit-event", "eventName": "transport:play" },
+    "icon-pause": { "widgetId": "transport-monitor", "behavior": "emit-event", "eventName": "transport:pause" }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "id": "spotify-playlist-widget",
+  "name": "Spotify Playlist",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Manage and play Spotify tracks, albums, and playlists with embedded playback",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "addTrack": {
+      "type": "string",
+      "description": "Add track by Spotify URL or URI"
+    },
+    "play": {
+      "type": "trigger",
+      "description": "Start playback"
+    },
+    "pause": {
+      "type": "trigger",
+      "description": "Pause playback"
+    },
+    "next": {
+      "type": "trigger",
+      "description": "Skip to next track"
+    },
+    "previous": {
+      "type": "trigger",
+      "description": "Go to previous track"
+    },
+    "shuffle": {
+      "type": "boolean",
+      "description": "Enable or disable shuffle mode"
+    }
+  },
+  "outputs": {
+    "trackChanged": {
+      "type": "object",
+      "description": "Emitted when current track changes"
+    },
+    "playStateChanged": {
+      "type": "object",
+      "description": "Emitted on play or pause"
+    },
+    "preview": {
+      "type": "object",
+      "description": "Emits current track for preview widgets"
+    }
+  },
+  "events": {
+    "listens": ["playlist:add", "playlist:control"],
+    "emits": ["spotify:changed", "spotify:preview"]
+  },
+  "size": {
+    "width": 400,
+    "height": 520,
+    "minWidth": 320,
+    "minHeight": 420,
+    "maxWidth": 800,
+    "maxHeight": 900
+  }
+}

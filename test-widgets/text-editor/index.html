@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-accent-primary: #8b5cf6;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+
+      --editor-bg: var(--sn-bg-secondary);
+      --editor-text: var(--sn-text-primary);
+      --editor-accent: var(--sn-accent-primary);
+      --toolbar-bg: var(--sn-bg-tertiary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--sn-bg-primary);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      border-radius: var(--sn-radius-md);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--sn-border-primary);
+      flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+      padding: 6px 10px;
+      background: transparent;
+      border: 1px solid var(--sn-border-primary);
+      border-radius: 4px;
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toolbar-btn:hover {
+      background: var(--editor-accent);
+      color: white;
+      border-color: var(--editor-accent);
+    }
+
+    .toolbar-btn.active {
+      background: var(--editor-accent);
+      color: white;
+    }
+
+    .toolbar-separator {
+      width: 1px;
+      background: var(--sn-border-primary);
+      margin: 0 4px;
+    }
+
+    .editor-content {
+      flex: 1;
+      padding: 12px;
+      background: var(--editor-bg);
+      color: var(--editor-text);
+      overflow-y: auto;
+      outline: none;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100px;
+    }
+
+    .editor-content:empty::before {
+      content: attr(data-placeholder);
+      color: var(--sn-text-secondary);
+      opacity: 0.6;
+    }
+
+    .editor-content:focus {
+      box-shadow: inset 0 0 0 2px var(--editor-accent);
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: var(--toolbar-bg);
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      border-top: 1px solid var(--sn-border-primary);
+    }
+
+    .mode-indicator {
+      padding: 2px 6px;
+      background: var(--editor-accent);
+      color: white;
+      border-radius: 3px;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    /* Selection highlight */
+    ::selection {
+      background: var(--editor-accent);
+      color: white;
+    }
+
+    /* Readonly mode */
+    .readonly .editor-content {
+      cursor: default;
+      opacity: 0.8;
+    }
+
+    .readonly .toolbar-btn {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-container" id="container">
+    <div class="toolbar">
+      <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
+      <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
+      <button class="toolbar-btn" data-command="underline" title="Underline"><u>U</u></button>
+      <button class="toolbar-btn" data-command="strikethrough" title="Strikethrough"><s>S</s></button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">• List</button>
+      <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">1. List</button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">⬅</button>
+      <button class="toolbar-btn" data-command="justifyCenter" title="Align Center">⬌</button>
+      <button class="toolbar-btn" data-command="justifyRight" title="Align Right">➡</button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" id="clearBtn" title="Clear">Clear</button>
+    </div>
+    <div
+      class="editor-content"
+      id="editor"
+      contenteditable="true"
+      data-placeholder="Start typing..."
+    ></div>
+    <div class="status-bar">
+      <span id="charCount">0 characters</span>
+      <span class="mode-indicator" id="modeIndicator">EDIT</span>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let mode = 'edit';
+    let content = '';
+
+    // DOM elements
+    const container = document.getElementById('container');
+    const editor = document.getElementById('editor');
+    const charCount = document.getElementById('charCount');
+    const modeIndicator = document.getElementById('modeIndicator');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // Emit helper
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function log(msg) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.log(msg);
+      }
+      console.log('[TextEditor]', msg);
+    }
+
+    // Update character count
+    function updateCharCount() {
+      const text = editor.innerText || '';
+      charCount.textContent = `${text.length} characters`;
+    }
+
+    // Set content
+    function setContent(text) {
+      editor.innerHTML = text;
+      content = text;
+      updateCharCount();
+      log(`Content set: ${text.length} chars`);
+    }
+
+    // Append content
+    function appendContent(text) {
+      editor.innerHTML += text;
+      content = editor.innerHTML;
+      updateCharCount();
+      log(`Content appended`);
+    }
+
+    // Clear content
+    function clearContent() {
+      editor.innerHTML = '';
+      content = '';
+      updateCharCount();
+      emit('text.changed', '');
+      log('Content cleared');
+    }
+
+    // Set mode
+    function setMode(newMode) {
+      mode = newMode;
+      modeIndicator.textContent = mode.toUpperCase();
+
+      if (mode === 'readonly') {
+        editor.contentEditable = 'false';
+        container.classList.add('readonly');
+      } else if (mode === 'preview') {
+        editor.contentEditable = 'false';
+        container.classList.remove('readonly');
+      } else {
+        editor.contentEditable = 'true';
+        container.classList.remove('readonly');
+      }
+
+      log(`Mode changed to: ${mode}`);
+    }
+
+    // Apply formatting command
+    function applyFormat(command, value = null) {
+      if (mode === 'readonly') return;
+      document.execCommand(command, false, value);
+      editor.focus();
+    }
+
+    // Toolbar button handlers
+    document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applyFormat(btn.dataset.command);
+      });
+    });
+
+    clearBtn.addEventListener('click', clearContent);
+
+    // Editor event handlers
+    editor.addEventListener('input', () => {
+      content = editor.innerHTML;
+      updateCharCount();
+      emit('text.changed', content);
+    });
+
+    editor.addEventListener('focus', () => {
+      emit('editor.focus', {});
+      log('Editor focused');
+    });
+
+    editor.addEventListener('blur', () => {
+      emit('editor.blur', {});
+    });
+
+    editor.addEventListener('mouseup', () => {
+      const selection = window.getSelection();
+      if (selection.toString()) {
+        emit('selection.changed', {
+          text: selection.toString(),
+          start: selection.anchorOffset,
+          end: selection.focusOffset
+        });
+      }
+    });
+
+    // Initialize
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Text Editor');
+
+      // Listen for events
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'text.set':
+            if (typeof event.payload === 'string') {
+              setContent(event.payload);
+            } else if (event.payload?.text) {
+              setContent(event.payload.text);
+            }
+            break;
+
+          case 'text.append':
+            if (typeof event.payload === 'string') {
+              appendContent(event.payload);
+            } else if (event.payload?.text) {
+              appendContent(event.payload.text);
+            }
+            break;
+
+          case 'text.clear':
+            clearContent();
+            break;
+
+          case 'format.apply':
+            if (event.payload?.command) {
+              applyFormat(event.payload.command, event.payload.value);
+            }
+            break;
+
+          case 'mode.set':
+            if (typeof event.payload === 'string') {
+              setMode(event.payload);
+            } else if (event.payload?.mode) {
+              setMode(event.payload.mode);
+            }
+            break;
+        }
+      });
+
+      // Register capabilities
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['text'],
+          canNest: true,
+          canBeNested: true
+        });
+      }
+
+      // Emit ready
+      emit('editor.ready', { capabilities: ['text'] });
+      log('Text Editor ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

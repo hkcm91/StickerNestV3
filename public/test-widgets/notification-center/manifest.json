@@ -1,0 +1,27 @@
+{
+    "id": "notification-center",
+    "name": "Notification Center",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "all-events": {
+            "type": "event",
+            "description": "Listens to all ecosystem events to generate notifications"
+        }
+    },
+    "outputs": {
+        "notification-clicked": {
+            "type": "event",
+            "description": "Emits when a notification is clicked"
+        },
+        "notifications-cleared": {
+            "type": "event",
+            "description": "Emits when notifications are cleared"
+        }
+    }
+}

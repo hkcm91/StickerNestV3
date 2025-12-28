@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tamagotchi Pet</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #1e1e2e;
+      --bg-secondary: #2a2a3e;
+      --bg-tertiary: #3a3a4e;
+      --accent: #f5a9b8;
+      --accent-happy: #7ed56f;
+      --accent-sad: #5dade2;
+      --accent-hungry: #f39c12;
+      --accent-tired: #9b59b6;
+      --accent-sick: #95a5a6;
+      --text-primary: #eee;
+      --text-secondary: #aaa;
+      --border: #444;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pet-name {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mood-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-happy);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 16px;
+    }
+
+    .pet-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(ellipse at center bottom, var(--bg-tertiary) 0%, var(--bg-primary) 70%);
+      cursor: pointer;
+    }
+
+    .pet-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Lottie container */
+    #lottieContainer {
+      width: 80%;
+      height: 80%;
+      max-width: 250px;
+      max-height: 250px;
+    }
+
+    /* Video container */
+    #videoContainer {
+      display: none;
+      width: 80%;
+      height: 80%;
+      max-width: 250px;
+      max-height: 250px;
+    }
+
+    #videoContainer video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Sprite container */
+    #spriteContainer {
+      display: none;
+      width: 80%;
+      height: 80%;
+      max-width: 250px;
+      max-height: 250px;
+    }
+
+    #spriteCanvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    /* Default pet (SVG) */
+    #defaultPet {
+      width: 150px;
+      height: 150px;
+    }
+
+    .default-pet-body {
+      transition: all 0.3s ease;
+    }
+
+    /* Mood effects */
+    .mood-happy .default-pet-body { fill: #7ed56f; }
+    .mood-sad .default-pet-body { fill: #5dade2; }
+    .mood-hungry .default-pet-body { fill: #f39c12; }
+    .mood-tired .default-pet-body { fill: #9b59b6; }
+    .mood-sick .default-pet-body { fill: #95a5a6; }
+
+    /* Floating hearts on interaction */
+    .heart {
+      position: absolute;
+      font-size: 24px;
+      animation: floatUp 1.5s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-80px) scale(0.5); }
+    }
+
+    /* Speech bubble */
+    .speech-bubble {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      color: #333;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      max-width: 150px;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid white;
+    }
+
+    .speech-bubble.show {
+      opacity: 1;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .stat-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .stat-icon {
+      font-size: 14px;
+      width: 20px;
+    }
+
+    .stat-bar {
+      flex: 1;
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .stat-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease, background 0.3s;
+    }
+
+    .stat-fill.happiness { background: linear-gradient(90deg, #f39c12, #7ed56f); }
+    .stat-fill.energy { background: linear-gradient(90deg, #e74c3c, #f1c40f); }
+    .stat-fill.hunger { background: linear-gradient(90deg, #7ed56f, #e74c3c); }
+
+    .stat-value {
+      font-size: 10px;
+      color: var(--text-secondary);
+      width: 30px;
+      text-align: right;
+    }
+
+    /* Action buttons */
+    .action-bar {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 8px 4px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .action-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Settings panel */
+    .settings-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-primary);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+    }
+
+    .settings-panel.show {
+      display: flex;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .setting-group {
+      margin-bottom: 16px;
+    }
+
+    .setting-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .setting-input {
+      flex: 1;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    .setting-btn {
+      padding: 8px 12px;
+      background: var(--accent);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .media-source-btn {
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .media-source-btn:hover {
+      background: var(--accent);
+    }
+
+    .media-source-btn.active {
+      border-color: var(--accent);
+      background: rgba(245, 169, 184, 0.2);
+    }
+
+    .media-sources {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    /* Bounce animation for happy pet */
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .bouncing {
+      animation: bounce 0.5s ease infinite;
+    }
+
+    /* Shake animation for sad/sick pet */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .shaking {
+      animation: shake 0.3s ease infinite;
+    }
+
+    /* Sleepy animation */
+    @keyframes sleepy {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+
+    .sleepy {
+      animation: sleepy 2s ease infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="pet-name">
+      <div class="mood-indicator" id="moodIndicator"></div>
+      <span id="petNameDisplay">My Pet</span>
+    </div>
+    <button class="settings-btn" id="btnSettings">...</button>
+  </div>
+
+  <div class="pet-container" id="petContainer">
+    <div class="speech-bubble" id="speechBubble">Hello!</div>
+
+    <div class="pet-stage" id="petStage">
+      <!-- Lottie Animation -->
+      <div id="lottieContainer"></div>
+
+      <!-- Video -->
+      <div id="videoContainer">
+        <video id="petVideo" loop muted playsinline></video>
+      </div>
+
+      <!-- Sprite Sheet -->
+      <div id="spriteContainer">
+        <canvas id="spriteCanvas"></canvas>
+      </div>
+
+      <!-- Default SVG Pet -->
+      <svg id="defaultPet" viewBox="0 0 100 100">
+        <ellipse cx="50" cy="85" rx="25" ry="8" fill="rgba(0,0,0,0.2)"/>
+        <ellipse class="default-pet-body" cx="50" cy="55" rx="30" ry="35" fill="#f5a9b8"/>
+        <circle cx="35" cy="45" r="8" fill="white"/>
+        <circle cx="65" cy="45" r="8" fill="white"/>
+        <circle cx="37" cy="47" r="4" fill="#333" id="leftEye"/>
+        <circle cx="67" cy="47" r="4" fill="#333" id="rightEye"/>
+        <ellipse cx="50" cy="60" rx="4" ry="3" fill="#ff9999"/>
+        <path id="mouth" d="M 40 68 Q 50 78, 60 68" stroke="#333" stroke-width="3" fill="none"/>
+        <ellipse cx="25" cy="55" rx="8" ry="5" fill="rgba(255,150,150,0.5)"/>
+        <ellipse cx="75" cy="55" rx="8" ry="5" fill="rgba(255,150,150,0.5)"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-row">
+      <span class="stat-icon">&#x1F60A;</span>
+      <div class="stat-bar">
+        <div class="stat-fill happiness" id="happinessBar" style="width: 80%"></div>
+      </div>
+      <span class="stat-value" id="happinessValue">80%</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-icon">&#x26A1;</span>
+      <div class="stat-bar">
+        <div class="stat-fill energy" id="energyBar" style="width: 70%"></div>
+      </div>
+      <span class="stat-value" id="energyValue">70%</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-icon">&#x1F35E;</span>
+      <div class="stat-bar">
+        <div class="stat-fill hunger" id="hungerBar" style="width: 60%"></div>
+      </div>
+      <span class="stat-value" id="hungerValue">60%</span>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="action-btn" id="btnPet" title="Pet">&#x1F49C;</button>
+    <button class="action-btn" id="btnFeed" title="Feed">&#x1F35E;</button>
+    <button class="action-btn" id="btnPlay" title="Play">&#x1F3AE;</button>
+    <button class="action-btn" id="btnSleep" title="Sleep">&#x1F4A4;</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+      <span>Pet Settings</span>
+      <button class="settings-btn" id="btnCloseSettings">&times;</button>
+    </div>
+    <div class="settings-content">
+      <div class="setting-group">
+        <div class="setting-label">Pet Name</div>
+        <div class="setting-row">
+          <input type="text" class="setting-input" id="petNameInput" placeholder="Enter pet name" value="My Pet">
+          <button class="setting-btn" id="btnSaveName">Save</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">Media Source</div>
+        <div class="media-sources">
+          <button class="media-source-btn active" data-source="default">Default</button>
+          <button class="media-source-btn" data-source="lottie">Lottie</button>
+          <button class="media-source-btn" data-source="video">Video</button>
+          <button class="media-source-btn" data-source="sprite">Sprite</button>
+        </div>
+      </div>
+
+      <div class="setting-group" id="lottieSettings" style="display: none;">
+        <div class="setting-label">Lottie URL</div>
+        <div class="setting-row">
+          <input type="text" class="setting-input" id="lottieUrl" placeholder="https://...">
+          <button class="setting-btn" id="btnLoadLottie">Load</button>
+        </div>
+      </div>
+
+      <div class="setting-group" id="videoSettings" style="display: none;">
+        <div class="setting-label">Video URL</div>
+        <div class="setting-row">
+          <input type="text" class="setting-input" id="videoUrl" placeholder="https://...">
+          <button class="setting-btn" id="btnLoadVideo">Load</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">Mood Sync</div>
+        <div class="setting-row">
+          <button class="setting-btn" id="btnRequestMood" style="width: 100%;">Request Mood from Moodlet Widget</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== STATE =====
+    const state = {
+      name: 'My Pet',
+      mood: 'happy',
+      happiness: 80,
+      energy: 70,
+      hunger: 60,
+
+      // Media source
+      mediaSource: 'default', // 'default', 'lottie', 'video', 'sprite'
+
+      // Lottie
+      lottieAnimation: null,
+      lottieAnimationMap: {
+        idle: null,
+        happy: null,
+        sad: null,
+        hungry: null,
+        tired: null,
+        sick: null,
+        celebrating: null,
+        eating: null,
+        drinking: null,
+        sleeping: null,
+        exercising: null
+      },
+
+      // Video
+      videoMap: {},
+
+      // Sprite
+      spriteSheet: null,
+      spriteConfig: null,
+      spriteAnimations: {},
+      currentSpriteFrame: 0,
+      spriteInterval: null,
+
+      // Moodlet data
+      moodletData: null,
+
+      // Animation state
+      currentAnimation: 'idle',
+      isAnimating: false
+    };
+
+    // ===== ELEMENTS =====
+    const petContainer = document.getElementById('petContainer');
+    const petStage = document.getElementById('petStage');
+    const defaultPet = document.getElementById('defaultPet');
+    const lottieContainer = document.getElementById('lottieContainer');
+    const videoContainer = document.getElementById('videoContainer');
+    const petVideo = document.getElementById('petVideo');
+    const spriteContainer = document.getElementById('spriteContainer');
+    const spriteCanvas = document.getElementById('spriteCanvas');
+    const spriteCtx = spriteCanvas.getContext('2d');
+    const speechBubble = document.getElementById('speechBubble');
+    const moodIndicator = document.getElementById('moodIndicator');
+
+    // ===== MOOD COLORS =====
+    const moodColors = {
+      happy: '#7ed56f',
+      sad: '#5dade2',
+      hungry: '#f39c12',
+      tired: '#9b59b6',
+      sick: '#95a5a6',
+      celebrating: '#e91e63',
+      neutral: '#f5a9b8'
+    };
+
+    // ===== DEFAULT PET EXPRESSIONS =====
+    function updateDefaultPetExpression() {
+      const mouth = document.getElementById('mouth');
+      const leftEye = document.getElementById('leftEye');
+      const rightEye = document.getElementById('rightEye');
+      const body = document.querySelector('.default-pet-body');
+
+      // Reset classes
+      defaultPet.classList.remove('bouncing', 'shaking', 'sleepy');
+      petStage.className = 'pet-stage';
+
+      switch (state.mood) {
+        case 'happy':
+        case 'celebrating':
+          mouth.setAttribute('d', 'M 40 68 Q 50 78, 60 68');
+          leftEye.setAttribute('cy', '47');
+          rightEye.setAttribute('cy', '47');
+          defaultPet.classList.add('bouncing');
+          break;
+        case 'sad':
+          mouth.setAttribute('d', 'M 40 73 Q 50 65, 60 73');
+          leftEye.setAttribute('cy', '50');
+          rightEye.setAttribute('cy', '50');
+          defaultPet.classList.add('shaking');
+          break;
+        case 'hungry':
+          mouth.setAttribute('d', 'M 45 70 Q 50 70, 55 70');
+          leftEye.setAttribute('cy', '47');
+          rightEye.setAttribute('cy', '47');
+          break;
+        case 'tired':
+        case 'sleeping':
+          mouth.setAttribute('d', 'M 45 70 Q 50 72, 55 70');
+          leftEye.setAttribute('cy', '45');
+          rightEye.setAttribute('cy', '45');
+          leftEye.setAttribute('r', '2');
+          rightEye.setAttribute('r', '2');
+          defaultPet.classList.add('sleepy');
+          break;
+        case 'sick':
+          mouth.setAttribute('d', 'M 45 72 Q 50 68, 55 72');
+          leftEye.setAttribute('cy', '48');
+          rightEye.setAttribute('cy', '48');
+          defaultPet.classList.add('shaking');
+          break;
+        default:
+          mouth.setAttribute('d', 'M 42 70 Q 50 74, 58 70');
+          leftEye.setAttribute('cy', '47');
+          rightEye.setAttribute('cy', '47');
+          leftEye.setAttribute('r', '4');
+          rightEye.setAttribute('r', '4');
+      }
+
+      // Update body color
+      if (body) {
+        body.style.fill = moodColors[state.mood] || moodColors.neutral;
+      }
+
+      // Update mood indicator
+      moodIndicator.style.background = moodColors[state.mood] || moodColors.neutral;
+    }
+
+    // ===== MEDIA SOURCE SWITCHING =====
+    function setMediaSource(source) {
+      state.mediaSource = source;
+
+      // Hide all containers
+      defaultPet.style.display = 'none';
+      lottieContainer.style.display = 'none';
+      videoContainer.style.display = 'none';
+      spriteContainer.style.display = 'none';
+
+      // Show appropriate container
+      switch (source) {
+        case 'lottie':
+          lottieContainer.style.display = 'block';
+          break;
+        case 'video':
+          videoContainer.style.display = 'block';
+          petVideo.play();
+          break;
+        case 'sprite':
+          spriteContainer.style.display = 'block';
+          startSpriteAnimation();
+          break;
+        default:
+          defaultPet.style.display = 'block';
+          updateDefaultPetExpression();
+      }
+
+      // Update settings UI
+      document.querySelectorAll('.media-source-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.source === source);
+      });
+
+      document.getElementById('lottieSettings').style.display = source === 'lottie' ? 'block' : 'none';
+      document.getElementById('videoSettings').style.display = source === 'video' ? 'block' : 'none';
+    }
+
+    // ===== LOTTIE HANDLING =====
+    async function loadLottie(url, data) {
+      if (state.lottieAnimation) {
+        state.lottieAnimation.destroy();
+      }
+
+      lottieContainer.innerHTML = '';
+
+      const animData = {
+        container: lottieContainer,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true
+      };
+
+      if (url) {
+        animData.path = url;
+      } else if (data) {
+        animData.animationData = data;
+      } else {
+        return;
+      }
+
+      state.lottieAnimation = lottie.loadAnimation(animData);
+      setMediaSource('lottie');
+    }
+
+    function playLottieSegment(animName) {
+      if (!state.lottieAnimation) return;
+
+      const map = state.lottieAnimationMap[animName];
+      if (map && map.start !== undefined && map.end !== undefined) {
+        state.lottieAnimation.playSegments([map.start, map.end], true);
+      }
+    }
+
+    // ===== VIDEO HANDLING =====
+    function loadVideo(url) {
+      petVideo.src = url;
+      petVideo.load();
+      setMediaSource('video');
+    }
+
+    function playVideoForMood(mood) {
+      if (state.videoMap[mood]) {
+        petVideo.src = state.videoMap[mood];
+        petVideo.load();
+        petVideo.play();
+      }
+    }
+
+    // ===== SPRITE HANDLING =====
+    function loadSprite(imageUrl, config, animations) {
+      const img = new Image();
+      img.onload = () => {
+        state.spriteSheet = img;
+        state.spriteConfig = config;
+        state.spriteAnimations = animations;
+        setMediaSource('sprite');
+      };
+      img.src = imageUrl;
+    }
+
+    function startSpriteAnimation() {
+      if (state.spriteInterval) {
+        clearInterval(state.spriteInterval);
+      }
+
+      if (!state.spriteSheet || !state.spriteConfig) return;
+
+      const fps = state.spriteConfig.fps || 8;
+      state.spriteInterval = setInterval(() => {
+        renderSpriteFrame();
+        state.currentSpriteFrame++;
+      }, 1000 / fps);
+    }
+
+    function renderSpriteFrame() {
+      if (!state.spriteSheet || !state.spriteConfig) return;
+
+      const { frameWidth, frameHeight, cols } = state.spriteConfig;
+      const anim = state.spriteAnimations[state.currentAnimation] || state.spriteAnimations['idle'];
+
+      if (!anim || !anim.frames || anim.frames.length === 0) return;
+
+      const frameIndex = anim.frames[state.currentSpriteFrame % anim.frames.length];
+      const col = frameIndex % cols;
+      const row = Math.floor(frameIndex / cols);
+
+      spriteCanvas.width = frameWidth;
+      spriteCanvas.height = frameHeight;
+
+      spriteCtx.clearRect(0, 0, frameWidth, frameHeight);
+      spriteCtx.imageSmoothingEnabled = false;
+      spriteCtx.drawImage(
+        state.spriteSheet,
+        col * frameWidth, row * frameHeight, frameWidth, frameHeight,
+        0, 0, frameWidth, frameHeight
+      );
+    }
+
+    // ===== MOOD HANDLING =====
+    function setMood(moodData) {
+      if (typeof moodData === 'string') {
+        state.mood = moodData;
+      } else if (moodData.mood) {
+        state.mood = moodData.mood;
+        state.moodletData = moodData.moodlets || null;
+
+        // Update stats based on moodlet data
+        if (moodData.moodlets) {
+          updateStatsFromMoodlets(moodData.moodlets);
+        }
+      }
+
+      // Update visuals
+      switch (state.mediaSource) {
+        case 'lottie':
+          playLottieSegment(state.mood);
+          break;
+        case 'video':
+          playVideoForMood(state.mood);
+          break;
+        case 'sprite':
+          state.currentAnimation = state.mood;
+          state.currentSpriteFrame = 0;
+          break;
+        default:
+          updateDefaultPetExpression();
+      }
+
+      moodIndicator.style.background = moodColors[state.mood] || moodColors.neutral;
+      emit('animationChanged', { animation: state.mood, mood: state.mood });
+    }
+
+    function updateStatsFromMoodlets(moodlets) {
+      // Calculate overall stats from moodlet categories
+      let totalPositive = 0;
+      let totalMoodlets = 0;
+
+      // Map moodlet categories to stats
+      if (moodlets.hygiene) {
+        totalMoodlets++;
+        if (moodlets.hygiene.value > 0) totalPositive++;
+      }
+      if (moodlets.nutrition) {
+        totalMoodlets++;
+        if (moodlets.nutrition.value > 0) totalPositive++;
+        state.hunger = Math.max(0, Math.min(100, 50 + moodlets.nutrition.value * 50));
+      }
+      if (moodlets.hydration) {
+        totalMoodlets++;
+        if (moodlets.hydration.value > 0) totalPositive++;
+      }
+      if (moodlets.productivity) {
+        totalMoodlets++;
+        if (moodlets.productivity.value > 0) totalPositive++;
+        state.energy = Math.max(0, Math.min(100, 50 + moodlets.productivity.value * 50));
+      }
+      if (moodlets.health) {
+        totalMoodlets++;
+        if (moodlets.health.value > 0) totalPositive++;
+      }
+      if (moodlets.financial) {
+        totalMoodlets++;
+        if (moodlets.financial.value > 0) totalPositive++;
+      }
+
+      // Calculate happiness from overall moodlet state
+      if (totalMoodlets > 0) {
+        state.happiness = Math.round((totalPositive / totalMoodlets) * 100);
+      }
+
+      updateStatsDisplay();
+    }
+
+    function updateStatsDisplay() {
+      document.getElementById('happinessBar').style.width = state.happiness + '%';
+      document.getElementById('happinessValue').textContent = state.happiness + '%';
+
+      document.getElementById('energyBar').style.width = state.energy + '%';
+      document.getElementById('energyValue').textContent = state.energy + '%';
+
+      document.getElementById('hungerBar').style.width = state.hunger + '%';
+      document.getElementById('hungerValue').textContent = state.hunger + '%';
+    }
+
+    // ===== INTERACTIONS =====
+    function interact(type) {
+      switch (type) {
+        case 'pet':
+          showSpeech(['I love you!', 'That feels nice!', 'Purrrr...', '&#x1F60A;'][Math.floor(Math.random() * 4)]);
+          createHeart();
+          state.happiness = Math.min(100, state.happiness + 5);
+          triggerAnimation('happy');
+          break;
+        case 'feed':
+          showSpeech(['Yummy!', 'Thanks for the food!', 'Nom nom nom!'][Math.floor(Math.random() * 3)]);
+          state.hunger = Math.min(100, state.hunger + 20);
+          triggerAnimation('eating');
+          break;
+        case 'play':
+          showSpeech(['Wheee!', 'This is fun!', 'Let\'s play more!'][Math.floor(Math.random() * 3)]);
+          state.happiness = Math.min(100, state.happiness + 10);
+          state.energy = Math.max(0, state.energy - 10);
+          triggerAnimation('celebrating');
+          break;
+        case 'sleep':
+          showSpeech(['Zzz...', 'So sleepy...', 'Good night!'][Math.floor(Math.random() * 3)]);
+          state.energy = Math.min(100, state.energy + 30);
+          triggerAnimation('sleeping');
+          break;
+      }
+
+      updateStatsDisplay();
+      emitPetStatus();
+      emit('petInteraction', { type, stats: { happiness: state.happiness, energy: state.energy, hunger: state.hunger } });
+    }
+
+    function triggerAnimation(animName) {
+      state.currentAnimation = animName;
+
+      switch (state.mediaSource) {
+        case 'lottie':
+          playLottieSegment(animName);
+          break;
+        case 'video':
+          playVideoForMood(animName);
+          break;
+        case 'sprite':
+          state.currentSpriteFrame = 0;
+          break;
+        default:
+          state.mood = animName;
+          updateDefaultPetExpression();
+      }
+
+      emit('animationChanged', { animation: animName });
+
+      // Return to idle after a delay
+      if (animName !== 'idle' && animName !== 'sleeping') {
+        setTimeout(() => {
+          state.currentAnimation = 'idle';
+          if (state.mediaSource === 'default') {
+            updateMoodFromStats();
+          }
+        }, 3000);
+      }
+    }
+
+    function updateMoodFromStats() {
+      if (state.hunger < 30) {
+        state.mood = 'hungry';
+      } else if (state.energy < 30) {
+        state.mood = 'tired';
+      } else if (state.happiness < 30) {
+        state.mood = 'sad';
+      } else if (state.happiness > 80) {
+        state.mood = 'happy';
+      } else {
+        state.mood = 'neutral';
+      }
+      updateDefaultPetExpression();
+    }
+
+    function showSpeech(text) {
+      speechBubble.innerHTML = text;
+      speechBubble.classList.add('show');
+      setTimeout(() => speechBubble.classList.remove('show'), 2000);
+    }
+
+    function createHeart() {
+      const heart = document.createElement('div');
+      heart.className = 'heart';
+      heart.innerHTML = ['&#x2764;', '&#x1F497;', '&#x1F496;', '&#x1F49B;'][Math.floor(Math.random() * 4)];
+      heart.style.left = (20 + Math.random() * 60) + '%';
+      heart.style.top = (30 + Math.random() * 30) + '%';
+      petContainer.appendChild(heart);
+      setTimeout(() => heart.remove(), 1500);
+    }
+
+    function taskCompleted(data) {
+      // Celebrate when tasks are completed
+      showSpeech(['Great job!', 'You did it!', 'Awesome!', 'Keep it up!'][Math.floor(Math.random() * 4)]);
+      createHeart();
+      state.happiness = Math.min(100, state.happiness + 3);
+      triggerAnimation('celebrating');
+      updateStatsDisplay();
+      emitPetStatus();
+    }
+
+    // ===== EMIT FUNCTIONS =====
+    function emit(type, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type, payload }
+      }, '*');
+    }
+
+    function emitPetStatus() {
+      emit('petStatus', {
+        name: state.name,
+        mood: state.mood,
+        happiness: state.happiness,
+        energy: state.energy,
+        hunger: state.hunger,
+        mediaSource: state.mediaSource
+      });
+    }
+
+    // ===== EVENT HANDLERS =====
+    // Pet container click
+    petContainer.onclick = (e) => {
+      if (e.target.closest('.action-btn') || e.target.closest('.speech-bubble')) return;
+      interact('pet');
+    };
+
+    // Action buttons
+    document.getElementById('btnPet').onclick = (e) => { e.stopPropagation(); interact('pet'); };
+    document.getElementById('btnFeed').onclick = (e) => { e.stopPropagation(); interact('feed'); };
+    document.getElementById('btnPlay').onclick = (e) => { e.stopPropagation(); interact('play'); };
+    document.getElementById('btnSleep').onclick = (e) => { e.stopPropagation(); interact('sleep'); };
+
+    // Settings
+    document.getElementById('btnSettings').onclick = () => {
+      document.getElementById('settingsPanel').classList.add('show');
+    };
+
+    document.getElementById('btnCloseSettings').onclick = () => {
+      document.getElementById('settingsPanel').classList.remove('show');
+    };
+
+    document.getElementById('btnSaveName').onclick = () => {
+      state.name = document.getElementById('petNameInput').value || 'My Pet';
+      document.getElementById('petNameDisplay').textContent = state.name;
+      emitPetStatus();
+    };
+
+    // Media source buttons
+    document.querySelectorAll('.media-source-btn').forEach(btn => {
+      btn.onclick = () => setMediaSource(btn.dataset.source);
+    });
+
+    document.getElementById('btnLoadLottie').onclick = () => {
+      const url = document.getElementById('lottieUrl').value;
+      if (url) loadLottie(url);
+    };
+
+    document.getElementById('btnLoadVideo').onclick = () => {
+      const url = document.getElementById('videoUrl').value;
+      if (url) loadVideo(url);
+    };
+
+    document.getElementById('btnRequestMood').onclick = () => {
+      emit('requestMoodSync', {});
+      showSpeech('Syncing mood...');
+    };
+
+    // ===== MESSAGE HANDLING =====
+    window.addEventListener('message', (event) => {
+      const { type, portName, value } = event.data;
+
+      if (type === 'pipeline:input') {
+        switch (portName) {
+          case 'setMood':
+            setMood(value);
+            break;
+          case 'triggerAnimation':
+            triggerAnimation(value);
+            break;
+          case 'setLottie':
+            loadLottie(value.url, value.data);
+            if (value.animationMap) {
+              state.lottieAnimationMap = { ...state.lottieAnimationMap, ...value.animationMap };
+            }
+            break;
+          case 'setVideo':
+            loadVideo(value.url);
+            if (value.videoMap) {
+              state.videoMap = value.videoMap;
+            }
+            break;
+          case 'setSprite':
+            loadSprite(value.imageUrl, value.config, value.animations);
+            break;
+          case 'setPetName':
+            state.name = value;
+            document.getElementById('petNameDisplay').textContent = value;
+            document.getElementById('petNameInput').value = value;
+            emitPetStatus();
+            break;
+          case 'interact':
+            interact(value);
+            break;
+          case 'taskCompleted':
+            taskCompleted(value);
+            break;
+        }
+      }
+    });
+
+    // ===== PASSIVE STAT DECAY =====
+    setInterval(() => {
+      // Slowly decrease stats over time
+      state.hunger = Math.max(0, state.hunger - 0.5);
+      state.energy = Math.max(0, state.energy - 0.3);
+
+      if (state.hunger < 20 || state.energy < 20) {
+        state.happiness = Math.max(0, state.happiness - 0.5);
+      }
+
+      updateStatsDisplay();
+      updateMoodFromStats();
+    }, 30000); // Every 30 seconds
+
+    // ===== INIT =====
+    updateDefaultPetExpression();
+    updateStatsDisplay();
+    emitPetStatus();
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

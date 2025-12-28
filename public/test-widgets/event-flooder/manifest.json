@@ -1,0 +1,23 @@
+{
+    "id": "debug-event-flooder",
+    "name": "Event Flooder",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "flood-response": {
+            "type": "event",
+            "description": "Receives flood events from other instances"
+        }
+    },
+    "outputs": {
+        "flood": {
+            "type": "event",
+            "description": "Emits flood events at configurable rates"
+        }
+    }
+}

@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Character</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-tertiary: #0f3460;
+      --accent: #e94560;
+      --accent-hover: #ff6b6b;
+      --text-primary: #eee;
+      --text-secondary: #aaa;
+      --border: #333;
+      --success: #4ade80;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .btn {
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent);
+    }
+
+    .btn.active {
+      background: var(--accent);
+      border-color: var(--accent-hover);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-icon {
+      padding: 6px 8px;
+    }
+
+    .main-content {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    /* Character Preview */
+    .preview-section {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .preview-container {
+      display: flex;
+      gap: 12px;
+    }
+
+    .character-preview {
+      flex: 1;
+      background: repeating-conic-gradient(#222 0% 25%, #333 0% 50%) 50% / 16px 16px;
+      border-radius: 6px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .preview-canvas {
+      image-rendering: pixelated;
+    }
+
+    .direction-control {
+      width: 100px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .dir-btn {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .dir-btn:hover {
+      background: var(--accent);
+    }
+
+    .dir-btn.active {
+      background: var(--accent);
+    }
+
+    .dir-btn.center {
+      background: var(--bg-primary);
+    }
+
+    /* Animation Controls */
+    .anim-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .anim-select {
+      flex: 1;
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    /* Properties */
+    .properties-section {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .prop-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .prop-label {
+      width: 80px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .prop-input {
+      flex: 1;
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    .prop-input[type="color"] {
+      padding: 2px;
+      width: 40px;
+      height: 30px;
+      cursor: pointer;
+    }
+
+    .color-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .color-preview {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* Sprite Connection */
+    .sprite-section {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .sprite-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: var(--bg-primary);
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .sprite-status .icon {
+      font-size: 24px;
+    }
+
+    .sprite-status .info {
+      flex: 1;
+    }
+
+    .sprite-status .name {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .sprite-status .details {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .sprite-status.connected {
+      border: 1px solid var(--success);
+    }
+
+    .sprite-status.connected .icon {
+      color: var(--success);
+    }
+
+    /* Animation Mapping */
+    .mapping-section {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .mapping-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mapping-row label {
+      width: 60px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .mapping-row select {
+      flex: 1;
+      padding: 4px 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 11px;
+    }
+
+    /* Movement Settings */
+    .settings-section {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .slider-row label {
+      width: 100px;
+      font-size: 12px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+    }
+
+    .slider-row .value {
+      width: 40px;
+      text-align: right;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .checkbox-row label {
+      font-size: 12px;
+    }
+
+    /* Actions */
+    .actions-section {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .actions-section .btn {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      padding: 4px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Default character (when no sprite) */
+    .default-character {
+      position: relative;
+    }
+
+    .char-body {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-title">🎮 Game Character</span>
+    <button class="btn btn-icon" id="btnExport" title="Export Character">💾</button>
+    <button class="btn btn-icon" id="btnImport" title="Import Character">📂</button>
+    <button class="btn btn-icon" id="btnReset" title="Reset">🔄</button>
+  </div>
+
+  <div class="main-content">
+    <!-- Character Preview -->
+    <div class="preview-section">
+      <div class="section-title">Character Preview</div>
+      <div class="preview-container">
+        <div class="character-preview">
+          <canvas id="previewCanvas" class="preview-canvas" width="128" height="128"></canvas>
+        </div>
+        <div class="direction-control">
+          <button class="dir-btn" data-dir="nw">↖</button>
+          <button class="dir-btn" data-dir="n">↑</button>
+          <button class="dir-btn" data-dir="ne">↗</button>
+          <button class="dir-btn" data-dir="w">←</button>
+          <button class="dir-btn center" data-dir="">●</button>
+          <button class="dir-btn" data-dir="e">→</button>
+          <button class="dir-btn" data-dir="sw">↙</button>
+          <button class="dir-btn active" data-dir="s">↓</button>
+          <button class="dir-btn" data-dir="se">↘</button>
+        </div>
+      </div>
+      <div class="anim-controls">
+        <select class="anim-select" id="animSelect">
+          <option value="idle">Idle</option>
+          <option value="walk">Walk</option>
+        </select>
+        <button class="btn btn-icon" id="btnPlayAnim">▶️</button>
+        <button class="btn btn-icon" id="btnStopAnim">⏹</button>
+      </div>
+    </div>
+
+    <!-- Character Properties -->
+    <div class="properties-section">
+      <div class="section-title">Properties</div>
+      <div class="prop-row">
+        <label class="prop-label">Name:</label>
+        <input type="text" class="prop-input" id="charName" value="Player" placeholder="Character name">
+      </div>
+      <div class="prop-row">
+        <label class="prop-label">Body Color:</label>
+        <div class="color-group">
+          <input type="color" class="prop-input" id="bodyColor" value="#4a90d9">
+          <div class="color-preview" id="bodyColorPreview" style="background: #4a90d9;"></div>
+        </div>
+      </div>
+      <div class="prop-row">
+        <label class="prop-label">Skin Color:</label>
+        <div class="color-group">
+          <input type="color" class="prop-input" id="skinColor" value="#ffcc99">
+          <div class="color-preview" id="skinColorPreview" style="background: #ffcc99;"></div>
+        </div>
+      </div>
+      <div class="prop-row">
+        <label class="prop-label">Hair Color:</label>
+        <div class="color-group">
+          <input type="color" class="prop-input" id="hairColor" value="#4a3728">
+          <div class="color-preview" id="hairColorPreview" style="background: #4a3728;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sprite Connection -->
+    <div class="sprite-section">
+      <div class="section-title">Sprite Sheet</div>
+      <div class="sprite-status" id="spriteStatus">
+        <span class="icon">📁</span>
+        <div class="info">
+          <div class="name">No sprite connected</div>
+          <div class="details">Using default character</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" id="btnConnectSprite" style="flex: 1;">🔗 Connect Sprite Widget</button>
+        <button class="btn" id="btnClearSprite">✖</button>
+      </div>
+    </div>
+
+    <!-- Animation Mapping -->
+    <div class="mapping-section">
+      <div class="section-title">Animation Mapping</div>
+      <div class="mapping-grid" id="mappingGrid">
+        <div class="mapping-row">
+          <label>Idle:</label>
+          <select data-state="idle"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk S:</label>
+          <select data-state="walk_s"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk N:</label>
+          <select data-state="walk_n"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk E:</label>
+          <select data-state="walk_e"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk W:</label>
+          <select data-state="walk_w"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk SE:</label>
+          <select data-state="walk_se"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk SW:</label>
+          <select data-state="walk_sw"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk NE:</label>
+          <select data-state="walk_ne"><option value="">Default</option></select>
+        </div>
+        <div class="mapping-row">
+          <label>Walk NW:</label>
+          <select data-state="walk_nw"><option value="">Default</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Movement Settings -->
+    <div class="settings-section">
+      <div class="section-title">Movement Settings</div>
+      <div class="slider-row">
+        <label>Walk Speed:</label>
+        <input type="range" id="walkSpeed" min="1" max="10" value="5">
+        <span class="value" id="walkSpeedValue">5</span>
+      </div>
+      <div class="slider-row">
+        <label>Animation FPS:</label>
+        <input type="range" id="animFPS" min="4" max="24" value="8">
+        <span class="value" id="animFPSValue">8</span>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="enableCollision" checked>
+        <label>Enable Collision</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="smoothMovement" checked>
+        <label>Smooth Movement</label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-section">
+      <button class="btn primary" id="btnDeploy">🚀 Deploy to Map</button>
+      <button class="btn" id="btnSaveCharacter">💾 Save Character</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span id="statusLeft">Ready</span>
+    <span id="statusRight">Direction: S</span>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+  <script>
+    // ===== STATE =====
+    const state = {
+      // Character properties
+      name: 'Player',
+      bodyColor: '#4a90d9',
+      skinColor: '#ffcc99',
+      hairColor: '#4a3728',
+
+      // Position & direction
+      x: 0,
+      y: 0,
+      direction: 's',
+
+      // Movement
+      walkSpeed: 5,
+      animFPS: 8,
+      enableCollision: true,
+      smoothMovement: true,
+
+      // Sprite data
+      spriteData: null,
+      spriteSheet: null,
+      animations: {},
+      animationMapping: {
+        idle: '',
+        walk_s: '',
+        walk_n: '',
+        walk_e: '',
+        walk_w: '',
+        walk_se: '',
+        walk_sw: '',
+        walk_ne: '',
+        walk_nw: ''
+      },
+
+      // Animation state
+      currentAnimation: 'idle',
+      isPlaying: false,
+      currentFrame: 0,
+      animInterval: null,
+
+      // Unique ID
+      id: 'char_' + Date.now()
+    };
+
+    // ===== ELEMENTS =====
+    const previewCanvas = document.getElementById('previewCanvas');
+    const ctx = previewCanvas.getContext('2d');
+
+    // ===== DEFAULT CHARACTER RENDERING =====
+    function drawDefaultCharacter() {
+      ctx.clearRect(0, 0, 128, 128);
+
+      const centerX = 64;
+      const bottomY = 110;
+
+      // Shadow
+      ctx.beginPath();
+      ctx.ellipse(centerX, bottomY, 20, 8, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fill();
+
+      // Body
+      ctx.fillStyle = state.bodyColor;
+      ctx.beginPath();
+      ctx.ellipse(centerX, bottomY - 25, 14, 25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Head
+      ctx.fillStyle = state.skinColor;
+      ctx.beginPath();
+      ctx.arc(centerX, bottomY - 60, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Hair
+      ctx.fillStyle = state.hairColor;
+      ctx.beginPath();
+      ctx.arc(centerX, bottomY - 68, 14, Math.PI, 2 * Math.PI);
+      ctx.fill();
+
+      // Direction indicator (eyes)
+      const eyeOffset = getEyeOffset(state.direction);
+      ctx.fillStyle = '#333';
+
+      // Left eye
+      ctx.beginPath();
+      ctx.arc(centerX - 5 + eyeOffset.x, bottomY - 62 + eyeOffset.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right eye
+      ctx.beginPath();
+      ctx.arc(centerX + 5 + eyeOffset.x, bottomY - 62 + eyeOffset.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Name tag
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      const nameWidth = ctx.measureText(state.name).width;
+      ctx.fillRect(centerX - nameWidth/2 - 4, bottomY - 95, nameWidth + 8, 14);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(state.name, centerX, bottomY - 85);
+    }
+
+    function getEyeOffset(direction) {
+      const offsets = {
+        'n': { x: 0, y: -2 },
+        's': { x: 0, y: 2 },
+        'e': { x: 4, y: 0 },
+        'w': { x: -4, y: 0 },
+        'ne': { x: 3, y: -1 },
+        'nw': { x: -3, y: -1 },
+        'se': { x: 3, y: 1 },
+        'sw': { x: -3, y: 1 }
+      };
+      return offsets[direction] || { x: 0, y: 0 };
+    }
+
+    // ===== SPRITE RENDERING =====
+    function drawSpriteFrame() {
+      if (!state.spriteData || !state.spriteSheet) {
+        drawDefaultCharacter();
+        return;
+      }
+
+      ctx.clearRect(0, 0, 128, 128);
+
+      const animName = getAnimationForState();
+      const anim = state.animations[animName];
+
+      if (!anim || anim.frames.length === 0) {
+        drawDefaultCharacter();
+        return;
+      }
+
+      const frameIndex = anim.frames[state.currentFrame % anim.frames.length];
+      const config = state.spriteData.config;
+
+      const col = frameIndex % config.cols;
+      const row = Math.floor(frameIndex / config.cols);
+
+      const sx = col * config.frameWidth;
+      const sy = row * config.frameHeight;
+
+      // Scale to fit preview
+      const scale = Math.min(128 / config.frameWidth, 128 / config.frameHeight) * 0.8;
+      const dw = config.frameWidth * scale;
+      const dh = config.frameHeight * scale;
+      const dx = (128 - dw) / 2;
+      const dy = (128 - dh) / 2;
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        state.spriteSheet,
+        sx, sy, config.frameWidth, config.frameHeight,
+        dx, dy, dw, dh
+      );
+    }
+
+    function getAnimationForState() {
+      const stateKey = state.currentAnimation === 'walk'
+        ? `walk_${state.direction}`
+        : state.currentAnimation;
+
+      const mappedAnim = state.animationMapping[stateKey];
+      if (mappedAnim && state.animations[mappedAnim]) {
+        return mappedAnim;
+      }
+
+      // Fallbacks
+      if (state.currentAnimation === 'walk') {
+        // Try exact direction match
+        const dirAnims = ['walk_' + state.direction, 'walk' + state.direction];
+        for (const name of dirAnims) {
+          if (state.animations[name]) return name;
+        }
+
+        // Try any walk animation
+        for (const name of Object.keys(state.animations)) {
+          if (name.includes('walk')) return name;
+        }
+      }
+
+      // Default to idle or first animation
+      if (state.animations['idle']) return 'idle';
+      const first = Object.keys(state.animations)[0];
+      return first || null;
+    }
+
+    function render() {
+      if (state.spriteData) {
+        drawSpriteFrame();
+      } else {
+        drawDefaultCharacter();
+      }
+    }
+
+    // ===== ANIMATION PLAYBACK =====
+    function playAnimation() {
+      if (state.isPlaying) return;
+
+      state.isPlaying = true;
+      document.getElementById('btnPlayAnim').textContent = '⏸';
+
+      const fps = state.animFPS;
+      clearInterval(state.animInterval);
+
+      state.animInterval = setInterval(() => {
+        state.currentFrame++;
+        render();
+      }, 1000 / fps);
+    }
+
+    function stopAnimation() {
+      state.isPlaying = false;
+      document.getElementById('btnPlayAnim').textContent = '▶️';
+      clearInterval(state.animInterval);
+      state.currentFrame = 0;
+      render();
+    }
+
+    // ===== SPRITE DATA LOADING =====
+    function loadSpriteData(data) {
+      state.spriteData = data;
+
+      if (data.spriteData) {
+        const img = new Image();
+        img.onload = () => {
+          state.spriteSheet = img;
+          render();
+          updateStatus('Sprite loaded');
+        };
+        img.src = data.spriteData;
+      }
+
+      if (data.animations) {
+        state.animations = data.animations;
+        updateAnimationMappings();
+      }
+
+      updateSpriteStatus(true);
+    }
+
+    function updateSpriteStatus(connected) {
+      const statusEl = document.getElementById('spriteStatus');
+      if (connected && state.spriteData) {
+        statusEl.classList.add('connected');
+        statusEl.innerHTML = `
+          <span class="icon">✅</span>
+          <div class="info">
+            <div class="name">${state.spriteData.name || 'Sprite Sheet'}</div>
+            <div class="details">${state.spriteData.totalFrames || 0} frames, ${Object.keys(state.animations).length} animations</div>
+          </div>
+        `;
+      } else {
+        statusEl.classList.remove('connected');
+        statusEl.innerHTML = `
+          <span class="icon">📁</span>
+          <div class="info">
+            <div class="name">No sprite connected</div>
+            <div class="details">Using default character</div>
+          </div>
+        `;
+      }
+    }
+
+    function updateAnimationMappings() {
+      const selects = document.querySelectorAll('#mappingGrid select');
+      const animNames = Object.keys(state.animations);
+
+      selects.forEach(select => {
+        const stateKey = select.dataset.state;
+        const current = state.animationMapping[stateKey] || '';
+
+        select.innerHTML = '<option value="">Default</option>';
+        animNames.forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          option.selected = (name === current);
+          select.appendChild(option);
+        });
+
+        // Auto-map if name matches
+        if (!current) {
+          const match = animNames.find(n =>
+            n.toLowerCase().includes(stateKey.toLowerCase()) ||
+            stateKey.toLowerCase().includes(n.toLowerCase())
+          );
+          if (match) {
+            state.animationMapping[stateKey] = match;
+            select.value = match;
+          }
+        }
+      });
+    }
+
+    // ===== CHARACTER DATA =====
+    function getCharacterData() {
+      return {
+        id: state.id,
+        name: state.name,
+        color: state.bodyColor,
+        skinColor: state.skinColor,
+        hairColor: state.hairColor,
+        x: state.x,
+        y: state.y,
+        direction: state.direction,
+        speed: state.walkSpeed / 100,
+        animFPS: state.animFPS,
+        enableCollision: state.enableCollision,
+        smoothMovement: state.smoothMovement,
+        spriteData: state.spriteData,
+        animationMapping: state.animationMapping
+      };
+    }
+
+    // ===== EVENT HANDLERS =====
+    // Direction buttons
+    document.querySelectorAll('.dir-btn').forEach(btn => {
+      btn.onclick = () => {
+        const dir = btn.dataset.dir;
+        if (dir) {
+          state.direction = dir;
+          document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          render();
+          updateStatus();
+          emit('animationChanged', { direction: dir, animation: state.currentAnimation });
+        }
+      };
+    });
+
+    // Animation select
+    document.getElementById('animSelect').onchange = (e) => {
+      state.currentAnimation = e.target.value;
+      state.currentFrame = 0;
+      render();
+    };
+
+    document.getElementById('btnPlayAnim').onclick = () => {
+      if (state.isPlaying) stopAnimation();
+      else playAnimation();
+    };
+
+    document.getElementById('btnStopAnim').onclick = stopAnimation;
+
+    // Properties
+    document.getElementById('charName').oninput = (e) => {
+      state.name = e.target.value || 'Player';
+      render();
+      emitPropertiesChanged();
+    };
+
+    ['bodyColor', 'skinColor', 'hairColor'].forEach(prop => {
+      document.getElementById(prop).oninput = (e) => {
+        state[prop] = e.target.value;
+        document.getElementById(prop + 'Preview').style.background = e.target.value;
+        render();
+        emitPropertiesChanged();
+      };
+    });
+
+    // Movement settings
+    document.getElementById('walkSpeed').oninput = (e) => {
+      state.walkSpeed = parseInt(e.target.value);
+      document.getElementById('walkSpeedValue').textContent = state.walkSpeed;
+    };
+
+    document.getElementById('animFPS').oninput = (e) => {
+      state.animFPS = parseInt(e.target.value);
+      document.getElementById('animFPSValue').textContent = state.animFPS;
+      if (state.isPlaying) {
+        stopAnimation();
+        playAnimation();
+      }
+    };
+
+    document.getElementById('enableCollision').onchange = (e) => {
+      state.enableCollision = e.target.checked;
+    };
+
+    document.getElementById('smoothMovement').onchange = (e) => {
+      state.smoothMovement = e.target.checked;
+    };
+
+    // Animation mapping
+    document.querySelectorAll('#mappingGrid select').forEach(select => {
+      select.onchange = (e) => {
+        state.animationMapping[select.dataset.state] = e.target.value;
+        render();
+      };
+    });
+
+    // Sprite connection
+    document.getElementById('btnConnectSprite').onclick = () => {
+      emit('requestSpriteData', {});
+      updateStatus('Waiting for sprite widget...');
+    };
+
+    document.getElementById('btnClearSprite').onclick = () => {
+      state.spriteData = null;
+      state.spriteSheet = null;
+      state.animations = {};
+      updateSpriteStatus(false);
+      updateAnimationMappings();
+      render();
+    };
+
+    // Actions
+    document.getElementById('btnDeploy').onclick = () => {
+      const data = getCharacterData();
+      // Save to localStorage for cross-widget sharing
+      localStorage.setItem('gameCharacter_deploy', JSON.stringify(data));
+      // Also copy to clipboard for easy pasting
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => {
+        updateStatus('Character copied to clipboard & ready to deploy!');
+      }).catch(() => {
+        updateStatus('Character saved & ready to deploy!');
+      });
+      emit('deployToMap', data);
+    };
+
+    document.getElementById('btnSaveCharacter').onclick = () => {
+      const data = getCharacterData();
+      // Save to localStorage
+      localStorage.setItem('gameCharacter_saved', JSON.stringify(data));
+      updateStatus('Character saved!');
+      emit('characterData', data);
+    };
+
+    document.getElementById('btnExport').onclick = () => {
+      const data = getCharacterData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.name.toLowerCase().replace(/\s+/g, '_')}_character.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    document.getElementById('btnImport').onclick = () => {
+      document.getElementById('fileInput').click();
+    };
+
+    document.getElementById('fileInput').onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            loadCharacterData(data);
+            updateStatus('Character loaded');
+          } catch (err) {
+            updateStatus('Error loading character');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+
+    document.getElementById('btnReset').onclick = () => {
+      if (confirm('Reset character to defaults?')) {
+        state.name = 'Player';
+        state.bodyColor = '#4a90d9';
+        state.skinColor = '#ffcc99';
+        state.hairColor = '#4a3728';
+        state.direction = 's';
+        state.walkSpeed = 5;
+        state.animFPS = 8;
+
+        document.getElementById('charName').value = state.name;
+        document.getElementById('bodyColor').value = state.bodyColor;
+        document.getElementById('skinColor').value = state.skinColor;
+        document.getElementById('hairColor').value = state.hairColor;
+        document.getElementById('bodyColorPreview').style.background = state.bodyColor;
+        document.getElementById('skinColorPreview').style.background = state.skinColor;
+        document.getElementById('hairColorPreview').style.background = state.hairColor;
+        document.getElementById('walkSpeed').value = state.walkSpeed;
+        document.getElementById('walkSpeedValue').textContent = state.walkSpeed;
+        document.getElementById('animFPS').value = state.animFPS;
+        document.getElementById('animFPSValue').textContent = state.animFPS;
+
+        render();
+        updateStatus('Reset to defaults');
+      }
+    };
+
+    function loadCharacterData(data) {
+      state.id = data.id || state.id;
+      state.name = data.name || 'Player';
+      state.bodyColor = data.color || data.bodyColor || '#4a90d9';
+      state.skinColor = data.skinColor || '#ffcc99';
+      state.hairColor = data.hairColor || '#4a3728';
+      state.x = data.x || 0;
+      state.y = data.y || 0;
+      state.direction = data.direction || 's';
+      state.walkSpeed = (data.speed ? data.speed * 100 : data.walkSpeed) || 5;
+      state.animFPS = data.animFPS || 8;
+      state.enableCollision = data.enableCollision !== false;
+      state.smoothMovement = data.smoothMovement !== false;
+
+      if (data.animationMapping) {
+        state.animationMapping = { ...state.animationMapping, ...data.animationMapping };
+      }
+
+      // Update UI
+      document.getElementById('charName').value = state.name;
+      document.getElementById('bodyColor').value = state.bodyColor;
+      document.getElementById('skinColor').value = state.skinColor;
+      document.getElementById('hairColor').value = state.hairColor;
+      document.getElementById('bodyColorPreview').style.background = state.bodyColor;
+      document.getElementById('skinColorPreview').style.background = state.skinColor;
+      document.getElementById('hairColorPreview').style.background = state.hairColor;
+      document.getElementById('walkSpeed').value = state.walkSpeed;
+      document.getElementById('walkSpeedValue').textContent = state.walkSpeed;
+      document.getElementById('animFPS').value = state.animFPS;
+      document.getElementById('animFPSValue').textContent = state.animFPS;
+      document.getElementById('enableCollision').checked = state.enableCollision;
+      document.getElementById('smoothMovement').checked = state.smoothMovement;
+
+      // Update direction buttons
+      document.querySelectorAll('.dir-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.dir === state.direction);
+      });
+
+      if (data.spriteData) {
+        loadSpriteData(data.spriteData);
+      }
+
+      render();
+    }
+
+    // ===== STATUS =====
+    function updateStatus(message) {
+      if (message) {
+        document.getElementById('statusLeft').textContent = message;
+      }
+      document.getElementById('statusRight').textContent = `Direction: ${state.direction.toUpperCase()}`;
+    }
+
+    function emitPropertiesChanged() {
+      emit('propertiesChanged', {
+        name: state.name,
+        bodyColor: state.bodyColor,
+        skinColor: state.skinColor,
+        hairColor: state.hairColor
+      });
+    }
+
+    // ===== MESSAGE HANDLING =====
+    function emit(type, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type, payload }
+      }, '*');
+    }
+
+    window.addEventListener('message', (event) => {
+      const { type, portName, value } = event.data;
+
+      if (type === 'pipeline:input') {
+        switch (portName) {
+          case 'setSpriteData':
+            loadSpriteData(value);
+            break;
+
+          case 'setProperties':
+            if (value.name) state.name = value.name;
+            if (value.color) state.bodyColor = value.color;
+            if (value.skinColor) state.skinColor = value.skinColor;
+            if (value.hairColor) state.hairColor = value.hairColor;
+            if (value.speed) state.walkSpeed = value.speed * 100;
+
+            document.getElementById('charName').value = state.name;
+            document.getElementById('bodyColor').value = state.bodyColor;
+            document.getElementById('skinColor').value = state.skinColor;
+            document.getElementById('hairColor').value = state.hairColor;
+            document.getElementById('bodyColorPreview').style.background = state.bodyColor;
+            document.getElementById('skinColorPreview').style.background = state.skinColor;
+            document.getElementById('hairColorPreview').style.background = state.hairColor;
+            document.getElementById('walkSpeed').value = state.walkSpeed;
+            document.getElementById('walkSpeedValue').textContent = state.walkSpeed;
+
+            render();
+            break;
+
+          case 'setPosition':
+            state.x = value.x || 0;
+            state.y = value.y || 0;
+            emit('characterData', getCharacterData());
+            break;
+
+          case 'playAnimation':
+            state.currentAnimation = value.includes('walk') ? 'walk' : value;
+            document.getElementById('animSelect').value = state.currentAnimation;
+            playAnimation();
+            break;
+
+          case 'setDirection':
+            state.direction = value;
+            document.querySelectorAll('.dir-btn').forEach(b => {
+              b.classList.toggle('active', b.dataset.dir === value);
+            });
+            render();
+            updateStatus();
+            break;
+
+          case 'loadCharacter':
+            loadCharacterData(value);
+            break;
+        }
+      }
+    });
+
+    // ===== INIT =====
+    // Load saved character from localStorage
+    const savedChar = localStorage.getItem('gameCharacter_saved');
+    if (savedChar) {
+      try {
+        loadCharacterData(JSON.parse(savedChar));
+        updateStatus('Loaded saved character');
+      } catch (e) {
+        render();
+        updateStatus('Ready');
+      }
+    } else {
+      render();
+      updateStatus('Ready');
+    }
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

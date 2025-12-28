@@ -1,0 +1,35 @@
+{
+    "id": "stickernest.business-card-layout",
+    "name": "Business Card Layout",
+    "version": "1.0.0",
+    "kind": "hybrid",
+    "entry": "index.tsx",
+    "description": "Generates business card layouts from form data.",
+    "author": "StickerNest",
+    "tags": [
+        "layout",
+        "business-card",
+        "pipeline"
+    ],
+    "inputs": {
+        "formData": {
+            "type": "object",
+            "description": "Form data from FormFlow",
+            "required": true
+        }
+    },
+    "outputs": {
+        "businesscard:layout.ready": {
+            "type": "event",
+            "description": "Emitted when layout is generated"
+        }
+    },
+    "capabilities": {
+        "draggable": true,
+        "resizable": false
+    },
+    "size": {
+        "width": 200,
+        "height": 100
+    }
+}

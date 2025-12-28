@@ -1,0 +1,412 @@
+paths:
+  /api/canvas/{canvasId}/widgets:
+    get:
+      tags:
+        - Widgets
+      summary: List canvas widgets
+      description: Get all widgets in a canvas
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of widgets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  widgets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Widget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+        - Widgets
+      summary: Create widget
+      description: Add a new widget to the canvas
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - position
+              properties:
+                type:
+                  type: string
+                  example: sticker
+                  description: Widget type identifier
+                position:
+                  type: object
+                  required:
+                    - x
+                    - y
+                  properties:
+                    x:
+                      type: number
+                      example: 100
+                    y:
+                      type: number
+                      example: 200
+                size:
+                  type: object
+                  properties:
+                    width:
+                      type: number
+                      default: 200
+                    height:
+                      type: number
+                      default: 200
+                rotation:
+                  type: number
+                  default: 0
+                data:
+                  type: object
+                  additionalProperties: true
+                  description: Widget-specific data
+      responses:
+        '201':
+          description: Widget created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  widget:
+                    $ref: '#/components/schemas/Widget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/canvas/{canvasId}/widgets/{widgetId}:
+    get:
+      tags:
+        - Widgets
+      summary: Get widget
+      description: Get a specific widget by ID
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Widget details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  widget:
+                    $ref: '#/components/schemas/Widget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Widgets
+      summary: Update widget
+      description: Update widget properties
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                position:
+                  type: object
+                  properties:
+                    x:
+                      type: number
+                    y:
+                      type: number
+                size:
+                  type: object
+                  properties:
+                    width:
+                      type: number
+                    height:
+                      type: number
+                rotation:
+                  type: number
+                zIndex:
+                  type: number
+                data:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Widget updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  widget:
+                    $ref: '#/components/schemas/Widget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Widgets
+      summary: Delete widget
+      description: Remove a widget from the canvas
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Widget deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Widget deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/canvas/{canvasId}/widgets/batch:
+    post:
+      tags:
+        - Widgets
+      summary: Batch create widgets
+      description: Create multiple widgets at once
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - widgets
+              properties:
+                widgets:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - position
+                    properties:
+                      type:
+                        type: string
+                      position:
+                        type: object
+                        properties:
+                          x:
+                            type: number
+                          y:
+                            type: number
+                      size:
+                        type: object
+                      data:
+                        type: object
+      responses:
+        '201':
+          description: Widgets created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  widgets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Widget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    put:
+      tags:
+        - Widgets
+      summary: Batch update widgets
+      description: Update multiple widgets at once
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - updates
+              properties:
+                updates:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: string
+                      position:
+                        type: object
+                      size:
+                        type: object
+                      rotation:
+                        type: number
+                      data:
+                        type: object
+      responses:
+        '200':
+          description: Widgets updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  widgets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Widget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      tags:
+        - Widgets
+      summary: Batch delete widgets
+      description: Delete multiple widgets at once
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - widgetIds
+              properties:
+                widgetIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Widgets deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  deletedCount:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'

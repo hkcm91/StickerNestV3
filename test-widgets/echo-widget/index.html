@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .header h1 { font-size: 1rem; color: #8b5cf6; margin: 0; }
+        .badge { background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.6rem; }
+        .stats { background: rgba(0,0,0,0.3); border-radius: 6px; padding: 10px; font-size: 0.75rem; margin-bottom: 10px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .stat-label { color: #64748b; }
+        .stat-value { color: #10b981; font-family: monospace; }
+        .controls { display: flex; gap: 6px; margin-bottom: 10px; }
+        .toggle-btn {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .toggle-btn.active { background: #8b5cf6; border-color: #8b5cf6; color: white; }
+        .events { max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 6px; font-size: 0.65rem; font-family: monospace; }
+        .event-item { padding: 4px; margin-bottom: 2px; background: rgba(139,92,246,0.1); border-radius: 3px; border-left: 2px solid #8b5cf6; }
+        .event-type { color: #a78bfa; font-weight: bold; }
+        .event-meta { color: #64748b; font-size: 0.6rem; }
+        .rtt { color: #10b981; }
+        .hop { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Echo Widget</h1>
+        <span class="badge">DEBUG</span>
+    </div>
+
+    <div class="controls">
+        <button class="toggle-btn active" id="echoToggle">Echo ON</button>
+        <button class="toggle-btn" id="clearBtn">Clear</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-row">
+            <span class="stat-label">Events Received:</span>
+            <span class="stat-value" id="received">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Echoes Sent:</span>
+            <span class="stat-value" id="echoed">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Avg RTT:</span>
+            <span class="stat-value" id="avgRtt">-</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Max Hop Count:</span>
+            <span class="stat-value" id="maxHops">0</span>
+        </div>
+    </div>
+
+    <div class="events" id="events"></div>
+
+    <script>
+        let state = {
+            received: 0,
+            echoed: 0,
+            echoEnabled: true,
+            rtts: [],
+            maxHops: 0,
+            events: []
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function updateUI() {
+            document.getElementById('received').textContent = state.received.toLocaleString();
+            document.getElementById('echoed').textContent = state.echoed.toLocaleString();
+            document.getElementById('maxHops').textContent = state.maxHops;
+
+            if (state.rtts.length > 0) {
+                const avgRtt = state.rtts.reduce((a, b) => a + b, 0) / state.rtts.length;
+                document.getElementById('avgRtt').textContent = avgRtt.toFixed(2) + 'ms';
+            }
+
+            const eventsEl = document.getElementById('events');
+            eventsEl.innerHTML = state.events.slice(-15).reverse().map(e => `
+                <div class="event-item">
+                    <div class="event-type">${e.type}</div>
+                    <div class="event-meta">
+                        <span class="rtt">RTT: ${e.rtt || '-'}ms</span> |
+                        <span class="hop">Hops: ${e.hopCount || 0}</span> |
+                        seenBy: ${(e.seenBy || []).length}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleEvent(event) {
+            // Skip our own echo events to prevent infinite loops
+            if (event.type === 'widget:echo') return;
+            if (event.type.startsWith('bridge:')) return;
+            if (event.type.startsWith('debug:')) return;
+
+            state.received++;
+
+            const now = Date.now();
+            const originTime = event.payload?.timestamp || event.metadata?.originTimestamp;
+            const rtt = originTime ? now - originTime : null;
+
+            if (rtt !== null && rtt >= 0 && rtt < 10000) {
+                state.rtts.push(rtt);
+                if (state.rtts.length > 100) state.rtts.shift();
+            }
+
+            const hopCount = event.metadata?.hopCount || 0;
+            state.maxHops = Math.max(state.maxHops, hopCount);
+
+            state.events.push({
+                type: event.type,
+                rtt,
+                hopCount,
+                seenBy: event.metadata?.seenBy || [],
+                timestamp: now
+            });
+
+            if (state.events.length > 50) state.events.shift();
+
+            // Echo back if enabled
+            if (state.echoEnabled) {
+                state.echoed++;
+                emit('widget:echo', {
+                    originalType: event.type,
+                    originalPayload: event.payload,
+                    echoTimestamp: now,
+                    originalTimestamp: originTime,
+                    rtt,
+                    hopCount,
+                    seenBy: event.metadata?.seenBy || []
+                });
+            }
+
+            updateUI();
+        }
+
+        document.getElementById('echoToggle').addEventListener('click', function() {
+            state.echoEnabled = !state.echoEnabled;
+            this.textContent = state.echoEnabled ? 'Echo ON' : 'Echo OFF';
+            this.classList.toggle('active', state.echoEnabled);
+            log(`Echo ${state.echoEnabled ? 'enabled' : 'disabled'}`);
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            state.received = 0;
+            state.echoed = 0;
+            state.rtts = [];
+            state.maxHops = 0;
+            state.events = [];
+            updateUI();
+            log('Stats cleared');
+        });
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Echo Widget ready');
+
+            // Listen to all events
+            window.WidgetAPI.onEvent('*', handleEvent);
+
+            updateUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>

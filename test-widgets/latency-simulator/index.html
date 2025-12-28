@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latency Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #795548;
+            font-weight: 600;
+        }
+        .status {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .status.active { background: #2ecc71; color: #000; }
+        .status.paused { background: #f39c12; color: #000; }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .btn-ping { background: #795548; color: #fff; }
+        .btn-burst { background: #ff5722; color: #fff; }
+        .btn-clear { background: #3498db; color: #fff; }
+        .config-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+        }
+        .config-label {
+            color: #888;
+            font-size: 10px;
+        }
+        .config-value {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        input[type="range"] {
+            width: 80px;
+            height: 4px;
+        }
+        input[type="number"] {
+            width: 50px;
+            padding: 4px;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #0d1117;
+            color: #e0e0e0;
+            font-size: 10px;
+        }
+        .preset-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .preset-btn {
+            padding: 4px 8px;
+            font-size: 9px;
+            background: rgba(121, 85, 72, 0.3);
+            border: 1px solid #795548;
+            color: #bcaaa4;
+        }
+        .preset-btn:hover { background: rgba(121, 85, 72, 0.5); }
+        .preset-btn.active { background: #795548; color: #fff; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #795548;
+        }
+        .stat-label {
+            font-size: 8px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .latency-graph {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .latency-graph h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .graph-container {
+            height: 80px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        .graph-bar {
+            flex: 1;
+            background: #795548;
+            min-height: 2px;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.2s;
+            position: relative;
+        }
+        .graph-bar.timeout { background: #e74c3c; }
+        .graph-bar:hover::after {
+            content: attr(data-value);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 8px;
+            white-space: nowrap;
+        }
+        .ping-log {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .ping-log h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .ping-entry {
+            font-family: 'Consolas', monospace;
+            font-size: 9px;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+        }
+        .ping-entry:last-child { border-bottom: none; }
+        .ping-entry.success { color: #2ecc71; }
+        .ping-entry.timeout { color: #e74c3c; }
+        .ping-entry.slow { color: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⏱️ Latency Simulator</h1>
+        <span class="status active" id="status">Ready</span>
+    </div>
+
+    <div class="controls">
+        <button class="btn-ping" id="pingBtn">Single Ping</button>
+        <button class="btn-burst" id="burstBtn">Burst (10)</button>
+        <button class="btn-clear" id="clearBtn">Clear</button>
+    </div>
+
+    <div class="config-section">
+        <div class="config-row">
+            <span class="config-label">Simulated Delay (ms)</span>
+            <div class="config-value">
+                <input type="range" id="delaySlider" min="0" max="2000" value="100">
+                <input type="number" id="delayInput" min="0" max="5000" value="100">
+            </div>
+        </div>
+        <div class="config-row">
+            <span class="config-label">Jitter (±ms)</span>
+            <div class="config-value">
+                <input type="range" id="jitterSlider" min="0" max="500" value="50">
+                <input type="number" id="jitterInput" min="0" max="1000" value="50">
+            </div>
+        </div>
+        <div class="config-row">
+            <span class="config-label">Packet Loss (%)</span>
+            <div class="config-value">
+                <input type="range" id="lossSlider" min="0" max="50" value="0">
+                <input type="number" id="lossInput" min="0" max="100" value="0">
+            </div>
+        </div>
+        <div class="config-row">
+            <span class="config-label">Presets</span>
+            <div class="preset-buttons">
+                <button class="preset-btn" data-delay="0" data-jitter="0" data-loss="0">LAN</button>
+                <button class="preset-btn active" data-delay="50" data-jitter="20" data-loss="0">Cable</button>
+                <button class="preset-btn" data-delay="150" data-jitter="50" data-loss="1">DSL</button>
+                <button class="preset-btn" data-delay="300" data-jitter="100" data-loss="2">3G</button>
+                <button class="preset-btn" data-delay="500" data-jitter="200" data-loss="5">Satellite</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-value" id="pingCount">0</div>
+            <div class="stat-label">Pings</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="avgLatency">-</div>
+            <div class="stat-label">Avg (ms)</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="minLatency">-</div>
+            <div class="stat-label">Min (ms)</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="maxLatency">-</div>
+            <div class="stat-label">Max (ms)</div>
+        </div>
+    </div>
+
+    <div class="latency-graph">
+        <h3>Latency History (last 40 pings)</h3>
+        <div class="graph-container" id="graphContainer"></div>
+    </div>
+
+    <div class="ping-log">
+        <h3>Ping Log</h3>
+        <div id="pingLog">No pings yet</div>
+    </div>
+
+    <script>
+        // State
+        let delay = 100;
+        let jitter = 50;
+        let packetLoss = 0;
+        let pingCount = 0;
+        let latencies = [];
+        let pendingPings = new Map();
+        const MAX_HISTORY = 40;
+        const TIMEOUT_MS = 5000;
+        const pingHistory = [];
+
+        // DOM elements
+        const delaySlider = document.getElementById('delaySlider');
+        const delayInput = document.getElementById('delayInput');
+        const jitterSlider = document.getElementById('jitterSlider');
+        const jitterInput = document.getElementById('jitterInput');
+        const lossSlider = document.getElementById('lossSlider');
+        const lossInput = document.getElementById('lossInput');
+        const pingCountEl = document.getElementById('pingCount');
+        const avgLatencyEl = document.getElementById('avgLatency');
+        const minLatencyEl = document.getElementById('minLatency');
+        const maxLatencyEl = document.getElementById('maxLatency');
+        const graphContainer = document.getElementById('graphContainer');
+        const pingLog = document.getElementById('pingLog');
+        const presetButtons = document.querySelectorAll('.preset-btn');
+        const statusEl = document.getElementById('status');
+
+        // Initialize graph
+        for (let i = 0; i < MAX_HISTORY; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'graph-bar';
+            bar.style.height = '2px';
+            graphContainer.appendChild(bar);
+        }
+
+        function syncSliderInput(slider, input) {
+            slider.addEventListener('input', () => input.value = slider.value);
+            input.addEventListener('input', () => slider.value = input.value);
+        }
+
+        syncSliderInput(delaySlider, delayInput);
+        syncSliderInput(jitterSlider, jitterInput);
+        syncSliderInput(lossSlider, lossInput);
+
+        function getConfig() {
+            return {
+                delay: parseInt(delayInput.value) || 0,
+                jitter: parseInt(jitterInput.value) || 0,
+                packetLoss: parseInt(lossInput.value) || 0
+            };
+        }
+
+        function applyPreset(delay, jitter, loss) {
+            delaySlider.value = delayInput.value = delay;
+            jitterSlider.value = jitterInput.value = jitter;
+            lossSlider.value = lossInput.value = loss;
+        }
+
+        presetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                presetButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyPreset(
+                    parseInt(btn.dataset.delay),
+                    parseInt(btn.dataset.jitter),
+                    parseInt(btn.dataset.loss)
+                );
+            });
+        });
+
+        function calculateSimulatedDelay() {
+            const config = getConfig();
+            const jitterValue = (Math.random() - 0.5) * 2 * config.jitter;
+            return Math.max(0, config.delay + jitterValue);
+        }
+
+        function shouldDropPacket() {
+            const config = getConfig();
+            return Math.random() * 100 < config.packetLoss;
+        }
+
+        function sendPing() {
+            const pingId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const sentTime = Date.now();
+
+            pendingPings.set(pingId, {
+                sentTime,
+                timeout: setTimeout(() => handleTimeout(pingId), TIMEOUT_MS)
+            });
+
+            pingCount++;
+            pingCountEl.textContent = pingCount;
+            statusEl.textContent = 'Waiting...';
+            statusEl.className = 'status paused';
+
+            // Emit ping event
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent('delay-ping', {
+                    pingId,
+                    sentTime,
+                    simulatedDelay: calculateSimulatedDelay(),
+                    shouldDrop: shouldDropPacket()
+                });
+            }
+
+            // Simulate response (if not using real transport)
+            simulateResponse(pingId, sentTime);
+        }
+
+        function simulateResponse(pingId, sentTime) {
+            const simulatedDelay = calculateSimulatedDelay();
+            const shouldDrop = shouldDropPacket();
+
+            if (shouldDrop) {
+                // Don't respond - let timeout handle it
+                return;
+            }
+
+            setTimeout(() => {
+                handlePong(pingId, sentTime);
+            }, simulatedDelay);
+        }
+
+        function handlePong(pingId, originalSentTime) {
+            const pending = pendingPings.get(pingId);
+            if (!pending) return; // Already timed out
+
+            clearTimeout(pending.timeout);
+            pendingPings.delete(pingId);
+
+            const rtt = Date.now() - pending.sentTime;
+            latencies.push(rtt);
+            if (latencies.length > MAX_HISTORY) latencies.shift();
+
+            updateStats();
+            updateGraph(rtt, false);
+            logPing(rtt, false);
+
+            statusEl.textContent = 'Ready';
+            statusEl.className = 'status active';
+        }
+
+        function handleTimeout(pingId) {
+            pendingPings.delete(pingId);
+
+            latencies.push(TIMEOUT_MS);
+            if (latencies.length > MAX_HISTORY) latencies.shift();
+
+            updateStats();
+            updateGraph(TIMEOUT_MS, true);
+            logPing(TIMEOUT_MS, true);
+
+            statusEl.textContent = 'Ready';
+            statusEl.className = 'status active';
+        }
+
+        function updateStats() {
+            const validLatencies = latencies.filter(l => l < TIMEOUT_MS);
+
+            if (validLatencies.length === 0) {
+                avgLatencyEl.textContent = '-';
+                minLatencyEl.textContent = '-';
+                maxLatencyEl.textContent = '-';
+                return;
+            }
+
+            const avg = validLatencies.reduce((a, b) => a + b, 0) / validLatencies.length;
+            const min = Math.min(...validLatencies);
+            const max = Math.max(...validLatencies);
+
+            avgLatencyEl.textContent = Math.round(avg);
+            minLatencyEl.textContent = min;
+            maxLatencyEl.textContent = max;
+        }
+
+        function updateGraph(latency, isTimeout) {
+            const bars = graphContainer.querySelectorAll('.graph-bar');
+
+            // Shift bars left
+            for (let i = 0; i < bars.length - 1; i++) {
+                bars[i].style.height = bars[i + 1].style.height;
+                bars[i].className = bars[i + 1].className;
+                bars[i].dataset.value = bars[i + 1].dataset.value;
+            }
+
+            // Add new bar
+            const lastBar = bars[bars.length - 1];
+            const maxLatency = Math.max(...latencies, 100);
+            const height = Math.max(2, (latency / maxLatency) * 76);
+
+            lastBar.style.height = `${height}px`;
+            lastBar.className = `graph-bar ${isTimeout ? 'timeout' : ''}`;
+            lastBar.dataset.value = isTimeout ? 'TIMEOUT' : `${latency}ms`;
+        }
+
+        function logPing(latency, isTimeout) {
+            const entry = {
+                latency,
+                isTimeout,
+                timestamp: Date.now()
+            };
+            pingHistory.unshift(entry);
+            if (pingHistory.length > 20) pingHistory.pop();
+
+            renderPingLog();
+        }
+
+        function renderPingLog() {
+            if (pingHistory.length === 0) {
+                pingLog.textContent = 'No pings yet';
+                return;
+            }
+
+            const entries = pingHistory.map((p, i) => {
+                const seq = pingCount - i;
+                const cls = p.isTimeout ? 'timeout' : (p.latency > 200 ? 'slow' : 'success');
+                const value = p.isTimeout ? 'TIMEOUT' : `${p.latency}ms`;
+
+                return `<div class="ping-entry ${cls}">
+                    seq=${seq} time=${value}
+                </div>`;
+            }).join('');
+
+            pingLog.innerHTML = entries;
+        }
+
+        function sendBurst() {
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => sendPing(), i * 100);
+            }
+        }
+
+        function clearAll() {
+            pendingPings.forEach(p => clearTimeout(p.timeout));
+            pendingPings.clear();
+            latencies.length = 0;
+            pingHistory.length = 0;
+            pingCount = 0;
+            pingCountEl.textContent = '0';
+            updateStats();
+
+            const bars = graphContainer.querySelectorAll('.graph-bar');
+            bars.forEach(bar => {
+                bar.style.height = '2px';
+                bar.className = 'graph-bar';
+            });
+
+            renderPingLog();
+        }
+
+        // Event listeners
+        document.getElementById('pingBtn').addEventListener('click', sendPing);
+        document.getElementById('burstBtn').addEventListener('click', sendBurst);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+        // Listen for echo responses
+        if (window.WidgetAPI) {
+            window.WidgetAPI.onEvent('delayed-echo', (payload) => {
+                if (payload.pingId) {
+                    handlePong(payload.pingId, payload.originalSentTime);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

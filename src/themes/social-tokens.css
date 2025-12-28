@@ -1,0 +1,420 @@
+/**
+ * StickerNest v2 - Social Widget Theme Tokens
+ * ============================================
+ *
+ * CSS Custom Properties specifically for social widgets.
+ * These extend the core theme tokens with social-specific semantics.
+ *
+ * ## Usage in Widgets
+ *
+ * Social widgets should reference these tokens in their CSS:
+ *
+ * ```css
+ * .user-card {
+ *   background: var(--sn-social-card-bg);
+ *   border: 1px solid var(--sn-social-card-border);
+ * }
+ *
+ * .online-indicator {
+ *   background: var(--sn-social-status-online);
+ * }
+ * ```
+ *
+ * ## Integration
+ *
+ * These tokens are injected into widget iframes via WidgetThemeInjector.
+ * They automatically respond to theme changes in the host application.
+ *
+ * @see theme-tokens.css - Core theme tokens
+ * @see WidgetThemeInjector - For token injection
+ */
+
+:root {
+  /* ===========================================
+   * SOCIAL CARD TOKENS
+   * Used for user cards, profile cards, etc.
+   * =========================================== */
+
+  --sn-social-card-bg: var(--sn-bg-elevated, #1e1e42);
+  --sn-social-card-bg-hover: var(--sn-bg-tertiary, #1a1a3a);
+  --sn-social-card-border: var(--sn-border-primary, rgba(255, 255, 255, 0.08));
+  --sn-social-card-radius: var(--sn-radius-lg, 12px);
+  --sn-social-card-shadow: var(--sn-elevation-card, 0 2px 8px rgba(0, 0, 0, 0.2));
+
+  /* ===========================================
+   * SOCIAL STATUS COLORS
+   * For presence, activity, and connection state
+   * =========================================== */
+
+  /* Online/presence indicators */
+  --sn-social-status-online: #22c55e;
+  --sn-social-status-away: #f59e0b;
+  --sn-social-status-busy: #ef4444;
+  --sn-social-status-offline: var(--sn-text-muted, #64748b);
+  --sn-social-status-idle: #8b8b8b;
+
+  /* Status ring/border for avatars */
+  --sn-social-status-ring-online: 0 0 0 2px var(--sn-social-status-online);
+  --sn-social-status-ring-away: 0 0 0 2px var(--sn-social-status-away);
+  --sn-social-status-ring-busy: 0 0 0 2px var(--sn-social-status-busy);
+
+  /* ===========================================
+   * SOCIAL INTERACTION COLORS
+   * For actions like follow, like, comment
+   * =========================================== */
+
+  /* Follow/friend actions */
+  --sn-social-follow-bg: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-follow-bg-hover: var(--sn-accent-hover, #7c3aed);
+  --sn-social-following-bg: var(--sn-bg-tertiary, #1a1a3a);
+  --sn-social-following-border: var(--sn-accent-primary, #8b5cf6);
+
+  /* Like/reaction colors */
+  --sn-social-like: #ef4444;
+  --sn-social-like-hover: #dc2626;
+  --sn-social-like-bg: rgba(239, 68, 68, 0.15);
+
+  /* Comment indicators */
+  --sn-social-comment: var(--sn-info, #3b82f6);
+  --sn-social-comment-bg: rgba(59, 130, 246, 0.15);
+
+  /* Share/repost */
+  --sn-social-share: var(--sn-success, #22c55e);
+  --sn-social-share-bg: rgba(34, 197, 94, 0.15);
+
+  /* ===========================================
+   * FEED & ACTIVITY TOKENS
+   * For activity feeds, timelines, live feeds
+   * =========================================== */
+
+  --sn-social-feed-bg: var(--sn-bg-surface, #0f0f24);
+  --sn-social-feed-item-bg: var(--sn-bg-elevated, #1e1e42);
+  --sn-social-feed-item-hover: var(--sn-bg-tertiary, #1a1a3a);
+  --sn-social-feed-divider: var(--sn-border-secondary, rgba(255, 255, 255, 0.04));
+  --sn-social-feed-unread-indicator: var(--sn-accent-primary, #8b5cf6);
+
+  /* Activity type colors (for icons/badges) */
+  --sn-social-activity-follow: var(--sn-rainbow-purple, #a855f7);
+  --sn-social-activity-like: var(--sn-rainbow-red, #ff6b6b);
+  --sn-social-activity-comment: var(--sn-rainbow-blue, #6b9fff);
+  --sn-social-activity-share: var(--sn-rainbow-green, #6bcb77);
+  --sn-social-activity-mention: var(--sn-rainbow-cyan, #4ecdc4);
+  --sn-social-activity-fork: var(--sn-rainbow-orange, #ffa06b);
+
+  /* ===========================================
+   * NOTIFICATION TOKENS
+   * For notification badges, alerts, toasts
+   * =========================================== */
+
+  --sn-social-notification-badge: #ef4444;
+  --sn-social-notification-badge-text: #ffffff;
+  --sn-social-notification-unread-bg: rgba(139, 92, 246, 0.1);
+  --sn-social-notification-unread-border: var(--sn-accent-primary, #8b5cf6);
+
+  /* Notification type colors */
+  --sn-social-notif-follow: var(--sn-rainbow-purple, #a855f7);
+  --sn-social-notif-like: var(--sn-rainbow-red, #ff6b6b);
+  --sn-social-notif-comment: var(--sn-rainbow-blue, #6b9fff);
+  --sn-social-notif-mention: var(--sn-rainbow-cyan, #4ecdc4);
+  --sn-social-notif-fork: var(--sn-rainbow-orange, #ffa06b);
+  --sn-social-notif-system: var(--sn-text-secondary, #94a3b8);
+
+  /* ===========================================
+   * CHAT & MESSAGING TOKENS
+   * For chat widgets, message bubbles, etc.
+   * =========================================== */
+
+  --sn-social-chat-bg: var(--sn-bg-surface, #0f0f24);
+  --sn-social-chat-bubble-own: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-chat-bubble-other: var(--sn-bg-elevated, #1e1e42);
+  --sn-social-chat-bubble-text-own: #ffffff;
+  --sn-social-chat-bubble-text-other: var(--sn-text-primary, #f0f4f8);
+  --sn-social-chat-input-bg: var(--sn-bg-tertiary, #1a1a3a);
+  --sn-social-chat-input-border: var(--sn-border-primary, rgba(255, 255, 255, 0.08));
+  --sn-social-chat-typing: var(--sn-info, #3b82f6);
+
+  /* ===========================================
+   * PRESENCE & AVATAR TOKENS
+   * For user presence, avatar displays
+   * =========================================== */
+
+  --sn-social-avatar-border: var(--sn-border-primary, rgba(255, 255, 255, 0.08));
+  --sn-social-avatar-placeholder-bg: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-avatar-placeholder-text: #ffffff;
+  --sn-social-avatar-stack-overlap: -8px;
+  --sn-social-avatar-ring-width: 2px;
+
+  /* Friend highlighting */
+  --sn-social-friend-highlight: rgba(139, 92, 246, 0.2);
+  --sn-social-friend-border: var(--sn-accent-tertiary, #a78bfa);
+
+  /* ===========================================
+   * COMMENT THREAD TOKENS
+   * For threaded comments, replies
+   * =========================================== */
+
+  --sn-social-comment-thread-line: var(--sn-border-primary, rgba(255, 255, 255, 0.08));
+  --sn-social-comment-thread-line-width: 2px;
+  --sn-social-comment-reply-bg: rgba(0, 0, 0, 0.2);
+  --sn-social-comment-reply-indent: 24px;
+  --sn-social-comment-author-color: var(--sn-text-primary, #f0f4f8);
+  --sn-social-comment-time-color: var(--sn-text-muted, #64748b);
+
+  /* ===========================================
+   * REACTION TOKENS
+   * For emoji reactions, like counts
+   * =========================================== */
+
+  --sn-social-reaction-bg: var(--sn-bg-tertiary, #1a1a3a);
+  --sn-social-reaction-bg-active: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-reaction-border: var(--sn-border-primary, rgba(255, 255, 255, 0.08));
+  --sn-social-reaction-border-active: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-reaction-text-active: #ffffff;
+
+  /* ===========================================
+   * SOCIAL BUTTON TOKENS
+   * For follow buttons, action buttons
+   * =========================================== */
+
+  --sn-social-btn-follow-bg: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-btn-follow-hover: var(--sn-accent-hover, #7c3aed);
+  --sn-social-btn-follow-text: #ffffff;
+
+  --sn-social-btn-following-bg: transparent;
+  --sn-social-btn-following-border: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-btn-following-text: var(--sn-accent-primary, #8b5cf6);
+  --sn-social-btn-following-hover-bg: rgba(139, 92, 246, 0.1);
+
+  --sn-social-btn-message-bg: var(--sn-bg-tertiary, #1a1a3a);
+  --sn-social-btn-message-hover: var(--sn-bg-elevated, #1e1e42);
+  --sn-social-btn-message-text: var(--sn-text-primary, #f0f4f8);
+
+  /* ===========================================
+   * TYPING INDICATOR
+   * Animation tokens for typing dots
+   * =========================================== */
+
+  --sn-social-typing-dot-size: 4px;
+  --sn-social-typing-dot-color: var(--sn-info, #3b82f6);
+  --sn-social-typing-animation-duration: 1.4s;
+
+  /* ===========================================
+   * SOCIAL LAYER Z-INDEX
+   * Stacking order for social overlays
+   * =========================================== */
+
+  --sn-social-z-presence: 100;
+  --sn-social-z-notification: 150;
+  --sn-social-z-chat: 120;
+  --sn-social-z-tooltip: 200;
+}
+
+/* ===========================================
+ * LIGHT THEME OVERRIDES
+ * =========================================== */
+
+[data-theme="light"] {
+  --sn-social-card-bg: #ffffff;
+  --sn-social-card-bg-hover: #f7f8fa;
+  --sn-social-card-border: rgba(0, 0, 0, 0.08);
+  --sn-social-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  --sn-social-feed-bg: #fafbfc;
+  --sn-social-feed-item-bg: #ffffff;
+  --sn-social-feed-item-hover: #f7f8fa;
+  --sn-social-feed-divider: rgba(0, 0, 0, 0.06);
+
+  --sn-social-chat-bg: #fafbfc;
+  --sn-social-chat-bubble-other: #f0f2f5;
+  --sn-social-chat-bubble-text-other: #1a1a2e;
+  --sn-social-chat-input-bg: #ffffff;
+  --sn-social-chat-input-border: rgba(0, 0, 0, 0.1);
+
+  --sn-social-avatar-border: rgba(0, 0, 0, 0.08);
+  --sn-social-friend-highlight: rgba(139, 92, 246, 0.1);
+
+  --sn-social-comment-thread-line: rgba(0, 0, 0, 0.1);
+  --sn-social-comment-reply-bg: rgba(0, 0, 0, 0.03);
+  --sn-social-comment-author-color: #1a1a2e;
+  --sn-social-comment-time-color: #6b7280;
+
+  --sn-social-reaction-bg: #f0f2f5;
+  --sn-social-reaction-border: rgba(0, 0, 0, 0.08);
+
+  --sn-social-btn-message-bg: #f0f2f5;
+  --sn-social-btn-message-hover: #e5e7eb;
+  --sn-social-btn-message-text: #1a1a2e;
+
+  --sn-social-notification-unread-bg: rgba(139, 92, 246, 0.08);
+}
+
+/* ===========================================
+ * SOCIAL WIDGET UTILITY CLASSES
+ * =========================================== */
+
+/* Status indicator dot */
+.sn-social-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--sn-social-card-bg);
+}
+.sn-social-status-dot.online { background: var(--sn-social-status-online); }
+.sn-social-status-dot.away { background: var(--sn-social-status-away); }
+.sn-social-status-dot.busy { background: var(--sn-social-status-busy); }
+.sn-social-status-dot.offline { background: var(--sn-social-status-offline); }
+.sn-social-status-dot.idle { background: var(--sn-social-status-idle); }
+
+/* Activity type badge */
+.sn-social-activity-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.sn-social-activity-badge.follow { background: var(--sn-social-activity-follow); }
+.sn-social-activity-badge.like { background: var(--sn-social-activity-like); }
+.sn-social-activity-badge.comment { background: var(--sn-social-activity-comment); }
+.sn-social-activity-badge.share { background: var(--sn-social-activity-share); }
+.sn-social-activity-badge.mention { background: var(--sn-social-activity-mention); }
+.sn-social-activity-badge.fork { background: var(--sn-social-activity-fork); }
+
+/* Notification badge */
+.sn-social-notif-badge {
+  background: var(--sn-social-notification-badge);
+  color: var(--sn-social-notification-badge-text);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Unread indicator */
+.sn-social-unread {
+  background: var(--sn-social-notification-unread-bg);
+  border-left: 3px solid var(--sn-social-notification-unread-border);
+}
+
+/* Avatar with status */
+.sn-social-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.sn-social-avatar-wrapper .sn-social-status-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+/* Chat bubble styles */
+.sn-social-chat-bubble {
+  padding: 8px 12px;
+  border-radius: 16px;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+.sn-social-chat-bubble.own {
+  background: var(--sn-social-chat-bubble-own);
+  color: var(--sn-social-chat-bubble-text-own);
+  border-bottom-right-radius: 4px;
+}
+.sn-social-chat-bubble.other {
+  background: var(--sn-social-chat-bubble-other);
+  color: var(--sn-social-chat-bubble-text-other);
+  border-bottom-left-radius: 4px;
+}
+
+/* Follow button states */
+.sn-social-btn-follow {
+  background: var(--sn-social-btn-follow-bg);
+  color: var(--sn-social-btn-follow-text);
+  border: none;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.sn-social-btn-follow:hover {
+  background: var(--sn-social-btn-follow-hover);
+}
+.sn-social-btn-follow.following {
+  background: var(--sn-social-btn-following-bg);
+  color: var(--sn-social-btn-following-text);
+  border: 1px solid var(--sn-social-btn-following-border);
+}
+.sn-social-btn-follow.following:hover {
+  background: var(--sn-social-btn-following-hover-bg);
+}
+
+/* Typing indicator animation */
+@keyframes sn-social-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
+.sn-social-typing-dots {
+  display: flex;
+  gap: 2px;
+}
+.sn-social-typing-dot {
+  width: var(--sn-social-typing-dot-size);
+  height: var(--sn-social-typing-dot-size);
+  border-radius: 50%;
+  background: var(--sn-social-typing-dot-color);
+  animation: sn-social-typing-bounce var(--sn-social-typing-animation-duration) infinite;
+}
+.sn-social-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.sn-social-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Reaction pill */
+.sn-social-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--sn-social-reaction-bg);
+  border: 1px solid var(--sn-social-reaction-border);
+  border-radius: 9999px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sn-social-reaction:hover {
+  background: var(--sn-social-reaction-bg-active);
+  border-color: var(--sn-social-reaction-border-active);
+}
+.sn-social-reaction.active {
+  background: var(--sn-social-reaction-bg-active);
+  border-color: var(--sn-social-reaction-border-active);
+  color: var(--sn-social-reaction-text-active);
+}
+
+/* Comment thread line */
+.sn-social-thread-line {
+  position: absolute;
+  left: 16px;
+  top: 40px;
+  bottom: 0;
+  width: var(--sn-social-comment-thread-line-width);
+  background: var(--sn-social-comment-thread-line);
+}
+
+/* Social card hover effect */
+.sn-social-card {
+  background: var(--sn-social-card-bg);
+  border: 1px solid var(--sn-social-card-border);
+  border-radius: var(--sn-social-card-radius);
+  box-shadow: var(--sn-social-card-shadow);
+  transition: all 0.2s ease;
+}
+.sn-social-card:hover {
+  background: var(--sn-social-card-bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--sn-elevation-3);
+}

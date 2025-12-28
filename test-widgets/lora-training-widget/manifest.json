@@ -1,0 +1,69 @@
+{
+  "id": "lora-training-widget",
+  "name": "LoRA Trainer",
+  "version": "1.1.0",
+  "description": "Train custom LoRA models with AI-powered image captioning and preprocessing. Supports FLUX LoRA training via Replicate. Manage and apply trained LoRAs.",
+  "kind": "2d",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "addTrainingImages": {
+      "type": "object",
+      "description": "Add images for training { images: [{url, name}] }"
+    },
+    "setApiKey": {
+      "type": "object",
+      "description": "Set API key { provider, apiKey }"
+    },
+    "startTraining": {
+      "type": "object",
+      "description": "Start training with config { triggerWord, steps, etc. }"
+    },
+    "cancelTraining": {
+      "type": "trigger",
+      "description": "Cancel current training"
+    },
+    "selectLora": {
+      "type": "string",
+      "description": "Select a trained LoRA by ID"
+    }
+  },
+  "outputs": {
+    "trainingStarted": {
+      "type": "object",
+      "description": "Emitted when training starts"
+    },
+    "trainingProgress": {
+      "type": "object",
+      "description": "Emitted with training progress"
+    },
+    "trainingCompleted": {
+      "type": "object",
+      "description": "Emitted when training completes { loraUrl, triggerWord }"
+    },
+    "trainingFailed": {
+      "type": "object",
+      "description": "Emitted when training fails"
+    },
+    "loraSelected": {
+      "type": "object",
+      "description": "Emitted when user selects a LoRA { url, name, triggerWord, scale }"
+    }
+  },
+  "events": {
+    "listens": ["gallery:image-selected"],
+    "emits": ["lora:selected", "lora:training-completed"]
+  },
+  "size": {
+    "width": 400,
+    "height": 650,
+    "minWidth": 340,
+    "minHeight": 500,
+    "maxWidth": 600,
+    "maxHeight": 900
+  }
+}

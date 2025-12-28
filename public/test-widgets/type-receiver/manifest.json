@@ -1,0 +1,38 @@
+{
+    "id": "pipeline-type-receiver",
+    "name": "Type Receiver",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "description": "Test widget with multiple input types for type validation",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "numberIn": {
+            "type": "number",
+            "description": "Receives a number value"
+        },
+        "stringIn": {
+            "type": "string",
+            "description": "Receives a string value"
+        },
+        "booleanIn": {
+            "type": "boolean",
+            "description": "Receives a boolean value"
+        },
+        "objectIn": {
+            "type": "object",
+            "description": "Receives an object value"
+        },
+        "arrayIn": {
+            "type": "array",
+            "description": "Receives an array value"
+        },
+        "eventIn": {
+            "type": "event",
+            "description": "Receives an event"
+        }
+    }
+}

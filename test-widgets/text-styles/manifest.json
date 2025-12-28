@@ -1,0 +1,88 @@
+{
+  "id": "text-styles",
+  "name": "Text Styles",
+  "version": "1.0.0",
+  "description": "Advanced typography styling widget with font controls, spacing, and alignment for creating beautiful text layouts",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "typography",
+  "tags": ["text", "typography", "fonts", "styling", "flyer", "design"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["text"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "text.set": {
+      "type": "string",
+      "description": "Set the text content"
+    },
+    "style.apply": {
+      "type": "object",
+      "description": "Apply style properties (fontFamily, fontSize, fontWeight, color, etc.)"
+    },
+    "style.preset": {
+      "type": "string",
+      "description": "Apply a preset style (headline, subheading, body, caption, quote)"
+    },
+    "alignment.set": {
+      "type": "string",
+      "description": "Set text alignment (left, center, right, justify)"
+    },
+    "transform.set": {
+      "type": "string",
+      "description": "Set text transform (none, uppercase, lowercase, capitalize)"
+    },
+    "style.export": {
+      "type": "event",
+      "description": "Export current styles as object"
+    }
+  },
+  "outputs": {
+    "text.changed": {
+      "type": "object",
+      "description": "Emitted when text content changes with current text and styles"
+    },
+    "style.changed": {
+      "type": "object",
+      "description": "Emitted when any style property changes"
+    },
+    "style.exported": {
+      "type": "object",
+      "description": "Emitted with full style configuration"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["brand:color-changed", "brand:font-changed"],
+    "emits": ["typography:style-changed", "typography:text-changed"]
+  },
+  "config": {
+    "defaultText": "Your Text Here",
+    "defaultFontSize": 32,
+    "defaultFontFamily": "Inter",
+    "showPreview": true,
+    "showControls": true
+  },
+  "size": {
+    "width": 400,
+    "height": 500,
+    "minWidth": 320,
+    "minHeight": 400,
+    "maxWidth": 800,
+    "maxHeight": 1000
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" },
+    { "name": "textPreview", "type": "color", "variable": "--text-preview" },
+    { "name": "borderColor", "type": "color", "variable": "--border-color" }
+  ]
+}

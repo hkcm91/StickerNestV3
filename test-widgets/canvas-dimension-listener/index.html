@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Dimension Listener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 12px;
+            min-height: 100vh;
+            font-size: 11px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h1 {
+            font-size: 13px;
+            color: #00bcd4;
+            font-weight: 600;
+        }
+        .status {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+            background: #2ecc71;
+            color: #000;
+        }
+        .dimension-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .dimension-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .dimension-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00bcd4;
+            font-family: 'Consolas', monospace;
+        }
+        .dimension-label {
+            font-size: 10px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .viewport-info {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .viewport-info h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #222;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #888; }
+        .info-value {
+            color: #79c0ff;
+            font-family: 'Consolas', monospace;
+        }
+        .event-log {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .event-log h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .event-entry {
+            font-family: 'Consolas', monospace;
+            font-size: 9px;
+            padding: 4px 0;
+            border-bottom: 1px solid #222;
+        }
+        .event-entry:last-child { border-bottom: none; }
+        .event-type {
+            color: #ffa657;
+            font-weight: bold;
+        }
+        .event-data { color: #a5d6ff; }
+        .event-time { color: #666; }
+        .visual-preview {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            height: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+        .visual-preview h3 {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .preview-canvas {
+            border: 1px dashed #333;
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 188, 212, 0.1);
+        }
+        .preview-viewport {
+            border: 2px solid #00bcd4;
+            position: absolute;
+            background: rgba(0, 188, 212, 0.2);
+        }
+        .controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .btn-clear { background: #3498db; color: #fff; }
+        .btn-refresh { background: #2ecc71; color: #000; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📐 Canvas Dimension Listener</h1>
+        <span class="status" id="status">Listening</span>
+    </div>
+
+    <div class="controls">
+        <button class="btn-refresh" id="refreshBtn">Refresh</button>
+        <button class="btn-clear" id="clearBtn">Clear Log</button>
+    </div>
+
+    <div class="dimension-display">
+        <div class="dimension-box">
+            <div class="dimension-value" id="canvasWidth">-</div>
+            <div class="dimension-label">Canvas Width</div>
+        </div>
+        <div class="dimension-box">
+            <div class="dimension-value" id="canvasHeight">-</div>
+            <div class="dimension-label">Canvas Height</div>
+        </div>
+        <div class="dimension-box">
+            <div class="dimension-value" id="viewportWidth">-</div>
+            <div class="dimension-label">Viewport Width</div>
+        </div>
+        <div class="dimension-box">
+            <div class="dimension-value" id="viewportHeight">-</div>
+            <div class="dimension-label">Viewport Height</div>
+        </div>
+    </div>
+
+    <div class="viewport-info">
+        <h3>Viewport Details</h3>
+        <div class="info-row">
+            <span class="info-label">Scroll Position:</span>
+            <span class="info-value" id="scrollPos">0, 0</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Zoom Level:</span>
+            <span class="info-value" id="zoomLevel">100%</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Device Pixel Ratio:</span>
+            <span class="info-value" id="dpr">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Widget Position:</span>
+            <span class="info-value" id="widgetPos">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Widget Size:</span>
+            <span class="info-value" id="widgetSize">-</span>
+        </div>
+    </div>
+
+    <div class="visual-preview">
+        <h3>Visual Preview</h3>
+        <div class="preview-canvas" id="previewCanvas"></div>
+        <div class="preview-viewport" id="previewViewport"></div>
+    </div>
+
+    <div class="event-log">
+        <h3>Dimension Events (last 20)</h3>
+        <div id="eventLog">No events yet</div>
+    </div>
+
+    <script>
+        // State
+        let canvasWidth = 0, canvasHeight = 0;
+        let viewportWidth = 0, viewportHeight = 0;
+        let scrollX = 0, scrollY = 0;
+        let zoomLevel = 1;
+        const eventHistory = [];
+        const MAX_EVENTS = 20;
+
+        // DOM elements
+        const canvasWidthEl = document.getElementById('canvasWidth');
+        const canvasHeightEl = document.getElementById('canvasHeight');
+        const viewportWidthEl = document.getElementById('viewportWidth');
+        const viewportHeightEl = document.getElementById('viewportHeight');
+        const scrollPosEl = document.getElementById('scrollPos');
+        const zoomLevelEl = document.getElementById('zoomLevel');
+        const dprEl = document.getElementById('dpr');
+        const widgetPosEl = document.getElementById('widgetPos');
+        const widgetSizeEl = document.getElementById('widgetSize');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewViewport = document.getElementById('previewViewport');
+        const eventLog = document.getElementById('eventLog');
+
+        function logEvent(type, data) {
+            const entry = {
+                type,
+                data,
+                timestamp: Date.now()
+            };
+            eventHistory.unshift(entry);
+            if (eventHistory.length > MAX_EVENTS) {
+                eventHistory.pop();
+            }
+            renderEventLog();
+        }
+
+        function renderEventLog() {
+            if (eventHistory.length === 0) {
+                eventLog.textContent = 'No events yet';
+                return;
+            }
+
+            const entries = eventHistory.map(e => {
+                const age = Date.now() - e.timestamp;
+                const ageStr = age < 1000 ? `${age}ms` : `${(age/1000).toFixed(1)}s`;
+                const dataStr = typeof e.data === 'object' ? JSON.stringify(e.data) : e.data;
+
+                return `<div class="event-entry">
+                    <span class="event-type">${e.type}</span>
+                    <span class="event-data">${dataStr}</span>
+                    <span class="event-time">(${ageStr} ago)</span>
+                </div>`;
+            }).join('');
+
+            eventLog.innerHTML = entries;
+        }
+
+        function updateDimensions(canvas, viewport) {
+            if (canvas) {
+                canvasWidth = canvas.width || canvasWidth;
+                canvasHeight = canvas.height || canvasHeight;
+                canvasWidthEl.textContent = canvasWidth;
+                canvasHeightEl.textContent = canvasHeight;
+            }
+
+            if (viewport) {
+                viewportWidth = viewport.width || viewportWidth;
+                viewportHeight = viewport.height || viewportHeight;
+                scrollX = viewport.scrollX ?? scrollX;
+                scrollY = viewport.scrollY ?? scrollY;
+                zoomLevel = viewport.zoom ?? zoomLevel;
+
+                viewportWidthEl.textContent = viewportWidth;
+                viewportHeightEl.textContent = viewportHeight;
+                scrollPosEl.textContent = `${Math.round(scrollX)}, ${Math.round(scrollY)}`;
+                zoomLevelEl.textContent = `${Math.round(zoomLevel * 100)}%`;
+            }
+
+            updateVisualPreview();
+        }
+
+        function updateVisualPreview() {
+            if (!canvasWidth || !canvasHeight) return;
+
+            // Scale to fit in preview area
+            const previewWidth = 180;
+            const previewHeight = 60;
+            const scaleX = previewWidth / canvasWidth;
+            const scaleY = previewHeight / canvasHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+
+            // Canvas preview
+            previewCanvas.style.width = `${canvasWidth * scale}px`;
+            previewCanvas.style.height = `${canvasHeight * scale}px`;
+
+            // Viewport preview
+            if (viewportWidth && viewportHeight) {
+                const vpW = Math.min(viewportWidth, canvasWidth) * scale;
+                const vpH = Math.min(viewportHeight, canvasHeight) * scale;
+                const vpX = scrollX * scale;
+                const vpY = scrollY * scale;
+
+                previewViewport.style.width = `${vpW}px`;
+                previewViewport.style.height = `${vpH}px`;
+                previewViewport.style.left = `calc(50% - ${canvasWidth * scale / 2}px + ${vpX}px)`;
+                previewViewport.style.bottom = `${10 + (canvasHeight * scale - vpH - vpY)}px`;
+            }
+        }
+
+        function updateWidgetInfo() {
+            // Get widget's own dimensions
+            const rect = document.body.getBoundingClientRect();
+            widgetSizeEl.textContent = `${Math.round(rect.width)} x ${Math.round(rect.height)}`;
+
+            // Device pixel ratio
+            dprEl.textContent = window.devicePixelRatio?.toFixed(2) || '-';
+        }
+
+        function refresh() {
+            updateWidgetInfo();
+
+            // Query canvas dimensions via event
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent('query-dimensions', {
+                    requestId: Date.now()
+                });
+            }
+
+            logEvent('refresh', 'Manual refresh requested');
+        }
+
+        function clearLog() {
+            eventHistory.length = 0;
+            renderEventLog();
+        }
+
+        // Event listeners
+        document.getElementById('refreshBtn').addEventListener('click', refresh);
+        document.getElementById('clearBtn').addEventListener('click', clearLog);
+
+        // Listen for canvas events
+        if (window.WidgetAPI) {
+            window.WidgetAPI.onEvent('canvas-resize', (payload) => {
+                logEvent('canvas-resize', payload);
+                updateDimensions({ width: payload.width, height: payload.height }, null);
+            });
+
+            window.WidgetAPI.onEvent('viewport-change', (payload) => {
+                logEvent('viewport-change', payload);
+                updateDimensions(null, payload);
+            });
+
+            // Also listen for dimension response
+            window.WidgetAPI.onEvent('dimensions-response', (payload) => {
+                logEvent('dimensions-response', payload);
+                updateDimensions(payload.canvas, payload.viewport);
+            });
+        }
+
+        // Window resize observer
+        const resizeObserver = new ResizeObserver(() => {
+            updateWidgetInfo();
+            logEvent('widget-resize', {
+                width: document.body.clientWidth,
+                height: document.body.clientHeight
+            });
+        });
+        resizeObserver.observe(document.body);
+
+        // Initial setup
+        updateWidgetInfo();
+        refresh();
+
+        // Periodic refresh
+        setInterval(updateWidgetInfo, 1000);
+    </script>
+</body>
+</html>

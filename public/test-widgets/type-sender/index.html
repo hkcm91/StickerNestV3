@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: white;
+            padding: 12px;
+            height: 100vh;
+            overflow: auto;
+        }
+        .title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .port-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .port-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .port-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .port-dot.number { background: #3b82f6; }
+        .port-dot.string { background: #22c55e; }
+        .port-dot.boolean { background: #f59e0b; }
+        .port-dot.object { background: #8b5cf6; }
+        .port-dot.array { background: #ec4899; }
+        .port-dot.event { background: #14b8a6; }
+        .port-name {
+            font-size: 11px;
+            color: #e2e8f0;
+            flex: 1;
+        }
+        .type-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            color: #94a3b8;
+        }
+        button {
+            padding: 4px 10px;
+            font-size: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        button.sent {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        .send-all {
+            margin-top: 12px;
+            padding: 10px;
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            font-weight: 600;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Type Sender</div>
+    <div class="port-list">
+        <div class="port-row">
+            <div class="port-dot number"></div>
+            <span class="port-name">numberOut</span>
+            <span class="type-badge">number</span>
+            <button id="sendNumber">Send</button>
+        </div>
+        <div class="port-row">
+            <div class="port-dot string"></div>
+            <span class="port-name">stringOut</span>
+            <span class="type-badge">string</span>
+            <button id="sendString">Send</button>
+        </div>
+        <div class="port-row">
+            <div class="port-dot boolean"></div>
+            <span class="port-name">booleanOut</span>
+            <span class="type-badge">boolean</span>
+            <button id="sendBoolean">Send</button>
+        </div>
+        <div class="port-row">
+            <div class="port-dot object"></div>
+            <span class="port-name">objectOut</span>
+            <span class="type-badge">object</span>
+            <button id="sendObject">Send</button>
+        </div>
+        <div class="port-row">
+            <div class="port-dot array"></div>
+            <span class="port-name">arrayOut</span>
+            <span class="type-badge">array</span>
+            <button id="sendArray">Send</button>
+        </div>
+        <div class="port-row">
+            <div class="port-dot event"></div>
+            <span class="port-name">eventOut</span>
+            <span class="type-badge">event</span>
+            <button id="sendEvent">Send</button>
+        </div>
+    </div>
+    <button class="send-all" id="sendAll">Send All Types</button>
+
+    <script>
+        // Emit event to host
+        function emit(portName, payload, btn) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: {
+                    type: portName,
+                    payload: payload
+                }
+            }, '*');
+
+            // Visual feedback
+            if (btn) {
+                btn.classList.add('sent');
+                btn.textContent = 'Sent!';
+                setTimeout(() => {
+                    btn.classList.remove('sent');
+                    btn.textContent = 'Send';
+                }, 500);
+            }
+        }
+
+        // Test data generators
+        const testData = {
+            number: () => Math.round(Math.random() * 100),
+            string: () => `Hello-${Date.now().toString(36)}`,
+            boolean: () => Math.random() > 0.5,
+            object: () => ({ id: Date.now(), name: 'Test', value: Math.random() }),
+            array: () => [1, 2, 3, Math.round(Math.random() * 10)],
+            event: () => ({ type: 'test', timestamp: Date.now() })
+        };
+
+        // Wire up buttons
+        document.getElementById('sendNumber').onclick = function() {
+            emit('numberOut', testData.number(), this);
+        };
+        document.getElementById('sendString').onclick = function() {
+            emit('stringOut', testData.string(), this);
+        };
+        document.getElementById('sendBoolean').onclick = function() {
+            emit('booleanOut', testData.boolean(), this);
+        };
+        document.getElementById('sendObject').onclick = function() {
+            emit('objectOut', testData.object(), this);
+        };
+        document.getElementById('sendArray').onclick = function() {
+            emit('arrayOut', testData.array(), this);
+        };
+        document.getElementById('sendEvent').onclick = function() {
+            emit('eventOut', testData.event(), this);
+        };
+
+        document.getElementById('sendAll').onclick = function() {
+            const btn = this;
+            Object.entries(testData).forEach(([type, gen], i) => {
+                setTimeout(() => {
+                    emit(type + 'Out', gen());
+                }, i * 100);
+            });
+            btn.textContent = 'Sending...';
+            setTimeout(() => btn.textContent = 'Send All Types', 700);
+        };
+
+        // Signal ready
+        window.parent.postMessage({ type: 'widget:ready' }, '*');
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{
+  "id": "link-button",
+  "name": "Link Button",
+  "version": "1.0.0",
+  "description": "Customizable CTA and link buttons with icons, hover effects, and social media presets for Link in Bio pages",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "interactive",
+  "tags": ["button", "link", "cta", "social", "interactive", "linkinbio"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["text", "link"],
+    "canNest": false,
+    "canBeNested": true
+  },
+  "inputs": {
+    "text.set": {
+      "type": "string",
+      "description": "Set button text"
+    },
+    "link.set": {
+      "type": "string",
+      "description": "Set button URL"
+    },
+    "style.set": {
+      "type": "string",
+      "description": "Set button style (solid, outline, gradient, glass, minimal)"
+    },
+    "preset.apply": {
+      "type": "string",
+      "description": "Apply social media preset (instagram, twitter, youtube, tiktok, spotify, etc.)"
+    },
+    "button.export": {
+      "type": "event",
+      "description": "Export button as HTML/CSS"
+    }
+  },
+  "outputs": {
+    "button.clicked": {
+      "type": "object",
+      "description": "Emitted when button is clicked with link URL"
+    },
+    "button.changed": {
+      "type": "object",
+      "description": "Emitted when button style or text changes"
+    },
+    "button.exported": {
+      "type": "object",
+      "description": "Emitted with HTML/CSS code for button"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["brand:color-changed", "brand:font-changed"],
+    "emits": ["button:clicked"]
+  },
+  "config": {
+    "defaultText": "Click Me",
+    "defaultStyle": "solid",
+    "openInNewTab": true
+  },
+  "size": {
+    "width": 380,
+    "height": 520,
+    "minWidth": 320,
+    "minHeight": 420,
+    "maxWidth": 600,
+    "maxHeight": 800
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" }
+  ]
+}

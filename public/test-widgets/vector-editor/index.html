@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-accent-primary: #8b5cf6;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+
+      --canvas-bg: #1a1a2e;
+      --grid-color: rgba(139, 92, 246, 0.1);
+      --toolbar-bg: var(--sn-bg-tertiary);
+      --accent-color: var(--sn-accent-primary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--sn-bg-primary);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--sn-border-primary);
+      align-items: center;
+    }
+
+    .tool-btn {
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid var(--sn-border-primary);
+      border-radius: 4px;
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn:hover {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .tool-btn.active {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+    }
+
+    .color-picker {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--sn-border-primary);
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .toolbar-separator {
+      width: 1px;
+      height: 24px;
+      background: var(--sn-border-primary);
+      margin: 0 8px;
+    }
+
+    .canvas-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: var(--canvas-bg);
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: var(--toolbar-bg);
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      border-top: 1px solid var(--sn-border-primary);
+    }
+
+    .shape-count {
+      color: var(--accent-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-container">
+    <div class="toolbar">
+      <button class="tool-btn active" data-tool="select" title="Select">↖</button>
+      <button class="tool-btn" data-tool="rect" title="Rectangle">▢</button>
+      <button class="tool-btn" data-tool="circle" title="Circle">○</button>
+      <button class="tool-btn" data-tool="line" title="Line">╱</button>
+      <div class="toolbar-separator"></div>
+      <input type="color" class="color-picker" id="colorPicker" value="#8b5cf6" title="Color">
+      <div class="toolbar-separator"></div>
+      <button class="tool-btn" id="clearBtn" title="Clear All">🗑</button>
+    </div>
+    <div class="canvas-wrapper">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--grid-color)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" id="gridRect"/>
+      </svg>
+    </div>
+    <div class="status-bar">
+      <span>Tool: <strong id="currentTool">Select</strong></span>
+      <span class="shape-count"><span id="shapeCount">0</span> shapes</span>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let activeTool = 'select';
+    let currentColor = '#8b5cf6';
+    let shapes = [];
+    let selectedShape = null;
+    let isDrawing = false;
+    let startPoint = null;
+    let tempElement = null;
+    let shapeIdCounter = 0;
+
+    // DOM elements
+    const canvas = document.getElementById('canvas');
+    const colorPicker = document.getElementById('colorPicker');
+    const clearBtn = document.getElementById('clearBtn');
+    const currentToolEl = document.getElementById('currentTool');
+    const shapeCountEl = document.getElementById('shapeCount');
+
+    // Emit helper
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function log(msg) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.log(msg);
+      }
+      console.log('[VectorEditor]', msg);
+    }
+
+    // Generate shape ID
+    function generateId() {
+      return `shape_${++shapeIdCounter}_${Date.now().toString(36)}`;
+    }
+
+    // Update shape count
+    function updateShapeCount() {
+      shapeCountEl.textContent = shapes.length;
+    }
+
+    // Set active tool
+    function setTool(tool) {
+      activeTool = tool;
+      currentToolEl.textContent = tool.charAt(0).toUpperCase() + tool.slice(1);
+
+      document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tool === tool);
+      });
+
+      log(`Tool changed to: ${tool}`);
+    }
+
+    // Set color
+    function setColor(color) {
+      currentColor = color;
+      colorPicker.value = color;
+      log(`Color changed to: ${color}`);
+    }
+
+    // Get mouse position relative to SVG
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    // Create shape element
+    function createShapeElement(shape) {
+      let el;
+
+      switch (shape.type) {
+        case 'rect':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          el.setAttribute('x', shape.x);
+          el.setAttribute('y', shape.y);
+          el.setAttribute('width', shape.width);
+          el.setAttribute('height', shape.height);
+          break;
+
+        case 'circle':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+          el.setAttribute('cx', shape.cx);
+          el.setAttribute('cy', shape.cy);
+          el.setAttribute('rx', shape.rx);
+          el.setAttribute('ry', shape.ry);
+          break;
+
+        case 'line':
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          el.setAttribute('x1', shape.x1);
+          el.setAttribute('y1', shape.y1);
+          el.setAttribute('x2', shape.x2);
+          el.setAttribute('y2', shape.y2);
+          break;
+      }
+
+      if (el) {
+        el.setAttribute('fill', shape.type === 'line' ? 'none' : shape.fill || 'transparent');
+        el.setAttribute('stroke', shape.stroke || currentColor);
+        el.setAttribute('stroke-width', shape.strokeWidth || 2);
+        el.setAttribute('data-id', shape.id);
+        el.style.cursor = 'pointer';
+
+        el.addEventListener('click', (e) => {
+          if (activeTool === 'select') {
+            selectShape(shape.id);
+            e.stopPropagation();
+          }
+        });
+      }
+
+      return el;
+    }
+
+    // Add shape
+    function addShape(shapeData) {
+      const shape = {
+        id: shapeData.id || generateId(),
+        ...shapeData
+      };
+
+      const el = createShapeElement(shape);
+      if (el) {
+        canvas.appendChild(el);
+        shapes.push(shape);
+        updateShapeCount();
+        emit('shape.created', shape);
+        emit('canvas.changed', shapes);
+        log(`Shape added: ${shape.type}`);
+      }
+
+      return shape;
+    }
+
+    // Remove shape
+    function removeShape(id) {
+      const el = canvas.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        el.remove();
+        shapes = shapes.filter(s => s.id !== id);
+        updateShapeCount();
+        emit('canvas.changed', shapes);
+        log(`Shape removed: ${id}`);
+      }
+    }
+
+    // Select shape
+    function selectShape(id) {
+      // Deselect previous
+      if (selectedShape) {
+        const prevEl = canvas.querySelector(`[data-id="${selectedShape}"]`);
+        if (prevEl) {
+          prevEl.removeAttribute('filter');
+        }
+      }
+
+      selectedShape = id;
+      const el = canvas.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        // Add selection highlight
+        el.setAttribute('filter', 'drop-shadow(0 0 3px var(--accent-color))');
+
+        const shape = shapes.find(s => s.id === id);
+        emit('shape.selected', shape);
+        log(`Shape selected: ${id}`);
+      }
+    }
+
+    // Clear all shapes
+    function clearAll() {
+      shapes.forEach(s => {
+        const el = canvas.querySelector(`[data-id="${s.id}"]`);
+        if (el) el.remove();
+      });
+      shapes = [];
+      selectedShape = null;
+      updateShapeCount();
+      emit('canvas.changed', []);
+      log('Canvas cleared');
+    }
+
+    // Drawing handlers
+    canvas.addEventListener('mousedown', (e) => {
+      if (activeTool === 'select') return;
+
+      isDrawing = true;
+      startPoint = getMousePos(e);
+
+      // Create temp element
+      if (activeTool === 'rect') {
+        tempElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        tempElement.setAttribute('fill', 'transparent');
+      } else if (activeTool === 'circle') {
+        tempElement = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        tempElement.setAttribute('fill', 'transparent');
+      } else if (activeTool === 'line') {
+        tempElement = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      }
+
+      if (tempElement) {
+        tempElement.setAttribute('stroke', currentColor);
+        tempElement.setAttribute('stroke-width', '2');
+        tempElement.setAttribute('stroke-dasharray', '4');
+        canvas.appendChild(tempElement);
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing || !tempElement) return;
+
+      const pos = getMousePos(e);
+
+      if (activeTool === 'rect') {
+        const x = Math.min(startPoint.x, pos.x);
+        const y = Math.min(startPoint.y, pos.y);
+        const width = Math.abs(pos.x - startPoint.x);
+        const height = Math.abs(pos.y - startPoint.y);
+
+        tempElement.setAttribute('x', x);
+        tempElement.setAttribute('y', y);
+        tempElement.setAttribute('width', width);
+        tempElement.setAttribute('height', height);
+      } else if (activeTool === 'circle') {
+        const cx = (startPoint.x + pos.x) / 2;
+        const cy = (startPoint.y + pos.y) / 2;
+        const rx = Math.abs(pos.x - startPoint.x) / 2;
+        const ry = Math.abs(pos.y - startPoint.y) / 2;
+
+        tempElement.setAttribute('cx', cx);
+        tempElement.setAttribute('cy', cy);
+        tempElement.setAttribute('rx', rx);
+        tempElement.setAttribute('ry', ry);
+      } else if (activeTool === 'line') {
+        tempElement.setAttribute('x1', startPoint.x);
+        tempElement.setAttribute('y1', startPoint.y);
+        tempElement.setAttribute('x2', pos.x);
+        tempElement.setAttribute('y2', pos.y);
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (!isDrawing) return;
+
+      isDrawing = false;
+      const pos = getMousePos(e);
+
+      if (tempElement) {
+        tempElement.remove();
+        tempElement = null;
+      }
+
+      // Create final shape
+      if (activeTool === 'rect') {
+        const x = Math.min(startPoint.x, pos.x);
+        const y = Math.min(startPoint.y, pos.y);
+        const width = Math.abs(pos.x - startPoint.x);
+        const height = Math.abs(pos.y - startPoint.y);
+
+        if (width > 5 && height > 5) {
+          addShape({ type: 'rect', x, y, width, height, stroke: currentColor });
+        }
+      } else if (activeTool === 'circle') {
+        const cx = (startPoint.x + pos.x) / 2;
+        const cy = (startPoint.y + pos.y) / 2;
+        const rx = Math.abs(pos.x - startPoint.x) / 2;
+        const ry = Math.abs(pos.y - startPoint.y) / 2;
+
+        if (rx > 5 && ry > 5) {
+          addShape({ type: 'circle', cx, cy, rx, ry, stroke: currentColor });
+        }
+      } else if (activeTool === 'line') {
+        const dist = Math.hypot(pos.x - startPoint.x, pos.y - startPoint.y);
+
+        if (dist > 10) {
+          addShape({
+            type: 'line',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: pos.x,
+            y2: pos.y,
+            stroke: currentColor
+          });
+        }
+      }
+
+      startPoint = null;
+    });
+
+    // Toolbar handlers
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => setTool(btn.dataset.tool));
+    });
+
+    colorPicker.addEventListener('input', (e) => setColor(e.target.value));
+    clearBtn.addEventListener('click', clearAll);
+
+    // Initialize
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Vector Editor');
+
+      // Listen for events
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'shape.add':
+            if (event.payload) {
+              addShape(event.payload);
+            }
+            break;
+
+          case 'shape.remove':
+            if (typeof event.payload === 'string') {
+              removeShape(event.payload);
+            } else if (event.payload?.id) {
+              removeShape(event.payload.id);
+            }
+            break;
+
+          case 'canvas.clear':
+            clearAll();
+            break;
+
+          case 'tool.set':
+            if (typeof event.payload === 'string') {
+              setTool(event.payload);
+            } else if (event.payload?.tool) {
+              setTool(event.payload.tool);
+            }
+            break;
+
+          case 'color.set':
+            if (typeof event.payload === 'string') {
+              setColor(event.payload);
+            } else if (event.payload?.color) {
+              setColor(event.payload.color);
+            }
+            break;
+        }
+      });
+
+      // Register capabilities
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['vector'],
+          canNest: true,
+          canBeNested: true
+        });
+      }
+
+      // Emit ready
+      emit('editor.ready', { capabilities: ['vector'] });
+      log('Vector Editor ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

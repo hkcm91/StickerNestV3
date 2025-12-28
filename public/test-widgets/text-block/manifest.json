@@ -1,0 +1,64 @@
+{
+  "id": "text-block",
+  "name": "Text Block",
+  "version": "1.0.0",
+  "description": "Editable text element for canvas - click to select, use Text Styles editor to modify",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "element",
+  "tags": ["text", "element", "canvas", "editable", "flyer", "linkinbio"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": true,
+    "canEdit": ["text"],
+    "canNest": false,
+    "canBeNested": true
+  },
+  "inputs": {
+    "style.apply": {
+      "type": "object",
+      "description": "Apply style properties from editor"
+    },
+    "text.set": {
+      "type": "string",
+      "description": "Set text content"
+    },
+    "select": {
+      "type": "event",
+      "description": "Select this element"
+    },
+    "deselect": {
+      "type": "event",
+      "description": "Deselect this element"
+    }
+  },
+  "outputs": {
+    "selected": {
+      "type": "object",
+      "description": "Emitted when element is selected with current properties"
+    },
+    "changed": {
+      "type": "object",
+      "description": "Emitted when element properties change"
+    }
+  },
+  "events": {
+    "emits": ["canvas:element-selected", "canvas:element-changed"],
+    "listens": ["canvas:style-changed", "canvas:element-selected"]
+  },
+  "config": {
+    "defaultText": "Click to edit",
+    "defaultFontSize": 24,
+    "defaultColor": "#ffffff"
+  },
+  "size": {
+    "width": 200,
+    "height": 60,
+    "minWidth": 50,
+    "minHeight": 30,
+    "maxWidth": 800,
+    "maxHeight": 600
+  }
+}

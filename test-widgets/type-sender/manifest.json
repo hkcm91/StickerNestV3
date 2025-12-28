@@ -1,0 +1,38 @@
+{
+    "id": "pipeline-type-sender",
+    "name": "Type Sender",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "description": "Test widget with multiple output types for type validation",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "outputs": {
+        "numberOut": {
+            "type": "number",
+            "description": "Sends a number value"
+        },
+        "stringOut": {
+            "type": "string",
+            "description": "Sends a string value"
+        },
+        "booleanOut": {
+            "type": "boolean",
+            "description": "Sends a boolean value"
+        },
+        "objectOut": {
+            "type": "object",
+            "description": "Sends an object value"
+        },
+        "arrayOut": {
+            "type": "array",
+            "description": "Sends an array value"
+        },
+        "eventOut": {
+            "type": "event",
+            "description": "Sends an event"
+        }
+    }
+}

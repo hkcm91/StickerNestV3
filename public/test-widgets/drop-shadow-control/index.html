@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .widget-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 12px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 12px;
+        }
+        .header-icon {
+            font-size: 1.2rem;
+        }
+        .title {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .status {
+            margin-left: auto;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: rgba(239,68,68,0.2);
+            color: #f87171;
+        }
+        .status.active {
+            background: rgba(34,197,94,0.2);
+            color: #4ade80;
+        }
+        .controls {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .label-text {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .label-value {
+            font-size: 0.75rem;
+            color: #8b5cf6;
+            font-weight: 500;
+        }
+        .slider-track {
+            position: relative;
+            height: 32px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(139,92,246,0.3);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(139,92,246,0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        .color-row {
+            display: flex;
+            gap: 8px;
+        }
+        .color-picker-wrap {
+            flex: 1;
+            position: relative;
+            height: 36px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .color-picker-wrap input[type="color"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+        }
+        .color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 4px;
+        }
+        .color-picker-wrap input[type="color"]::-webkit-color-swatch {
+            border-radius: 4px;
+            border: none;
+        }
+        .color-hex {
+            width: 80px;
+            height: 36px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            text-align: center;
+            outline: none;
+        }
+        .color-hex:focus {
+            border-color: #8b5cf6;
+        }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        .toggle-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle.on {
+            background: #8b5cf6;
+        }
+        .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .toggle.on .toggle-knob {
+            transform: translateX(20px);
+        }
+        .preview-section {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .preview-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .preview-box {
+            height: 60px;
+            background: #252542;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .preview-shape {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 8px;
+            transition: box-shadow 0.15s ease;
+        }
+        .no-selection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            color: #64748b;
+            text-align: center;
+            gap: 8px;
+        }
+        .no-selection-icon {
+            font-size: 2rem;
+            opacity: 0.5;
+        }
+        .no-selection-text {
+            font-size: 0.85rem;
+        }
+        .controls.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div class="header">
+            <span class="header-icon">🌓</span>
+            <span class="title">Drop Shadow</span>
+            <span class="status" id="status">No Selection</span>
+        </div>
+
+        <div class="controls disabled" id="controls">
+            <!-- Enable Toggle -->
+            <div class="toggle-row">
+                <span class="toggle-label">Enable Shadow</span>
+                <div class="toggle on" id="toggle-enabled" onclick="toggleEnabled()">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+
+            <!-- Offset X -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span class="label-text">Offset X</span>
+                    <span class="label-value" id="offsetx-value">4px</span>
+                </div>
+                <div class="slider-track">
+                    <input type="range" id="offsetx" min="-50" max="50" value="4" oninput="updateShadow()">
+                </div>
+            </div>
+
+            <!-- Offset Y -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span class="label-text">Offset Y</span>
+                    <span class="label-value" id="offsety-value">4px</span>
+                </div>
+                <div class="slider-track">
+                    <input type="range" id="offsety" min="-50" max="50" value="4" oninput="updateShadow()">
+                </div>
+            </div>
+
+            <!-- Blur -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span class="label-text">Blur Radius</span>
+                    <span class="label-value" id="blur-value">8px</span>
+                </div>
+                <div class="slider-track">
+                    <input type="range" id="blur" min="0" max="50" value="8" oninput="updateShadow()">
+                </div>
+            </div>
+
+            <!-- Opacity -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span class="label-text">Opacity</span>
+                    <span class="label-value" id="opacity-value">50%</span>
+                </div>
+                <div class="slider-track">
+                    <input type="range" id="opacity" min="0" max="100" value="50" oninput="updateShadow()">
+                </div>
+            </div>
+
+            <!-- Color -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span class="label-text">Shadow Color</span>
+                </div>
+                <div class="color-row">
+                    <div class="color-picker-wrap">
+                        <input type="color" id="color" value="#000000" oninput="updateShadow()">
+                    </div>
+                    <input type="text" class="color-hex" id="color-hex" value="#000000" oninput="updateColorFromHex()">
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-section">
+                <div class="preview-label">PREVIEW</div>
+                <div class="preview-box">
+                    <div class="preview-shape" id="preview-shape"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="no-selection" id="no-selection">
+            <span class="no-selection-icon">🎯</span>
+            <span class="no-selection-text">Select a shape on the<br>Vector Canvas to apply shadow</span>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let hasSelection = false;
+        let shadowEnabled = true;
+        let currentShadow = {
+            enabled: true,
+            offsetX: 4,
+            offsetY: 4,
+            blur: 8,
+            color: '#000000',
+            opacity: 0.5
+        };
+
+        // DOM Elements
+        const statusEl = document.getElementById('status');
+        const controlsEl = document.getElementById('controls');
+        const noSelectionEl = document.getElementById('no-selection');
+        const toggleEl = document.getElementById('toggle-enabled');
+        const previewShape = document.getElementById('preview-shape');
+
+        // Input elements
+        const offsetXEl = document.getElementById('offsetx');
+        const offsetYEl = document.getElementById('offsety');
+        const blurEl = document.getElementById('blur');
+        const opacityEl = document.getElementById('opacity');
+        const colorEl = document.getElementById('color');
+        const colorHexEl = document.getElementById('color-hex');
+
+        // Value display elements
+        const offsetXValueEl = document.getElementById('offsetx-value');
+        const offsetYValueEl = document.getElementById('offsety-value');
+        const blurValueEl = document.getElementById('blur-value');
+        const opacityValueEl = document.getElementById('opacity-value');
+
+        // Toggle shadow enabled
+        function toggleEnabled() {
+            shadowEnabled = !shadowEnabled;
+            toggleEl.classList.toggle('on', shadowEnabled);
+            currentShadow.enabled = shadowEnabled;
+            updateShadow();
+        }
+
+        // Update shadow from slider/color changes
+        function updateShadow() {
+            // Get values from inputs
+            currentShadow.offsetX = parseInt(offsetXEl.value);
+            currentShadow.offsetY = parseInt(offsetYEl.value);
+            currentShadow.blur = parseInt(blurEl.value);
+            currentShadow.opacity = parseInt(opacityEl.value) / 100;
+            currentShadow.color = colorEl.value;
+            currentShadow.enabled = shadowEnabled;
+
+            // Update value displays
+            offsetXValueEl.textContent = currentShadow.offsetX + 'px';
+            offsetYValueEl.textContent = currentShadow.offsetY + 'px';
+            blurValueEl.textContent = currentShadow.blur + 'px';
+            opacityValueEl.textContent = Math.round(currentShadow.opacity * 100) + '%';
+
+            // Update hex input
+            colorHexEl.value = currentShadow.color;
+
+            // Update preview
+            updatePreview();
+
+            // Emit shadow change to vector canvas
+            if (hasSelection) {
+                emit('vector:set-shadow', {
+                    enabled: currentShadow.enabled,
+                    offsetX: currentShadow.offsetX,
+                    offsetY: currentShadow.offsetY,
+                    blur: currentShadow.blur,
+                    color: currentShadow.color,
+                    opacity: currentShadow.opacity
+                });
+            }
+        }
+
+        // Update color from hex input
+        function updateColorFromHex() {
+            const hex = colorHexEl.value;
+            if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                colorEl.value = hex;
+                updateShadow();
+            }
+        }
+
+        // Update the preview shape
+        function updatePreview() {
+            if (!previewShape) return;
+
+            if (shadowEnabled) {
+                const rgba = hexToRgba(currentShadow.color, currentShadow.opacity);
+                previewShape.style.boxShadow = `${currentShadow.offsetX}px ${currentShadow.offsetY}px ${currentShadow.blur}px ${rgba}`;
+            } else {
+                previewShape.style.boxShadow = 'none';
+            }
+        }
+
+        // Convert hex to rgba
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // Update UI based on selection state
+        function updateSelectionUI(selected) {
+            hasSelection = selected;
+
+            if (selected) {
+                statusEl.textContent = 'Selected';
+                statusEl.classList.add('active');
+                controlsEl.classList.remove('disabled');
+                noSelectionEl.style.display = 'none';
+            } else {
+                statusEl.textContent = 'No Selection';
+                statusEl.classList.remove('active');
+                controlsEl.classList.add('disabled');
+                noSelectionEl.style.display = 'flex';
+            }
+        }
+
+        // Sync controls from entity's current shadow
+        function syncFromEntity(shadow) {
+            if (!shadow) {
+                // No shadow on entity, reset to defaults
+                shadowEnabled = false;
+                toggleEl.classList.remove('on');
+                return;
+            }
+
+            shadowEnabled = shadow.enabled !== false;
+            toggleEl.classList.toggle('on', shadowEnabled);
+
+            if (shadow.offsetX !== undefined) {
+                offsetXEl.value = shadow.offsetX;
+                offsetXValueEl.textContent = shadow.offsetX + 'px';
+            }
+            if (shadow.offsetY !== undefined) {
+                offsetYEl.value = shadow.offsetY;
+                offsetYValueEl.textContent = shadow.offsetY + 'px';
+            }
+            if (shadow.blur !== undefined) {
+                blurEl.value = shadow.blur;
+                blurValueEl.textContent = shadow.blur + 'px';
+            }
+            if (shadow.opacity !== undefined) {
+                opacityEl.value = Math.round(shadow.opacity * 100);
+                opacityValueEl.textContent = Math.round(shadow.opacity * 100) + '%';
+            }
+            if (shadow.color) {
+                colorEl.value = shadow.color.startsWith('#') ? shadow.color : '#000000';
+                colorHexEl.value = colorEl.value;
+            }
+
+            currentShadow = { ...currentShadow, ...shadow };
+            updatePreview();
+        }
+
+        // Emit event to parent
+        function emit(type, payload) {
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+            log('Emitted: ' + type, payload);
+        }
+
+        // Log to debug panel
+        function log(msg, data) {
+            console.log('[Drop Shadow]', msg, data || '');
+            if (window.WidgetAPI) {
+                window.WidgetAPI.log(msg, data);
+            }
+        }
+
+        // Handle incoming messages
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            // Handle new protocol (EVENT)
+            if (data.type === 'EVENT' && data.payload) {
+                handleEvent(data.payload);
+            }
+            // Handle legacy protocol (widget:event)
+            if (data.type === 'widget:event' && data.payload) {
+                handleEvent(data.payload);
+            }
+        });
+
+        function handleEvent(evt) {
+            const { type, payload } = evt;
+            log('Received: ' + type, payload);
+
+            switch (type) {
+                case 'vector:selection-changed':
+                    if (payload && payload.id) {
+                        updateSelectionUI(true);
+                        // Sync shadow controls from the selected entity
+                        if (payload.shadow) {
+                            syncFromEntity(payload.shadow);
+                        } else {
+                            // Entity has no shadow, reset toggle
+                            shadowEnabled = true;
+                            toggleEl.classList.add('on');
+                        }
+                    } else {
+                        updateSelectionUI(false);
+                    }
+                    break;
+
+                case 'vector:entity-updated':
+                    // Update preview if the updated entity is currently selected
+                    if (payload && payload.shadow !== undefined) {
+                        syncFromEntity(payload.shadow);
+                    }
+                    break;
+            }
+        }
+
+        // Initialize
+        function init() {
+            updatePreview();
+            updateSelectionUI(false);
+
+            // Signal ready
+            window.parent.postMessage({ type: 'READY' }, '*');
+            log('Drop Shadow Control ready');
+        }
+
+        // Wait for DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "id": "vector-layers",
+  "name": "Layer Manager",
+  "version": "1.0.0",
+  "kind": "2d",
+  "description": "Manage layer order, visibility, and locking for vector entities",
+  "author": "StickerNest",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "icon": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='4' y='4' width='16' height='4' fill='%233b82f6' rx='1'/><rect x='4' y='10' width='16' height='4' fill='%2322c55e' rx='1'/><rect x='4' y='16' width='16' height='4' fill='%23f59e0b' rx='1'/></svg>",
+  "category": "vector-graphics",
+  "size": {
+    "defaultWidth": 220,
+    "defaultHeight": 350,
+    "minWidth": 180,
+    "minHeight": 280
+  },
+  "permissions": [],
+  "events": {
+    "emits": [
+      "vector:bring-forward",
+      "vector:send-backward",
+      "vector:bring-to-front",
+      "vector:send-to-back",
+      "vector:get-entities"
+    ],
+    "listens": [
+      "vector:entities-list",
+      "vector:entity-added",
+      "vector:entity-deleted",
+      "vector:selection-changed"
+    ]
+  }
+}

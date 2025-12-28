@@ -1,0 +1,31 @@
+{
+    "id": "dashboard-analytics",
+    "name": "Analytics Dashboard",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "data": {
+            "type": "event",
+            "description": "Receives data points to visualize"
+        },
+        "config": {
+            "type": "event",
+            "description": "Configuration updates"
+        }
+    },
+    "outputs": {
+        "selection": {
+            "type": "event",
+            "description": "Emits when user selects data point"
+        },
+        "export": {
+            "type": "event",
+            "description": "Emits export requests"
+        }
+    }
+}

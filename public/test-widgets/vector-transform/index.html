@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+        h3 {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .control-row label {
+            font-size: 11px;
+            color: #333;
+            width: 50px;
+        }
+        .control-row input[type="number"] {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            width: 60px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+        }
+        .value-display {
+            font-size: 11px;
+            color: #666;
+            min-width: 40px;
+            text-align: right;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        .btn {
+            padding: 10px 8px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+        .btn svg {
+            width: 14px;
+            height: 14px;
+        }
+        .move-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+        .move-grid .btn {
+            aspect-ratio: 1;
+            padding: 8px;
+        }
+        .move-grid .center {
+            background: #e5e7eb;
+            cursor: default;
+        }
+        .selection-status {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h3>Transform Tool</h3>
+
+    <!-- Scale Section -->
+    <div class="section">
+        <div class="section-title">Scale</div>
+        <div class="control-row">
+            <label>Scale X:</label>
+            <input type="range" id="scaleX" min="0.1" max="3" step="0.1" value="1">
+            <span class="value-display" id="scaleXVal">1.0</span>
+        </div>
+        <div class="control-row">
+            <label>Scale Y:</label>
+            <input type="range" id="scaleY" min="0.1" max="3" step="0.1" value="1">
+            <span class="value-display" id="scaleYVal">1.0</span>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 6px;" onclick="applyScale()">Apply Scale</button>
+    </div>
+
+    <!-- Rotate Section -->
+    <div class="section">
+        <div class="section-title">Rotate</div>
+        <div class="control-row">
+            <label>Angle:</label>
+            <input type="range" id="rotation" min="-180" max="180" step="5" value="0">
+            <span class="value-display" id="rotationVal">0°</span>
+        </div>
+        <div class="btn-grid">
+            <button class="btn btn-secondary" onclick="rotateBy(-90)">↺ -90°</button>
+            <button class="btn btn-secondary" onclick="rotateBy(90)">↻ +90°</button>
+            <button class="btn btn-secondary" onclick="rotateBy(-45)">↺ -45°</button>
+            <button class="btn btn-secondary" onclick="rotateBy(45)">↻ +45°</button>
+        </div>
+    </div>
+
+    <!-- Move Section -->
+    <div class="section">
+        <div class="section-title">Move</div>
+        <div class="move-grid">
+            <button class="btn btn-secondary" onclick="moveBy(-10, -10)">↖</button>
+            <button class="btn btn-secondary" onclick="moveBy(0, -10)">↑</button>
+            <button class="btn btn-secondary" onclick="moveBy(10, -10)">↗</button>
+            <button class="btn btn-secondary" onclick="moveBy(-10, 0)">←</button>
+            <div class="btn center">•</div>
+            <button class="btn btn-secondary" onclick="moveBy(10, 0)">→</button>
+            <button class="btn btn-secondary" onclick="moveBy(-10, 10)">↙</button>
+            <button class="btn btn-secondary" onclick="moveBy(0, 10)">↓</button>
+            <button class="btn btn-secondary" onclick="moveBy(10, 10)">↘</button>
+        </div>
+    </div>
+
+    <!-- Flip & Actions -->
+    <div class="section">
+        <div class="section-title">Actions</div>
+        <div class="btn-grid">
+            <button class="btn btn-secondary" onclick="flipHorizontal()">↔ Flip H</button>
+            <button class="btn btn-secondary" onclick="flipVertical()">↕ Flip V</button>
+            <button class="btn btn-success" onclick="duplicate()">⧉ Duplicate</button>
+            <button class="btn btn-danger" onclick="deleteSelected()">✕ Delete</button>
+        </div>
+    </div>
+
+    <div class="selection-status" id="status">No selection</div>
+
+    <script>
+        const scaleX = document.getElementById('scaleX');
+        const scaleY = document.getElementById('scaleY');
+        const scaleXVal = document.getElementById('scaleXVal');
+        const scaleYVal = document.getElementById('scaleYVal');
+        const rotation = document.getElementById('rotation');
+        const rotationVal = document.getElementById('rotationVal');
+        const status = document.getElementById('status');
+
+        let selectedEntity = null;
+
+        // Update displays
+        scaleX.addEventListener('input', () => {
+            scaleXVal.textContent = parseFloat(scaleX.value).toFixed(1);
+        });
+        scaleY.addEventListener('input', () => {
+            scaleYVal.textContent = parseFloat(scaleY.value).toFixed(1);
+        });
+        rotation.addEventListener('input', () => {
+            rotationVal.textContent = rotation.value + '°';
+        });
+
+        function emitEvent(type, payload) {
+            console.log('[Transform] Emitting:', type, payload);
+            window.parent.postMessage({
+                type: 'widget:emit',
+                payload: { type, payload }
+            }, '*');
+        }
+
+        function applyScale() {
+            emitEvent('vector:transform', {
+                scaleX: parseFloat(scaleX.value),
+                scaleY: parseFloat(scaleY.value)
+            });
+        }
+
+        function rotateBy(degrees) {
+            const current = parseInt(rotation.value) || 0;
+            const newVal = ((current + degrees + 180) % 360) - 180;
+            rotation.value = newVal;
+            rotationVal.textContent = newVal + '°';
+            emitEvent('vector:transform', { rotate: degrees });
+        }
+
+        function moveBy(dx, dy) {
+            emitEvent('vector:transform', { translateX: dx, translateY: dy });
+        }
+
+        function flipHorizontal() {
+            emitEvent('vector:transform', { scaleX: -1 });
+        }
+
+        function flipVertical() {
+            emitEvent('vector:transform', { scaleY: -1 });
+        }
+
+        function duplicate() {
+            emitEvent('vector:duplicate-selected', {});
+        }
+
+        function deleteSelected() {
+            emitEvent('vector:delete-selected', {});
+        }
+
+        // Listen for selection changes
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            console.log('[Transform] Message:', data);
+
+            if (data.type === 'widget:event' && data.payload?.type === 'vector:selection-changed') {
+                const selection = data.payload.payload;
+                if (selection && selection.id) {
+                    selectedEntity = selection;
+                    status.textContent = `Selected: ${selection.type || 'entity'}`;
+                    status.style.background = 'rgba(34, 197, 94, 0.3)';
+
+                    // Reset controls
+                    scaleX.value = 1;
+                    scaleY.value = 1;
+                    scaleXVal.textContent = '1.0';
+                    scaleYVal.textContent = '1.0';
+                    rotation.value = 0;
+                    rotationVal.textContent = '0°';
+                } else {
+                    selectedEntity = null;
+                    status.textContent = 'No selection';
+                    status.style.background = 'rgba(0,0,0,0.2)';
+                }
+            }
+        });
+
+        // Signal ready
+        window.parent.postMessage({ type: 'READY' }, '*');
+        console.log('[Transform] Ready');
+    </script>
+</body>
+</html>

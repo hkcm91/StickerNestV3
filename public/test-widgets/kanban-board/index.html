@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .add-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .add-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+        .board {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        .column {
+            flex: 0 0 180px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 100px);
+        }
+        .column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+        .column-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .column-count {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .column-tasks {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 50px;
+        }
+        .column-tasks.drag-over {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        .task {
+            background: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: grab;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .task:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .task:active { cursor: grabbing; }
+        .task.dragging { opacity: 0.5; transform: rotate(3deg); }
+        .task-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .task-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .task-tags {
+            display: flex;
+            gap: 4px;
+        }
+        .tag {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .tag.bug { background: #fee2e2; color: #dc2626; }
+        .tag.feature { background: #dbeafe; color: #2563eb; }
+        .tag.urgent { background: #fef3c7; color: #d97706; }
+        .tag.design { background: #f3e8ff; color: #9333ea; }
+        .task-assignee {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .task-actions {
+            display: none;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .task:hover .task-actions { display: flex; }
+        .task-action {
+            flex: 1;
+            padding: 4px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s;
+        }
+        .task-action.edit { background: #e0e7ff; color: #4f46e5; }
+        .task-action.delete { background: #fee2e2; color: #dc2626; }
+        .task-action:hover { filter: brightness(0.95); }
+
+        .add-task-form {
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: none;
+        }
+        .add-task-form.open { display: block; }
+        .add-task-input {
+            width: 100%;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 12px;
+            margin-bottom: 8px;
+            outline: none;
+        }
+        .add-task-input:focus { border-color: #667eea; }
+        .add-task-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .tag-option {
+            font-size: 9px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            opacity: 0.5;
+            transition: all 0.2s;
+        }
+        .tag-option:hover { opacity: 0.8; }
+        .tag-option.selected { opacity: 1; border-color: currentColor; }
+        .add-task-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .form-btn {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .form-btn.primary { background: #667eea; color: #fff; }
+        .form-btn.secondary { background: #e5e7eb; color: #666; }
+
+        .column-add {
+            margin-top: 8px;
+            padding: 8px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .column-add:hover {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        .stat {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .stat-label {
+            font-size: 10px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">Kanban Board</div>
+        <button class="add-btn" onclick="showQuickAdd()">+ Add Task</button>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="stats" id="stats"></div>
+
+    <script>
+        const COLUMNS = [
+            { id: 'backlog', name: 'Backlog', color: '#6b7280' },
+            { id: 'todo', name: 'To Do', color: '#3b82f6' },
+            { id: 'in-progress', name: 'In Progress', color: '#f59e0b' },
+            { id: 'done', name: 'Done', color: '#10b981' }
+        ];
+
+        const TAGS = [
+            { id: 'bug', name: 'Bug', class: 'bug' },
+            { id: 'feature', name: 'Feature', class: 'feature' },
+            { id: 'urgent', name: 'Urgent', class: 'urgent' },
+            { id: 'design', name: 'Design', class: 'design' }
+        ];
+
+        const ASSIGNEES = ['👩', '👨', '🧑', '👩‍💻', '👨‍💻'];
+        const COLORS = ['#f38ba8', '#89b4fa', '#a6e3a1', '#fab387', '#cba6f7'];
+
+        let state = {
+            tasks: [
+                { id: '1', title: 'Fix login bug', column: 'todo', tags: ['bug', 'urgent'], assignee: 0 },
+                { id: '2', title: 'Design new dashboard', column: 'in-progress', tags: ['design'], assignee: 1 },
+                { id: '3', title: 'Add user settings', column: 'backlog', tags: ['feature'], assignee: 2 },
+                { id: '4', title: 'Write documentation', column: 'todo', tags: ['feature'], assignee: 3 },
+                { id: '5', title: 'Optimize database', column: 'done', tags: ['bug'], assignee: 0 }
+            ],
+            activeColumn: null,
+            draggedTask: null
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function render() {
+            const board = document.getElementById('board');
+            board.innerHTML = COLUMNS.map(col => {
+                const tasks = state.tasks.filter(t => t.column === col.id);
+                return `
+                    <div class="column" data-column="${col.id}">
+                        <div class="column-header">
+                            <span class="column-title" style="color: ${col.color}">${col.name}</span>
+                            <span class="column-count">${tasks.length}</span>
+                        </div>
+                        <div class="add-task-form" id="form-${col.id}">
+                            <input type="text" class="add-task-input" id="input-${col.id}"
+                                placeholder="Task title..." onkeydown="handleFormKey(event, '${col.id}')">
+                            <div class="add-task-tags" id="tags-${col.id}">
+                                ${TAGS.map(tag => `
+                                    <span class="tag-option tag ${tag.class}" data-tag="${tag.id}"
+                                        onclick="toggleTag('${col.id}', '${tag.id}')">${tag.name}</span>
+                                `).join('')}
+                            </div>
+                            <div class="add-task-buttons">
+                                <button class="form-btn secondary" onclick="hideForm('${col.id}')">Cancel</button>
+                                <button class="form-btn primary" onclick="addTask('${col.id}')">Add</button>
+                            </div>
+                        </div>
+                        <div class="column-tasks" data-column="${col.id}"
+                            ondrop="handleDrop(event, '${col.id}')"
+                            ondragover="handleDragOver(event)"
+                            ondragleave="handleDragLeave(event)">
+                            ${tasks.map(task => renderTask(task)).join('')}
+                        </div>
+                        <div class="column-add" onclick="showForm('${col.id}')">+ Add task</div>
+                    </div>
+                `;
+            }).join('');
+
+            renderStats();
+        }
+
+        function renderTask(task) {
+            return `
+                <div class="task" draggable="true" data-task="${task.id}"
+                    ondragstart="handleDragStart(event, '${task.id}')"
+                    ondragend="handleDragEnd(event)">
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                    <div class="task-meta">
+                        <div class="task-tags">
+                            ${task.tags.map(tagId => {
+                                const tag = TAGS.find(t => t.id === tagId);
+                                return tag ? `<span class="tag ${tag.class}">${tag.name}</span>` : '';
+                            }).join('')}
+                        </div>
+                        <div class="task-assignee" style="background: ${COLORS[task.assignee]}">
+                            ${ASSIGNEES[task.assignee]}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="task-action edit" onclick="editTask('${task.id}')">Edit</button>
+                        <button class="task-action delete" onclick="deleteTask('${task.id}')">Delete</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStats() {
+            const stats = document.getElementById('stats');
+            const total = state.tasks.length;
+            const done = state.tasks.filter(t => t.column === 'done').length;
+            const inProgress = state.tasks.filter(t => t.column === 'in-progress').length;
+
+            stats.innerHTML = `
+                <div class="stat">
+                    <div class="stat-value">${total}</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${inProgress}</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${done}</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${total > 0 ? Math.round((done / total) * 100) : 0}%</div>
+                    <div class="stat-label">Progress</div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Drag and Drop
+        function handleDragStart(e, taskId) {
+            state.draggedTask = taskId;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            state.draggedTask = null;
+            document.querySelectorAll('.column-tasks').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e, columnId) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!state.draggedTask) return;
+
+            const task = state.tasks.find(t => t.id === state.draggedTask);
+            if (!task) return;
+
+            const oldColumn = task.column;
+            if (oldColumn === columnId) return;
+
+            task.column = columnId;
+            render();
+
+            log(`Task moved: "${task.title}" from ${oldColumn} to ${columnId}`);
+            emit('kanban:task-moved', {
+                taskId: task.id,
+                title: task.title,
+                from: oldColumn,
+                to: columnId
+            });
+
+            if (columnId === 'done') {
+                emit('kanban:task-completed', { task });
+            }
+        }
+
+        // Forms
+        let selectedTags = {};
+
+        function showForm(columnId) {
+            document.querySelectorAll('.add-task-form').forEach(f => f.classList.remove('open'));
+            document.getElementById(`form-${columnId}`).classList.add('open');
+            document.getElementById(`input-${columnId}`).focus();
+            selectedTags[columnId] = [];
+        }
+
+        function hideForm(columnId) {
+            document.getElementById(`form-${columnId}`).classList.remove('open');
+            document.getElementById(`input-${columnId}`).value = '';
+            selectedTags[columnId] = [];
+            document.querySelectorAll(`#tags-${columnId} .tag-option`).forEach(t => t.classList.remove('selected'));
+        }
+
+        function toggleTag(columnId, tagId) {
+            if (!selectedTags[columnId]) selectedTags[columnId] = [];
+            const idx = selectedTags[columnId].indexOf(tagId);
+            if (idx === -1) {
+                selectedTags[columnId].push(tagId);
+            } else {
+                selectedTags[columnId].splice(idx, 1);
+            }
+            document.querySelector(`#tags-${columnId} [data-tag="${tagId}"]`)
+                .classList.toggle('selected', selectedTags[columnId].includes(tagId));
+        }
+
+        function handleFormKey(e, columnId) {
+            if (e.key === 'Enter') {
+                addTask(columnId);
+            } else if (e.key === 'Escape') {
+                hideForm(columnId);
+            }
+        }
+
+        function addTask(columnId) {
+            const input = document.getElementById(`input-${columnId}`);
+            const title = input.value.trim();
+            if (!title) return;
+
+            const task = {
+                id: Date.now().toString(),
+                title: title,
+                column: columnId,
+                tags: selectedTags[columnId] || [],
+                assignee: Math.floor(Math.random() * ASSIGNEES.length)
+            };
+
+            state.tasks.push(task);
+            hideForm(columnId);
+            render();
+
+            log(`Task created: "${title}" in ${columnId}`);
+            emit('kanban:task-created', { task });
+        }
+
+        function showQuickAdd() {
+            showForm('todo');
+        }
+
+        function editTask(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const newTitle = prompt('Edit task:', task.title);
+            if (newTitle && newTitle.trim()) {
+                task.title = newTitle.trim();
+                render();
+                log(`Task edited: "${task.title}"`);
+            }
+        }
+
+        function deleteTask(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            if (confirm(`Delete "${task.title}"?`)) {
+                state.tasks = state.tasks.filter(t => t.id !== taskId);
+                render();
+                log(`Task deleted: "${task.title}"`);
+            }
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Kanban Board ready');
+            render();
+
+            window.WidgetAPI.onEvent('*', (event) => {
+                if (event.type === 'kanban:add-task' && event.payload?.title) {
+                    const task = {
+                        id: Date.now().toString(),
+                        title: event.payload.title,
+                        column: event.payload.column || 'backlog',
+                        tags: event.payload.tags || [],
+                        assignee: Math.floor(Math.random() * ASSIGNEES.length)
+                    };
+                    state.tasks.push(task);
+                    render();
+                    log(`Task added via event: "${task.title}"`);
+                }
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

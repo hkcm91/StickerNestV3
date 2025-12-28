@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-text-muted: #64748b;
+      --sn-accent-primary: #8b5cf6;
+      --sn-accent-secondary: #a78bfa;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-border-hover: rgba(139, 92, 246, 0.4);
+      --sn-radius-sm: 4px;
+      --sn-radius-md: 6px;
+      --sn-transition-fast: 0.15s ease;
+
+      --widget-bg: var(--sn-bg-primary);
+      --controls-bg: var(--sn-bg-secondary);
+      --accent-color: var(--sn-accent-primary);
+      --preview-bg: var(--sn-bg-tertiary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--widget-bg);
+      color: var(--sn-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Preview Area */
+    .preview-area {
+      flex: 0 0 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--preview-bg);
+      border-bottom: 1px solid var(--sn-border-primary);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-bg-toggle {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .bg-btn {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--sn-border-primary);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .bg-btn:hover, .bg-btn.active {
+      border-color: var(--accent-color);
+      transform: scale(1.1);
+    }
+
+    .bg-btn.dark { background: #1a1a2e; }
+    .bg-btn.light { background: #f8fafc; }
+    .bg-btn.gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .bg-btn.checker {
+      background: repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%) 50% / 16px 16px;
+    }
+
+    .preview-text {
+      font-family: 'Inter', sans-serif;
+      font-size: 64px;
+      font-weight: 700;
+      text-align: center;
+      padding: 16px;
+      outline: none;
+      cursor: text;
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .preview-text:focus {
+      outline: 2px dashed var(--accent-color);
+      outline-offset: 4px;
+    }
+
+    .preview-text:empty::before {
+      content: 'TEXT';
+      opacity: 0.4;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--sn-bg-tertiary);
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 12px;
+      background: transparent;
+      border: none;
+      color: var(--sn-text-secondary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab:hover {
+      color: var(--sn-text-primary);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .tab.active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--controls-bg);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 12px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sn-text-secondary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--sn-border-primary);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: var(--sn-bg-primary);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toggle-switch.active {
+      background: var(--accent-color);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .toggle-switch.active::after {
+      left: 18px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .control-value {
+      color: var(--accent-color);
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    /* Input Styles */
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--sn-bg-primary);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="color"] {
+      width: 36px;
+      height: 32px;
+      padding: 0;
+      border: 2px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 2px;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 2px;
+    }
+
+    .color-hex {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-primary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Preset Grid */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .preset-btn {
+      padding: 12px 8px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-md);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      text-align: center;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+    }
+
+    .preset-preview {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preset-name {
+      font-size: 10px;
+      color: var(--sn-text-secondary);
+    }
+
+    /* Gradient Stops */
+    .gradient-stops {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .gradient-stop {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .gradient-preview {
+      height: 24px;
+      border-radius: var(--sn-radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--sn-border-primary);
+    }
+
+    /* Multi-shadow List */
+    .shadow-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .shadow-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--sn-bg-primary);
+      border-radius: var(--sn-radius-sm);
+      border: 1px solid var(--sn-border-primary);
+    }
+
+    .shadow-item input[type="color"] {
+      width: 28px;
+      height: 28px;
+    }
+
+    .shadow-item .remove-btn {
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: var(--sn-radius-sm);
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .shadow-item .remove-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .add-btn {
+      width: 100%;
+      padding: 8px;
+      background: transparent;
+      border: 1px dashed var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .add-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    /* CSS Output */
+    .css-output {
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--sn-border-primary);
+      border-radius: var(--sn-radius-sm);
+      padding: 10px;
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--sn-text-secondary);
+      max-height: 100px;
+      overflow-y: auto;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent-color);
+      border: none;
+      border-radius: var(--sn-radius-sm);
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .copy-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--sn-bg-primary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--sn-bg-tertiary);
+      border-radius: 3px;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Preview Area -->
+  <div class="preview-area" id="previewArea">
+    <div class="preview-bg-toggle">
+      <div class="bg-btn dark active" data-bg="dark" title="Dark background"></div>
+      <div class="bg-btn light" data-bg="light" title="Light background"></div>
+      <div class="bg-btn gradient" data-bg="gradient" title="Gradient background"></div>
+      <div class="bg-btn checker" data-bg="checker" title="Transparent"></div>
+    </div>
+    <div class="preview-text" id="previewText" contenteditable="true">EFFECT</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="shadow">Shadow</button>
+    <button class="tab" data-tab="outline">Outline</button>
+    <button class="tab" data-tab="glow">Glow</button>
+    <button class="tab" data-tab="gradient">Gradient</button>
+    <button class="tab" data-tab="presets">Presets</button>
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <!-- Shadow Tab -->
+    <div class="tab-content active" id="tab-shadow">
+      <div class="control-section">
+        <div class="section-header">
+          <span>Drop Shadow</span>
+          <div class="toggle-switch active" id="shadowEnabled"></div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Offset X</span>
+              <span class="control-value" id="shadowXValue">4px</span>
+            </div>
+            <input type="range" id="shadowX" min="-50" max="50" value="4">
+          </div>
+          <div class="control-group">
+            <div class="control-label">
+              <span>Offset Y</span>
+              <span class="control-value" id="shadowYValue">4px</span>
+            </div>
+            <input type="range" id="shadowY" min="-50" max="50" value="4">
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Blur</span>
+              <span class="control-value" id="shadowBlurValue">0px</span>
+            </div>
+            <input type="range" id="shadowBlur" min="0" max="50" value="0">
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label"><span>Shadow Color</span></div>
+            <div class="color-row">
+              <input type="color" id="shadowColor" value="#000000">
+              <input type="text" class="color-hex" id="shadowColorHex" value="#000000">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-header">
+          <span>Multi-Layer Shadows</span>
+        </div>
+        <div class="shadow-list" id="shadowList"></div>
+        <button class="add-btn" id="addShadow">+ Add Shadow Layer</button>
+      </div>
+    </div>
+
+    <!-- Outline Tab -->
+    <div class="tab-content" id="tab-outline">
+      <div class="control-section">
+        <div class="section-header">
+          <span>Text Stroke</span>
+          <div class="toggle-switch" id="outlineEnabled"></div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Stroke Width</span>
+              <span class="control-value" id="outlineWidthValue">2px</span>
+            </div>
+            <input type="range" id="outlineWidth" min="0" max="20" value="2">
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label"><span>Stroke Color</span></div>
+            <div class="color-row">
+              <input type="color" id="outlineColor" value="#ffffff">
+              <input type="text" class="color-hex" id="outlineColorHex" value="#FFFFFF">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-header">
+          <span>Fill Options</span>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label"><span>Text Fill</span></div>
+            <div class="color-row">
+              <input type="color" id="fillColor" value="#8b5cf6">
+              <input type="text" class="color-hex" id="fillColorHex" value="#8B5CF6">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Glow Tab -->
+    <div class="tab-content" id="tab-glow">
+      <div class="control-section">
+        <div class="section-header">
+          <span>Glow Effect</span>
+          <div class="toggle-switch" id="glowEnabled"></div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Glow Intensity</span>
+              <span class="control-value" id="glowIntensityValue">10px</span>
+            </div>
+            <input type="range" id="glowIntensity" min="0" max="50" value="10">
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Glow Spread</span>
+              <span class="control-value" id="glowSpreadValue">20px</span>
+            </div>
+            <input type="range" id="glowSpread" min="0" max="100" value="20">
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label"><span>Glow Color</span></div>
+            <div class="color-row">
+              <input type="color" id="glowColor" value="#8b5cf6">
+              <input type="text" class="color-hex" id="glowColorHex" value="#8B5CF6">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-header">
+          <span>Inner Glow</span>
+          <div class="toggle-switch" id="innerGlowEnabled"></div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Inner Intensity</span>
+              <span class="control-value" id="innerGlowIntensityValue">5px</span>
+            </div>
+            <input type="range" id="innerGlowIntensity" min="0" max="30" value="5">
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label"><span>Inner Glow Color</span></div>
+            <div class="color-row">
+              <input type="color" id="innerGlowColor" value="#ffffff">
+              <input type="text" class="color-hex" id="innerGlowColorHex" value="#FFFFFF">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gradient Tab -->
+    <div class="tab-content" id="tab-gradient">
+      <div class="control-section">
+        <div class="section-header">
+          <span>Gradient Fill</span>
+          <div class="toggle-switch" id="gradientEnabled"></div>
+        </div>
+
+        <div class="gradient-preview" id="gradientPreview"></div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label"><span>Type</span></div>
+            <select id="gradientType">
+              <option value="linear">Linear</option>
+              <option value="radial">Radial</option>
+              <option value="conic">Conic</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Angle</span>
+              <span class="control-value" id="gradientAngleValue">90°</span>
+            </div>
+            <input type="range" id="gradientAngle" min="0" max="360" value="90">
+          </div>
+        </div>
+
+        <div class="gradient-stops">
+          <div class="gradient-stop">
+            <div class="control-label"><span>Color 1</span></div>
+            <input type="color" id="gradientColor1" value="#8b5cf6">
+          </div>
+          <div class="gradient-stop">
+            <div class="control-label"><span>Color 2</span></div>
+            <input type="color" id="gradientColor2" value="#ec4899">
+          </div>
+          <div class="gradient-stop">
+            <div class="control-label"><span>Color 3</span></div>
+            <input type="color" id="gradientColor3" value="#06b6d4">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Presets Tab -->
+    <div class="tab-content" id="tab-presets">
+      <div class="control-section">
+        <div class="section-header">
+          <span>Effect Presets</span>
+        </div>
+
+        <div class="preset-grid">
+          <button class="preset-btn" data-preset="neon">
+            <div class="preset-preview" style="color: #0ff; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff;">Aa</div>
+            <div class="preset-name">Neon Glow</div>
+          </button>
+          <button class="preset-btn" data-preset="retro">
+            <div class="preset-preview" style="color: #f472b6; text-shadow: 4px 4px 0 #fbbf24, 8px 8px 0 #34d399;">Aa</div>
+            <div class="preset-name">Retro Stack</div>
+          </button>
+          <button class="preset-btn" data-preset="emboss">
+            <div class="preset-preview" style="color: #64748b; text-shadow: -1px -1px 1px #fff, 1px 1px 1px #0f0f19;">Aa</div>
+            <div class="preset-name">Emboss</div>
+          </button>
+          <button class="preset-btn" data-preset="fire">
+            <div class="preset-preview" style="color: #fbbf24; text-shadow: 0 0 10px #f97316, 0 -5px 20px #ef4444, 0 -10px 30px #dc2626;">Aa</div>
+            <div class="preset-name">Fire</div>
+          </button>
+          <button class="preset-btn" data-preset="outline">
+            <div class="preset-preview" style="color: transparent; -webkit-text-stroke: 2px #8b5cf6;">Aa</div>
+            <div class="preset-name">Outline Only</div>
+          </button>
+          <button class="preset-btn" data-preset="3d">
+            <div class="preset-preview" style="color: #8b5cf6; text-shadow: 1px 1px 0 #6d28d9, 2px 2px 0 #5b21b6, 3px 3px 0 #4c1d95, 4px 4px 0 #3b1776;">Aa</div>
+            <div class="preset-name">3D Extrude</div>
+          </button>
+          <button class="preset-btn" data-preset="rainbow">
+            <div class="preset-preview" style="background: linear-gradient(90deg, #ef4444, #f97316, #fbbf24, #22c55e, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Aa</div>
+            <div class="preset-name">Rainbow</div>
+          </button>
+          <button class="preset-btn" data-preset="gold">
+            <div class="preset-preview" style="background: linear-gradient(180deg, #fef3c7, #fbbf24, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Aa</div>
+            <div class="preset-name">Gold</div>
+          </button>
+          <button class="preset-btn" data-preset="chrome">
+            <div class="preset-preview" style="background: linear-gradient(180deg, #e2e8f0, #64748b, #e2e8f0, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Aa</div>
+            <div class="preset-name">Chrome</div>
+          </button>
+          <button class="preset-btn" data-preset="vintage">
+            <div class="preset-preview" style="color: #78350f; text-shadow: 2px 2px 0 #fef3c7, 4px 4px 0 #fcd34d;">Aa</div>
+            <div class="preset-name">Vintage</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-header">
+          <span>CSS Output</span>
+        </div>
+        <div class="css-output" id="cssOutput">text-shadow: none;</div>
+        <button class="copy-btn" id="copyCSS">Copy CSS</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE
+    // ========================================
+    const state = {
+      text: 'EFFECT',
+      fillColor: '#8b5cf6',
+      shadow: {
+        enabled: true,
+        x: 4,
+        y: 4,
+        blur: 0,
+        color: '#000000'
+      },
+      multiShadows: [],
+      outline: {
+        enabled: false,
+        width: 2,
+        color: '#ffffff'
+      },
+      glow: {
+        enabled: false,
+        intensity: 10,
+        spread: 20,
+        color: '#8b5cf6'
+      },
+      innerGlow: {
+        enabled: false,
+        intensity: 5,
+        color: '#ffffff'
+      },
+      gradient: {
+        enabled: false,
+        type: 'linear',
+        angle: 90,
+        colors: ['#8b5cf6', '#ec4899', '#06b6d4']
+      }
+    };
+
+    // ========================================
+    // DOM ELEMENTS
+    // ========================================
+    const previewArea = document.getElementById('previewArea');
+    const previewText = document.getElementById('previewText');
+    const gradientPreview = document.getElementById('gradientPreview');
+    const cssOutput = document.getElementById('cssOutput');
+
+    // ========================================
+    // HELPERS
+    // ========================================
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function broadcast(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload, broadcast: true });
+      }
+    }
+
+    function log(msg) {
+      console.log('[TextEffects]', msg);
+      if (window.WidgetAPI) window.WidgetAPI.log(msg);
+    }
+
+    // ========================================
+    // EFFECT RENDERING
+    // ========================================
+    function buildTextShadow() {
+      const shadows = [];
+
+      // Primary shadow
+      if (state.shadow.enabled) {
+        shadows.push(`${state.shadow.x}px ${state.shadow.y}px ${state.shadow.blur}px ${state.shadow.color}`);
+      }
+
+      // Multi-layer shadows
+      state.multiShadows.forEach(s => {
+        shadows.push(`${s.x}px ${s.y}px ${s.blur}px ${s.color}`);
+      });
+
+      // Glow effect (multiple shadow layers for intensity)
+      if (state.glow.enabled) {
+        const color = state.glow.color;
+        shadows.push(`0 0 ${state.glow.intensity}px ${color}`);
+        shadows.push(`0 0 ${state.glow.intensity * 2}px ${color}`);
+        shadows.push(`0 0 ${state.glow.spread}px ${color}`);
+      }
+
+      return shadows.length > 0 ? shadows.join(', ') : 'none';
+    }
+
+    function buildGradient() {
+      const { type, angle, colors } = state.gradient;
+      const colorStops = colors.filter(c => c).join(', ');
+
+      switch (type) {
+        case 'linear':
+          return `linear-gradient(${angle}deg, ${colorStops})`;
+        case 'radial':
+          return `radial-gradient(circle, ${colorStops})`;
+        case 'conic':
+          return `conic-gradient(from ${angle}deg, ${colorStops})`;
+        default:
+          return `linear-gradient(${angle}deg, ${colorStops})`;
+      }
+    }
+
+    function updatePreview() {
+      // Text shadow
+      previewText.style.textShadow = buildTextShadow();
+
+      // Outline/Stroke
+      if (state.outline.enabled) {
+        previewText.style.webkitTextStroke = `${state.outline.width}px ${state.outline.color}`;
+      } else {
+        previewText.style.webkitTextStroke = 'none';
+      }
+
+      // Gradient or solid fill
+      if (state.gradient.enabled) {
+        const gradient = buildGradient();
+        previewText.style.background = gradient;
+        previewText.style.webkitBackgroundClip = 'text';
+        previewText.style.webkitTextFillColor = 'transparent';
+        previewText.style.color = 'transparent';
+        gradientPreview.style.background = gradient;
+      } else {
+        previewText.style.background = 'none';
+        previewText.style.webkitBackgroundClip = 'initial';
+        previewText.style.webkitTextFillColor = 'initial';
+        previewText.style.color = state.fillColor;
+      }
+
+      // Update gradient preview
+      gradientPreview.style.background = buildGradient();
+
+      // Update CSS output
+      updateCSSOutput();
+    }
+
+    function updateCSSOutput() {
+      let css = [];
+
+      if (state.gradient.enabled) {
+        css.push(`background: ${buildGradient()};`);
+        css.push('-webkit-background-clip: text;');
+        css.push('-webkit-text-fill-color: transparent;');
+      } else {
+        css.push(`color: ${state.fillColor};`);
+      }
+
+      const shadow = buildTextShadow();
+      if (shadow !== 'none') {
+        css.push(`text-shadow: ${shadow};`);
+      }
+
+      if (state.outline.enabled) {
+        css.push(`-webkit-text-stroke: ${state.outline.width}px ${state.outline.color};`);
+      }
+
+      cssOutput.textContent = css.join('\n');
+    }
+
+    function emitEffectChange() {
+      const effectData = { ...state };
+      emit('effect.changed', effectData);
+      broadcast('typography:effect-changed', effectData);
+    }
+
+    // ========================================
+    // TAB HANDLING
+    // ========================================
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    // ========================================
+    // BACKGROUND TOGGLE
+    // ========================================
+    document.querySelectorAll('.bg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        switch (btn.dataset.bg) {
+          case 'dark':
+            previewArea.style.background = '#1a1a2e';
+            break;
+          case 'light':
+            previewArea.style.background = '#f8fafc';
+            break;
+          case 'gradient':
+            previewArea.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            break;
+          case 'checker':
+            previewArea.style.background = 'repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%) 50% / 16px 16px';
+            break;
+        }
+      });
+    });
+
+    // ========================================
+    // TOGGLE SWITCHES
+    // ========================================
+    function setupToggle(id, stateKey) {
+      const toggle = document.getElementById(id);
+      toggle.addEventListener('click', () => {
+        if (stateKey.includes('.')) {
+          const [parent, child] = stateKey.split('.');
+          state[parent][child] = !state[parent][child];
+          toggle.classList.toggle('active', state[parent][child]);
+        } else {
+          state[stateKey].enabled = !state[stateKey].enabled;
+          toggle.classList.toggle('active', state[stateKey].enabled);
+        }
+        updatePreview();
+        emitEffectChange();
+      });
+    }
+
+    setupToggle('shadowEnabled', 'shadow');
+    setupToggle('outlineEnabled', 'outline');
+    setupToggle('glowEnabled', 'glow');
+    setupToggle('innerGlowEnabled', 'innerGlow');
+    setupToggle('gradientEnabled', 'gradient');
+
+    // ========================================
+    // SLIDER HANDLERS
+    // ========================================
+    function setupSlider(id, stateKey, suffix = 'px') {
+      const slider = document.getElementById(id);
+      const valueEl = document.getElementById(`${id}Value`);
+
+      slider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        const [parent, child] = stateKey.split('.');
+        state[parent][child] = value;
+        if (valueEl) valueEl.textContent = `${value}${suffix}`;
+        updatePreview();
+      });
+
+      slider.addEventListener('change', () => emitEffectChange());
+    }
+
+    setupSlider('shadowX', 'shadow.x');
+    setupSlider('shadowY', 'shadow.y');
+    setupSlider('shadowBlur', 'shadow.blur');
+    setupSlider('outlineWidth', 'outline.width');
+    setupSlider('glowIntensity', 'glow.intensity');
+    setupSlider('glowSpread', 'glow.spread');
+    setupSlider('innerGlowIntensity', 'innerGlow.intensity');
+    setupSlider('gradientAngle', 'gradient.angle', '°');
+
+    // ========================================
+    // COLOR HANDLERS
+    // ========================================
+    function setupColor(colorId, hexId, stateKey) {
+      const colorInput = document.getElementById(colorId);
+      const hexInput = document.getElementById(hexId);
+
+      colorInput.addEventListener('input', (e) => {
+        const [parent, child] = stateKey.split('.');
+        state[parent][child] = e.target.value;
+        hexInput.value = e.target.value.toUpperCase();
+        updatePreview();
+      });
+      colorInput.addEventListener('change', () => emitEffectChange());
+
+      hexInput.addEventListener('input', (e) => {
+        let hex = e.target.value;
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+          const [parent, child] = stateKey.split('.');
+          state[parent][child] = hex;
+          colorInput.value = hex;
+          updatePreview();
+        }
+      });
+    }
+
+    setupColor('shadowColor', 'shadowColorHex', 'shadow.color');
+    setupColor('outlineColor', 'outlineColorHex', 'outline.color');
+    setupColor('fillColor', 'fillColorHex', 'fillColor');
+    setupColor('glowColor', 'glowColorHex', 'glow.color');
+    setupColor('innerGlowColor', 'innerGlowColorHex', 'innerGlow.color');
+
+    // Fill color special handling
+    document.getElementById('fillColor').addEventListener('input', (e) => {
+      state.fillColor = e.target.value;
+      document.getElementById('fillColorHex').value = e.target.value.toUpperCase();
+      updatePreview();
+    });
+
+    // Gradient colors
+    ['gradientColor1', 'gradientColor2', 'gradientColor3'].forEach((id, i) => {
+      document.getElementById(id).addEventListener('input', (e) => {
+        state.gradient.colors[i] = e.target.value;
+        updatePreview();
+      });
+      document.getElementById(id).addEventListener('change', () => emitEffectChange());
+    });
+
+    // Gradient type
+    document.getElementById('gradientType').addEventListener('change', (e) => {
+      state.gradient.type = e.target.value;
+      updatePreview();
+      emitEffectChange();
+    });
+
+    // ========================================
+    // MULTI-SHADOW HANDLING
+    // ========================================
+    function renderShadowList() {
+      const list = document.getElementById('shadowList');
+      list.innerHTML = '';
+
+      state.multiShadows.forEach((shadow, i) => {
+        const item = document.createElement('div');
+        item.className = 'shadow-item';
+        item.innerHTML = `
+          <input type="color" value="${shadow.color}" data-index="${i}" data-prop="color">
+          <input type="range" min="-30" max="30" value="${shadow.x}" style="width:60px" data-index="${i}" data-prop="x">
+          <input type="range" min="-30" max="30" value="${shadow.y}" style="width:60px" data-index="${i}" data-prop="y">
+          <input type="range" min="0" max="30" value="${shadow.blur}" style="width:60px" data-index="${i}" data-prop="blur">
+          <button class="remove-btn" data-index="${i}">×</button>
+        `;
+        list.appendChild(item);
+      });
+
+      // Attach events
+      list.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.dataset.index);
+          const prop = e.target.dataset.prop;
+          state.multiShadows[idx][prop] = prop === 'color' ? e.target.value : parseInt(e.target.value);
+          updatePreview();
+        });
+      });
+
+      list.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.dataset.index);
+          state.multiShadows.splice(idx, 1);
+          renderShadowList();
+          updatePreview();
+          emitEffectChange();
+        });
+      });
+    }
+
+    document.getElementById('addShadow').addEventListener('click', () => {
+      state.multiShadows.push({ x: 2, y: 2, blur: 0, color: '#6d28d9' });
+      renderShadowList();
+      updatePreview();
+    });
+
+    // ========================================
+    // PRESETS
+    // ========================================
+    const presets = {
+      neon: {
+        fillColor: '#00ffff',
+        shadow: { enabled: false, x: 0, y: 0, blur: 0, color: '#000000' },
+        glow: { enabled: true, intensity: 10, spread: 40, color: '#00ffff' },
+        outline: { enabled: false, width: 0, color: '#ffffff' },
+        gradient: { enabled: false }
+      },
+      retro: {
+        fillColor: '#f472b6',
+        shadow: { enabled: true, x: 4, y: 4, blur: 0, color: '#fbbf24' },
+        multiShadows: [{ x: 8, y: 8, blur: 0, color: '#34d399' }],
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: { enabled: false }
+      },
+      emboss: {
+        fillColor: '#64748b',
+        shadow: { enabled: true, x: -1, y: -1, blur: 1, color: '#ffffff' },
+        multiShadows: [{ x: 1, y: 1, blur: 1, color: '#0f0f19' }],
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: { enabled: false }
+      },
+      fire: {
+        fillColor: '#fbbf24',
+        shadow: { enabled: true, x: 0, y: 0, blur: 10, color: '#f97316' },
+        multiShadows: [
+          { x: 0, y: -5, blur: 20, color: '#ef4444' },
+          { x: 0, y: -10, blur: 30, color: '#dc2626' }
+        ],
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: { enabled: false }
+      },
+      outline: {
+        fillColor: 'transparent',
+        shadow: { enabled: false },
+        glow: { enabled: false },
+        outline: { enabled: true, width: 2, color: '#8b5cf6' },
+        gradient: { enabled: false }
+      },
+      '3d': {
+        fillColor: '#8b5cf6',
+        shadow: { enabled: true, x: 1, y: 1, blur: 0, color: '#6d28d9' },
+        multiShadows: [
+          { x: 2, y: 2, blur: 0, color: '#5b21b6' },
+          { x: 3, y: 3, blur: 0, color: '#4c1d95' },
+          { x: 4, y: 4, blur: 0, color: '#3b1776' }
+        ],
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: { enabled: false }
+      },
+      rainbow: {
+        fillColor: '#8b5cf6',
+        shadow: { enabled: false },
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: {
+          enabled: true,
+          type: 'linear',
+          angle: 90,
+          colors: ['#ef4444', '#fbbf24', '#22c55e', '#3b82f6', '#8b5cf6']
+        }
+      },
+      gold: {
+        fillColor: '#fbbf24',
+        shadow: { enabled: true, x: 0, y: 2, blur: 4, color: 'rgba(0,0,0,0.3)' },
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: {
+          enabled: true,
+          type: 'linear',
+          angle: 180,
+          colors: ['#fef3c7', '#fbbf24', '#d97706']
+        }
+      },
+      chrome: {
+        fillColor: '#e2e8f0',
+        shadow: { enabled: false },
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: {
+          enabled: true,
+          type: 'linear',
+          angle: 180,
+          colors: ['#e2e8f0', '#64748b', '#e2e8f0']
+        }
+      },
+      vintage: {
+        fillColor: '#78350f',
+        shadow: { enabled: true, x: 2, y: 2, blur: 0, color: '#fef3c7' },
+        multiShadows: [{ x: 4, y: 4, blur: 0, color: '#fcd34d' }],
+        glow: { enabled: false },
+        outline: { enabled: false },
+        gradient: { enabled: false }
+      }
+    };
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = presets[btn.dataset.preset];
+        if (preset) {
+          // Apply preset
+          if (preset.fillColor) state.fillColor = preset.fillColor;
+          if (preset.shadow) Object.assign(state.shadow, preset.shadow);
+          if (preset.multiShadows) state.multiShadows = [...preset.multiShadows];
+          else state.multiShadows = [];
+          if (preset.glow) Object.assign(state.glow, preset.glow);
+          if (preset.outline) Object.assign(state.outline, preset.outline);
+          if (preset.gradient) Object.assign(state.gradient, preset.gradient);
+
+          // Update UI
+          renderShadowList();
+          updateAllControls();
+          updatePreview();
+          emitEffectChange();
+          log(`Applied preset: ${btn.dataset.preset}`);
+        }
+      });
+    });
+
+    // ========================================
+    // UPDATE ALL CONTROLS
+    // ========================================
+    function updateAllControls() {
+      // Shadow
+      document.getElementById('shadowEnabled').classList.toggle('active', state.shadow.enabled);
+      document.getElementById('shadowX').value = state.shadow.x;
+      document.getElementById('shadowY').value = state.shadow.y;
+      document.getElementById('shadowBlur').value = state.shadow.blur;
+      document.getElementById('shadowColor').value = state.shadow.color;
+      document.getElementById('shadowColorHex').value = state.shadow.color.toUpperCase();
+      document.getElementById('shadowXValue').textContent = `${state.shadow.x}px`;
+      document.getElementById('shadowYValue').textContent = `${state.shadow.y}px`;
+      document.getElementById('shadowBlurValue').textContent = `${state.shadow.blur}px`;
+
+      // Outline
+      document.getElementById('outlineEnabled').classList.toggle('active', state.outline.enabled);
+      document.getElementById('outlineWidth').value = state.outline.width;
+      document.getElementById('outlineColor').value = state.outline.color;
+      document.getElementById('outlineWidthValue').textContent = `${state.outline.width}px`;
+
+      // Fill
+      document.getElementById('fillColor').value = state.fillColor;
+      document.getElementById('fillColorHex').value = state.fillColor.toUpperCase();
+
+      // Glow
+      document.getElementById('glowEnabled').classList.toggle('active', state.glow.enabled);
+      document.getElementById('glowIntensity').value = state.glow.intensity;
+      document.getElementById('glowSpread').value = state.glow.spread;
+      document.getElementById('glowColor').value = state.glow.color;
+      document.getElementById('glowIntensityValue').textContent = `${state.glow.intensity}px`;
+      document.getElementById('glowSpreadValue').textContent = `${state.glow.spread}px`;
+
+      // Gradient
+      document.getElementById('gradientEnabled').classList.toggle('active', state.gradient.enabled);
+      document.getElementById('gradientType').value = state.gradient.type;
+      document.getElementById('gradientAngle').value = state.gradient.angle;
+      document.getElementById('gradientAngleValue').textContent = `${state.gradient.angle}°`;
+      state.gradient.colors.forEach((c, i) => {
+        const el = document.getElementById(`gradientColor${i + 1}`);
+        if (el) el.value = c;
+      });
+    }
+
+    // ========================================
+    // COPY CSS
+    // ========================================
+    document.getElementById('copyCSS').addEventListener('click', () => {
+      navigator.clipboard.writeText(cssOutput.textContent).then(() => {
+        const btn = document.getElementById('copyCSS');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy CSS', 1500);
+      });
+    });
+
+    // ========================================
+    // TEXT EDITING
+    // ========================================
+    previewText.addEventListener('input', () => {
+      state.text = previewText.innerText;
+      emit('text.changed', { text: state.text });
+    });
+
+    // ========================================
+    // WIDGET API
+    // ========================================
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Text Effects widget');
+
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'text.set':
+            const text = typeof event.payload === 'string' ? event.payload : event.payload?.text;
+            if (text) {
+              state.text = text;
+              previewText.innerText = text;
+            }
+            break;
+
+          case 'effect.apply':
+            if (event.payload) {
+              Object.entries(event.payload).forEach(([key, value]) => {
+                if (key in state) {
+                  if (typeof state[key] === 'object' && !Array.isArray(state[key])) {
+                    Object.assign(state[key], value);
+                  } else {
+                    state[key] = value;
+                  }
+                }
+              });
+              updateAllControls();
+              updatePreview();
+            }
+            break;
+
+          case 'effect.preset':
+            const presetName = typeof event.payload === 'string' ? event.payload : event.payload?.preset;
+            if (presets[presetName]) {
+              document.querySelector(`[data-preset="${presetName}"]`)?.click();
+            }
+            break;
+
+          case 'effect.reset':
+            state.shadow = { enabled: true, x: 4, y: 4, blur: 0, color: '#000000' };
+            state.multiShadows = [];
+            state.outline = { enabled: false, width: 2, color: '#ffffff' };
+            state.glow = { enabled: false, intensity: 10, spread: 20, color: '#8b5cf6' };
+            state.gradient = { enabled: false, type: 'linear', angle: 90, colors: ['#8b5cf6', '#ec4899', '#06b6d4'] };
+            state.fillColor = '#8b5cf6';
+            renderShadowList();
+            updateAllControls();
+            updatePreview();
+            break;
+
+          case 'effect.export':
+            emit('effect.exported', {
+              css: cssOutput.textContent,
+              state: { ...state }
+            });
+            break;
+
+          case 'brand:color-changed':
+            if (event.payload?.color) {
+              state.fillColor = event.payload.color;
+              state.glow.color = event.payload.color;
+              updateAllControls();
+              updatePreview();
+            }
+            break;
+
+          case 'typography:style-changed':
+            // Could sync font styles if needed
+            break;
+        }
+      });
+
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['text'],
+          canNest: true,
+          canBeNested: true
+        });
+      }
+
+      renderShadowList();
+      updatePreview();
+      emit('widget.ready', { capabilities: ['text-effects'] });
+      log('Text Effects widget ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

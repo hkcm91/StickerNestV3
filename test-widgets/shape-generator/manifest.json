@@ -1,0 +1,78 @@
+{
+  "id": "shape-generator",
+  "name": "Shape Generator",
+  "version": "1.0.0",
+  "description": "Create and customize shapes including rectangles, circles, polygons, stars, arrows, and speech bubbles for flyer designs",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "graphics",
+  "tags": ["shapes", "graphics", "vector", "icons", "design", "flyer"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["vector"],
+    "canNest": true,
+    "canBeNested": true
+  },
+  "inputs": {
+    "shape.set": {
+      "type": "string",
+      "description": "Set shape type (rect, circle, triangle, polygon, star, arrow, bubble, heart, hexagon)"
+    },
+    "style.apply": {
+      "type": "object",
+      "description": "Apply style (fill, stroke, strokeWidth, radius, shadow)"
+    },
+    "shape.export": {
+      "type": "object",
+      "description": "Export shape as SVG or PNG"
+    },
+    "shape.random": {
+      "type": "event",
+      "description": "Generate a random shape with random colors"
+    }
+  },
+  "outputs": {
+    "shape.changed": {
+      "type": "object",
+      "description": "Emitted when shape type or style changes"
+    },
+    "shape.exported": {
+      "type": "object",
+      "description": "Emitted with exported SVG/PNG data"
+    },
+    "shape.created": {
+      "type": "object",
+      "description": "Emitted when user wants to add shape to canvas"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["brand:color-changed"],
+    "emits": ["graphics:shape-created"]
+  },
+  "config": {
+    "defaultShape": "rect",
+    "defaultFill": "#8b5cf6",
+    "defaultStroke": "#6d28d9",
+    "showGrid": true
+  },
+  "size": {
+    "width": 380,
+    "height": 560,
+    "minWidth": 320,
+    "minHeight": 450,
+    "maxWidth": 600,
+    "maxHeight": 800
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" },
+    { "name": "canvasBg", "type": "color", "variable": "--canvas-bg" }
+  ]
+}

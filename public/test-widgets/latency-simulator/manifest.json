@@ -1,0 +1,23 @@
+{
+    "id": "debug-latency-simulator",
+    "name": "Latency Simulator",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "delayed-echo": {
+            "type": "event",
+            "description": "Receives delayed echo responses"
+        }
+    },
+    "outputs": {
+        "delay-ping": {
+            "type": "event",
+            "description": "Emits events with artificial delay"
+        }
+    }
+}

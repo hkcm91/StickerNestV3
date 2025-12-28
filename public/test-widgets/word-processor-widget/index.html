@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      /* StickerNest Design System */
+      --sn-bg-primary: #0f0f19;
+      --sn-bg-secondary: #1a1a2e;
+      --sn-bg-tertiary: #252538;
+      --sn-text-primary: #e2e8f0;
+      --sn-text-secondary: #94a3b8;
+      --sn-text-muted: #64748b;
+      --sn-accent-primary: #8b5cf6;
+      --sn-accent-secondary: #a78bfa;
+      --sn-border-primary: rgba(139, 92, 246, 0.2);
+      --sn-border-hover: rgba(139, 92, 246, 0.4);
+      --sn-radius-sm: 4px;
+      --sn-radius-md: 6px;
+      --sn-radius-lg: 8px;
+      --sn-transition-fast: 0.15s ease;
+      --sn-shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --sn-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --sn-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+
+      /* Widget-specific slots */
+      --widget-bg: var(--sn-bg-primary);
+      --toolbar-bg: var(--sn-bg-secondary);
+      --editor-bg: #1e1e2e;
+      --accent-color: var(--sn-accent-primary);
+      --text-color: var(--sn-text-primary);
+      --border-color: var(--sn-border-primary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: transparent;
+      color: var(--text-color);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ========================================
+       ICON MODE - Document on Desktop
+       ======================================== */
+    .icon-mode {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 16px;
+      border-radius: var(--sn-radius-lg);
+      transition: all var(--sn-transition-fast);
+      width: 100%;
+      height: 100%;
+      min-width: 80px;
+      min-height: 100px;
+    }
+
+    .icon-mode:hover {
+      background: rgba(139, 92, 246, 0.1);
+      transform: scale(1.02);
+    }
+
+    .icon-mode:hover .doc-icon {
+      transform: translateY(-2px);
+      box-shadow: var(--sn-shadow-lg);
+    }
+
+    .doc-icon {
+      position: relative;
+      width: 64px;
+      height: 80px;
+      background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+      border-radius: 4px 12px 4px 4px;
+      box-shadow: var(--sn-shadow-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--sn-transition-fast);
+      overflow: hidden;
+    }
+
+    .doc-icon::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+
+    .doc-icon::after {
+      content: '';
+      position: absolute;
+      top: 16px;
+      right: 0;
+      left: 8px;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .doc-icon-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .doc-icon-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px;
+      width: 100%;
+    }
+
+    .doc-icon-line {
+      height: 3px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+    }
+
+    .doc-icon-line:nth-child(1) { width: 80%; }
+    .doc-icon-line:nth-child(2) { width: 60%; }
+    .doc-icon-line:nth-child(3) { width: 70%; }
+    .doc-icon-line:nth-child(4) { width: 50%; }
+
+    .doc-type-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent-color);
+      padding: 2px 6px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .doc-custom-emoji {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .doc-title {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-color);
+      text-align: center;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 4px;
+    }
+
+    .doc-modified {
+      font-size: 9px;
+      color: var(--sn-text-muted);
+      margin-top: 2px;
+    }
+
+    /* Icon customization popover */
+    .icon-customizer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--sn-bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-lg);
+      padding: 16px;
+      z-index: 1000;
+      box-shadow: var(--sn-shadow-lg);
+      min-width: 200px;
+      display: none;
+    }
+
+    .icon-customizer.visible {
+      display: block;
+    }
+
+    .icon-customizer-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-color);
+    }
+
+    .icon-options {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .icon-option {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      font-size: 18px;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .icon-option:hover {
+      border-color: var(--accent-color);
+      background: var(--sn-bg-tertiary);
+    }
+
+    .icon-option.selected {
+      border-color: var(--accent-color);
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    .custom-emoji-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      color: var(--text-color);
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .custom-emoji-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .icon-customizer-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-customizer-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: var(--sn-radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .icon-customizer-btn.primary {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .icon-customizer-btn.secondary {
+      background: var(--sn-bg-tertiary);
+      color: var(--sn-text-secondary);
+    }
+
+    /* ========================================
+       EDITOR MODE - Word Processor
+       ======================================== */
+    .editor-mode {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      background: var(--widget-bg);
+      border-radius: var(--sn-radius-lg);
+      overflow: hidden;
+      box-shadow: var(--sn-shadow-lg);
+    }
+
+    .editor-mode.active {
+      display: flex;
+    }
+
+    /* Title Bar */
+    .title-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--sn-bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .title-bar-icon {
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity var(--sn-transition-fast);
+    }
+
+    .title-bar-icon:hover {
+      opacity: 1;
+    }
+
+    .doc-title-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: var(--sn-radius-sm);
+      transition: background var(--sn-transition-fast);
+    }
+
+    .doc-title-input:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    .doc-title-input:focus {
+      outline: none;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .title-bar-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .title-bar-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .title-bar-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-color);
+    }
+
+    .title-bar-btn.minimize {
+      color: var(--accent-color);
+    }
+
+    /* Menu Bar */
+    .menu-bar {
+      display: flex;
+      gap: 2px;
+      padding: 4px 8px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .menu-item {
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .menu-item:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-color);
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px 12px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 2px;
+      padding-right: 8px;
+      border-right: 1px solid var(--border-color);
+    }
+
+    .toolbar-group:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    .toolbar-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+      font-size: 14px;
+    }
+
+    .toolbar-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--border-color);
+      color: var(--text-color);
+    }
+
+    .toolbar-btn.active {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .toolbar-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .toolbar-select {
+      height: 32px;
+      padding: 0 8px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      color: var(--text-color);
+      font-size: 11px;
+      cursor: pointer;
+      min-width: 100px;
+    }
+
+    .toolbar-select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .toolbar-color-picker {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .toolbar-color-picker::-webkit-color-swatch-wrapper {
+      padding: 3px;
+    }
+
+    .toolbar-color-picker::-webkit-color-swatch {
+      border: none;
+      border-radius: 2px;
+    }
+
+    /* Editor Area */
+    .editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--editor-bg);
+      overflow: hidden;
+    }
+
+    .editor-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .editor-content {
+      max-width: 800px;
+      margin: 0 auto;
+      min-height: 100%;
+      background: rgba(255,255,255,0.03);
+      padding: 40px 48px;
+      border-radius: var(--sn-radius-md);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+      outline: none;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-color);
+    }
+
+    .editor-content:empty::before {
+      content: 'Start typing your document...';
+      color: var(--sn-text-muted);
+      font-style: italic;
+    }
+
+    .editor-content h1 { font-size: 28px; margin: 16px 0; font-weight: 700; }
+    .editor-content h2 { font-size: 22px; margin: 14px 0; font-weight: 600; }
+    .editor-content h3 { font-size: 18px; margin: 12px 0; font-weight: 600; }
+    .editor-content p { margin: 10px 0; }
+    .editor-content ul, .editor-content ol { margin: 10px 0; padding-left: 24px; }
+    .editor-content li { margin: 4px 0; }
+    .editor-content blockquote {
+      border-left: 3px solid var(--accent-color);
+      margin: 16px 0;
+      padding: 8px 16px;
+      background: rgba(139, 92, 246, 0.1);
+      border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
+    }
+    .editor-content pre {
+      background: var(--sn-bg-primary);
+      padding: 12px;
+      border-radius: var(--sn-radius-sm);
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Monaco', monospace;
+      font-size: 13px;
+    }
+    .editor-content code {
+      background: var(--sn-bg-primary);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Fira Code', 'Monaco', monospace;
+      font-size: 13px;
+    }
+    .editor-content a {
+      color: var(--accent-color);
+      text-decoration: underline;
+    }
+    .editor-content hr {
+      border: none;
+      height: 1px;
+      background: var(--border-color);
+      margin: 20px 0;
+    }
+    .editor-content img {
+      max-width: 100%;
+      border-radius: var(--sn-radius-sm);
+    }
+
+    /* Status Bar */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px;
+      background: var(--sn-bg-tertiary);
+      border-top: 1px solid var(--border-color);
+      font-size: 10px;
+      color: var(--sn-text-muted);
+    }
+
+    .status-left, .status-right {
+      display: flex;
+      gap: 16px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .status-indicator.unsaved {
+      background: #f59e0b;
+    }
+
+    /* Find/Replace Panel */
+    .find-panel {
+      display: none;
+      padding: 8px 12px;
+      background: var(--sn-bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      gap: 8px;
+    }
+
+    .find-panel.visible {
+      display: flex;
+    }
+
+    .find-input {
+      flex: 1;
+      padding: 6px 10px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      color: var(--text-color);
+      font-size: 12px;
+    }
+
+    .find-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .find-btn {
+      padding: 6px 12px;
+      background: var(--accent-color);
+      border: none;
+      border-radius: var(--sn-radius-sm);
+      color: white;
+      font-size: 11px;
+      cursor: pointer;
+      transition: opacity var(--sn-transition-fast);
+    }
+
+    .find-btn:hover {
+      opacity: 0.9;
+    }
+
+    .find-close {
+      padding: 6px;
+      background: transparent;
+      border: none;
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+    }
+
+    /* Export Modal */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--sn-bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-lg);
+      padding: 20px;
+      min-width: 280px;
+      box-shadow: var(--sn-shadow-lg);
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .modal-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .modal-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--sn-bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .modal-option:hover {
+      border-color: var(--accent-color);
+    }
+
+    .modal-option-icon {
+      font-size: 20px;
+    }
+
+    .modal-option-info h4 {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .modal-option-info p {
+      font-size: 10px;
+      color: var(--sn-text-muted);
+    }
+
+    .modal-close {
+      width: 100%;
+      padding: 10px;
+      background: var(--sn-bg-tertiary);
+      border: none;
+      border-radius: var(--sn-radius-sm);
+      color: var(--sn-text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .modal-close:hover {
+      background: var(--sn-bg-primary);
+      color: var(--text-color);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--sn-bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--sn-bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-color);
+    }
+
+    /* SVG Icons */
+    .icon-svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Dropdown menu */
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 160px;
+      background: var(--sn-bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--sn-radius-sm);
+      box-shadow: var(--sn-shadow-lg);
+      z-index: 50;
+      display: none;
+      padding: 4px 0;
+    }
+
+    .dropdown-menu.visible {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: var(--sn-text-secondary);
+      cursor: pointer;
+      transition: all var(--sn-transition-fast);
+    }
+
+    .dropdown-item:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-color);
+    }
+
+    .dropdown-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+
+    .kbd {
+      margin-left: auto;
+      font-size: 9px;
+      color: var(--sn-text-muted);
+      background: var(--sn-bg-primary);
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+  </style>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Georgia&family=Arial&family=Courier+Prime&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ICON MODE -->
+  <div class="icon-mode" id="iconMode">
+    <div class="doc-icon" id="docIcon">
+      <div class="doc-icon-lines" id="docIconDefault">
+        <div class="doc-icon-line"></div>
+        <div class="doc-icon-line"></div>
+        <div class="doc-icon-line"></div>
+        <div class="doc-icon-line"></div>
+      </div>
+      <span class="doc-custom-emoji" id="docIconEmoji" style="display:none;"></span>
+      <span class="doc-type-badge" id="docTypeBadge">DOC</span>
+    </div>
+    <div class="doc-title" id="iconDocTitle">Untitled Document</div>
+    <div class="doc-modified" id="iconModified">Double-click to open</div>
+  </div>
+
+  <!-- Icon Customizer Popover -->
+  <div class="icon-customizer" id="iconCustomizer">
+    <div class="icon-customizer-title">Customize Icon</div>
+    <div class="icon-options" id="iconOptions">
+      <div class="icon-option" data-type="doc" title="DOC">
+        <svg width="16" height="20" viewBox="0 0 16 20" fill="currentColor">
+          <path d="M2 0C0.9 0 0 0.9 0 2V18C0 19.1 0.9 20 2 20H14C15.1 20 16 19.1 16 18V6L10 0H2ZM9 7V1.5L14.5 7H9Z"/>
+        </svg>
+      </div>
+      <div class="icon-option" data-type="docx" title="DOCX">
+        <svg width="16" height="20" viewBox="0 0 16 20" fill="#2b579a">
+          <path d="M2 0C0.9 0 0 0.9 0 2V18C0 19.1 0.9 20 2 20H14C15.1 20 16 19.1 16 18V6L10 0H2ZM9 7V1.5L14.5 7H9Z"/>
+        </svg>
+      </div>
+      <div class="icon-option" data-type="txt" title="TXT">
+        <svg width="16" height="20" viewBox="0 0 16 20" fill="#6b7280">
+          <path d="M2 0C0.9 0 0 0.9 0 2V18C0 19.1 0.9 20 2 20H14C15.1 20 16 19.1 16 18V6L10 0H2ZM9 7V1.5L14.5 7H9Z"/>
+        </svg>
+      </div>
+      <div class="icon-option" data-type="rtf" title="RTF">
+        <svg width="16" height="20" viewBox="0 0 16 20" fill="#059669">
+          <path d="M2 0C0.9 0 0 0.9 0 2V18C0 19.1 0.9 20 2 20H14C15.1 20 16 19.1 16 18V6L10 0H2ZM9 7V1.5L14.5 7H9Z"/>
+        </svg>
+      </div>
+      <div class="icon-option" data-emoji="true">📄</div>
+      <div class="icon-option" data-emoji="true">📝</div>
+      <div class="icon-option" data-emoji="true">📋</div>
+      <div class="icon-option" data-emoji="true">📑</div>
+    </div>
+    <input type="text" class="custom-emoji-input" id="customEmojiInput" placeholder="Enter custom emoji...">
+    <div class="icon-customizer-actions">
+      <button class="icon-customizer-btn secondary" id="cancelIconBtn">Cancel</button>
+      <button class="icon-customizer-btn primary" id="applyIconBtn">Apply</button>
+    </div>
+  </div>
+
+  <!-- EDITOR MODE -->
+  <div class="editor-mode" id="editorMode">
+    <!-- Title Bar -->
+    <div class="title-bar">
+      <span class="title-bar-icon" id="docTypeIcon">📄</span>
+      <input type="text" class="doc-title-input" id="docTitleInput" value="Untitled Document" spellcheck="false">
+      <div class="title-bar-actions">
+        <button class="title-bar-btn" id="saveBtn" title="Save (Ctrl+S)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17,21 17,13 7,13 7,21"/>
+            <polyline points="7,3 7,8 15,8"/>
+          </svg>
+        </button>
+        <button class="title-bar-btn" id="exportBtn" title="Export">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <button class="title-bar-btn minimize" id="minimizeBtn" title="Minimize to icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Menu Bar -->
+    <div class="menu-bar">
+      <div class="menu-item dropdown" id="fileMenu">
+        File
+        <div class="dropdown-menu" id="fileDropdown">
+          <div class="dropdown-item" data-action="new">New Document</div>
+          <div class="dropdown-item" data-action="save">Save <span class="kbd">Ctrl+S</span></div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" data-action="export">Export...</div>
+        </div>
+      </div>
+      <div class="menu-item dropdown" id="editMenu">
+        Edit
+        <div class="dropdown-menu" id="editDropdown">
+          <div class="dropdown-item" data-action="undo">Undo <span class="kbd">Ctrl+Z</span></div>
+          <div class="dropdown-item" data-action="redo">Redo <span class="kbd">Ctrl+Y</span></div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" data-action="find">Find & Replace <span class="kbd">Ctrl+F</span></div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" data-action="selectAll">Select All <span class="kbd">Ctrl+A</span></div>
+        </div>
+      </div>
+      <div class="menu-item dropdown" id="insertMenu">
+        Insert
+        <div class="dropdown-menu" id="insertDropdown">
+          <div class="dropdown-item" data-action="insertLink">Link</div>
+          <div class="dropdown-item" data-action="insertHR">Horizontal Rule</div>
+          <div class="dropdown-item" data-action="insertBlockquote">Block Quote</div>
+          <div class="dropdown-item" data-action="insertCode">Code Block</div>
+        </div>
+      </div>
+      <div class="menu-item dropdown" id="formatMenu">
+        Format
+        <div class="dropdown-menu" id="formatDropdown">
+          <div class="dropdown-item" data-action="heading1">Heading 1</div>
+          <div class="dropdown-item" data-action="heading2">Heading 2</div>
+          <div class="dropdown-item" data-action="heading3">Heading 3</div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" data-action="paragraph">Paragraph</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Find/Replace Panel -->
+    <div class="find-panel" id="findPanel">
+      <input type="text" class="find-input" id="findInput" placeholder="Find...">
+      <input type="text" class="find-input" id="replaceInput" placeholder="Replace with...">
+      <button class="find-btn" id="findNextBtn">Find</button>
+      <button class="find-btn" id="replaceBtn">Replace</button>
+      <button class="find-btn" id="replaceAllBtn">All</button>
+      <button class="find-close" id="closeFindBtn">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <select class="toolbar-select" id="fontFamily">
+          <option value="Inter">Inter</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Arial">Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier Prime">Courier</option>
+          <option value="Verdana">Verdana</option>
+        </select>
+        <select class="toolbar-select" id="fontSize" style="min-width: 70px;">
+          <option value="1">8pt</option>
+          <option value="2">10pt</option>
+          <option value="3" selected>12pt</option>
+          <option value="4">14pt</option>
+          <option value="5">18pt</option>
+          <option value="6">24pt</option>
+          <option value="7">36pt</option>
+        </select>
+      </div>
+
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="boldBtn" title="Bold (Ctrl+B)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="italicBtn" title="Italic (Ctrl+I)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4h-8z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="underlineBtn" title="Underline (Ctrl+U)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 17c3.31 0 6-2.69 6-6V3h-2.5v8c0 1.93-1.57 3.5-3.5 3.5S8.5 12.93 8.5 11V3H6v8c0 3.31 2.69 6 6 6zm-7 2v2h14v-2H5z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="strikeBtn" title="Strikethrough">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 19h4v-3h-4v3zM5 4v3h5v3h4V7h5V4H5zM3 14h18v-2H3v2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <input type="color" class="toolbar-color-picker" id="textColor" value="#e2e8f0" title="Text Color">
+        <input type="color" class="toolbar-color-picker" id="highlightColor" value="#8b5cf6" title="Highlight Color">
+      </div>
+
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="alignLeftBtn" title="Align Left">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15 15H3v2h12v-2zm0-8H3v2h12V7zM3 13h18v-2H3v2zm0 8h18v-2H3v2zM3 3v2h18V3H3z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="alignCenterBtn" title="Align Center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 15v2h10v-2H7zm-4 6h18v-2H3v2zm0-8h18v-2H3v2zm4-6v2h10V7H7zM3 3v2h18V3H3z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="alignRightBtn" title="Align Right">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 21h18v-2H3v2zm6-4h12v-2H9v2zm-6-4h18v-2H3v2zm6-4h12V7H9v2zM3 3v2h18V3H3z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="alignJustifyBtn" title="Justify">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 21h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18V7H3v2zm0-6v2h18V3H3z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="ulBtn" title="Bulleted List">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="olBtn" title="Numbered List">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="indentBtn" title="Increase Indent">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 21h18v-2H3v2zM3 8v8l4-4-4-4zm8 9h10v-2H11v2zM3 3v2h18V3H3zm8 6h10V7H11v2zm0 4h10v-2H11v2z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="outdentBtn" title="Decrease Indent">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 17h10v-2H11v2zm-8-5l4 4V8l-4 4zm0 9h18v-2H3v2zM3 3v2h18V3H3zm8 6h10V7H11v2zm0 4h10v-2H11v2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="linkBtn" title="Insert Link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="quoteBtn" title="Block Quote">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/>
+          </svg>
+        </button>
+        <button class="toolbar-btn" id="codeBtn" title="Code Block">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <button class="toolbar-btn" id="clearFormattingBtn" title="Clear Formatting">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 17H7V7"/><path d="M7 17L17 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Editor Container -->
+    <div class="editor-container">
+      <div class="editor-wrapper">
+        <div class="editor-content" id="editor" contenteditable="true" spellcheck="true"></div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-left">
+        <div class="status-item">
+          <span class="status-indicator" id="saveIndicator"></span>
+          <span id="saveStatus">Saved</span>
+        </div>
+        <div class="status-item" id="wordCount">0 words</div>
+        <div class="status-item" id="charCount">0 characters</div>
+      </div>
+      <div class="status-right">
+        <div class="status-item" id="cursorPosition">Line 1, Col 1</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal">
+      <div class="modal-title">Export Document</div>
+      <div class="modal-options">
+        <div class="modal-option" data-format="html">
+          <span class="modal-option-icon">🌐</span>
+          <div class="modal-option-info">
+            <h4>HTML</h4>
+            <p>Web-ready format with styling</p>
+          </div>
+        </div>
+        <div class="modal-option" data-format="txt">
+          <span class="modal-option-icon">📄</span>
+          <div class="modal-option-info">
+            <h4>Plain Text</h4>
+            <p>Simple text without formatting</p>
+          </div>
+        </div>
+        <div class="modal-option" data-format="markdown">
+          <span class="modal-option-icon">📝</span>
+          <div class="modal-option-info">
+            <h4>Markdown</h4>
+            <p>Portable markdown format</p>
+          </div>
+        </div>
+      </div>
+      <button class="modal-close" id="closeExportModal">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE
+    // ========================================
+    const state = {
+      viewMode: 'icon', // 'icon' or 'editor'
+      title: 'Untitled Document',
+      content: '',
+      iconType: 'doc',
+      customEmoji: null,
+      lastSaved: null,
+      isDirty: false,
+      autoSave: true,
+      autoSaveInterval: 30000
+    };
+
+    let autoSaveTimer = null;
+
+    // ========================================
+    // DOM ELEMENTS
+    // ========================================
+    const iconMode = document.getElementById('iconMode');
+    const editorMode = document.getElementById('editorMode');
+    const editor = document.getElementById('editor');
+    const docTitleInput = document.getElementById('docTitleInput');
+    const iconDocTitle = document.getElementById('iconDocTitle');
+    const docTypeBadge = document.getElementById('docTypeBadge');
+    const docIconDefault = document.getElementById('docIconDefault');
+    const docIconEmoji = document.getElementById('docIconEmoji');
+    const iconCustomizer = document.getElementById('iconCustomizer');
+    const saveIndicator = document.getElementById('saveIndicator');
+    const saveStatus = document.getElementById('saveStatus');
+    const wordCountEl = document.getElementById('wordCount');
+    const charCountEl = document.getElementById('charCount');
+    const findPanel = document.getElementById('findPanel');
+    const exportModal = document.getElementById('exportModal');
+
+    // ========================================
+    // ICON TYPE CONFIGS
+    // ========================================
+    const iconTypes = {
+      doc: { badge: 'DOC', color: '#8b5cf6' },
+      docx: { badge: 'DOCX', color: '#2b579a' },
+      txt: { badge: 'TXT', color: '#6b7280' },
+      rtf: { badge: 'RTF', color: '#059669' },
+      note: { badge: 'NOTE', color: '#f59e0b' }
+    };
+
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    function emit(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+      }
+    }
+
+    function broadcast(type, payload) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload, broadcast: true });
+      }
+    }
+
+    function log(msg) {
+      if (window.WidgetAPI) {
+        window.WidgetAPI.log(msg);
+      }
+      console.log('[WordProcessor]', msg);
+    }
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      if (mode === 'icon') {
+        iconMode.style.display = 'flex';
+        editorMode.classList.remove('active');
+        updateIconView();
+      } else {
+        iconMode.style.display = 'none';
+        editorMode.classList.add('active');
+        editor.focus();
+      }
+      emit('view.changed', mode);
+    }
+
+    function updateIconView() {
+      iconDocTitle.textContent = state.title || 'Untitled Document';
+
+      if (state.customEmoji) {
+        docIconDefault.style.display = 'none';
+        docIconEmoji.style.display = 'block';
+        docIconEmoji.textContent = state.customEmoji;
+        docTypeBadge.style.display = 'none';
+      } else {
+        docIconDefault.style.display = 'flex';
+        docIconEmoji.style.display = 'none';
+        const config = iconTypes[state.iconType] || iconTypes.doc;
+        docTypeBadge.textContent = config.badge;
+        docTypeBadge.style.background = config.color;
+        docTypeBadge.style.display = 'block';
+      }
+
+      // Update modified time
+      const modifiedEl = document.getElementById('iconModified');
+      if (state.lastSaved) {
+        const date = new Date(state.lastSaved);
+        modifiedEl.textContent = `Modified ${date.toLocaleDateString()}`;
+      } else {
+        modifiedEl.textContent = 'Double-click to open';
+      }
+    }
+
+    function updateTitleBarIcon() {
+      const icon = document.getElementById('docTypeIcon');
+      if (state.customEmoji) {
+        icon.textContent = state.customEmoji;
+      } else {
+        icon.textContent = '📄';
+      }
+    }
+
+    function markDirty() {
+      if (!state.isDirty) {
+        state.isDirty = true;
+        saveIndicator.classList.add('unsaved');
+        saveStatus.textContent = 'Unsaved changes';
+      }
+
+      // Reset auto-save timer
+      if (state.autoSave) {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(saveDocument, state.autoSaveInterval);
+      }
+    }
+
+    function updateStats() {
+      const text = editor.innerText || '';
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      const chars = text.length;
+
+      wordCountEl.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+      charCountEl.textContent = `${chars} character${chars !== 1 ? 's' : ''}`;
+    }
+
+    function saveDocument() {
+      state.content = editor.innerHTML;
+      state.lastSaved = Date.now();
+      state.isDirty = false;
+
+      saveIndicator.classList.remove('unsaved');
+      saveStatus.textContent = 'Saved';
+
+      const docData = {
+        title: state.title,
+        content: state.content,
+        lastSaved: state.lastSaved
+      };
+
+      emit('document.saved', docData);
+      broadcast('document:saved', docData);
+      log('Document saved');
+
+      updateIconView();
+    }
+
+    function exportDocument(format) {
+      let exportData = {
+        title: state.title,
+        format: format,
+        content: ''
+      };
+
+      switch (format) {
+        case 'html':
+          exportData.content = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${state.title}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+    h1 { font-size: 28px; margin-bottom: 16px; }
+    h2 { font-size: 22px; margin: 24px 0 12px; }
+    h3 { font-size: 18px; margin: 20px 0 10px; }
+    p { margin: 12px 0; }
+    blockquote { border-left: 3px solid #8b5cf6; margin: 16px 0; padding: 8px 16px; background: #f5f3ff; }
+    pre { background: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>${state.title}</h1>
+  ${editor.innerHTML}
+</body>
+</html>`;
+          break;
+
+        case 'txt':
+          exportData.content = editor.innerText;
+          break;
+
+        case 'markdown':
+          exportData.content = htmlToMarkdown(editor.innerHTML);
+          break;
+      }
+
+      emit('document.exported', exportData);
+
+      // Create download
+      const blob = new Blob([exportData.content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.title}.${format === 'markdown' ? 'md' : format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      closeModal('exportModal');
+      log(`Exported as ${format}`);
+    }
+
+    function htmlToMarkdown(html) {
+      let md = html;
+
+      // Headers
+      md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+      md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+      md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+
+      // Bold, italic, underline
+      md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+      md = md.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+      md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+      md = md.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+      md = md.replace(/<u[^>]*>(.*?)<\/u>/gi, '_$1_');
+      md = md.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~');
+      md = md.replace(/<strike[^>]*>(.*?)<\/strike>/gi, '~~$1~~');
+
+      // Links
+      md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+
+      // Lists
+      md = md.replace(/<ul[^>]*>(.*?)<\/ul>/gis, (match, content) => {
+        return content.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n') + '\n';
+      });
+      md = md.replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, content) => {
+        let i = 1;
+        return content.replace(/<li[^>]*>(.*?)<\/li>/gi, () => `${i++}. $1\n`) + '\n';
+      });
+
+      // Blockquote
+      md = md.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, (match, content) => {
+        return content.split('\n').map(line => '> ' + line.trim()).join('\n') + '\n\n';
+      });
+
+      // Code
+      md = md.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```\n\n');
+      md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+
+      // Paragraphs and line breaks
+      md = md.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+      md = md.replace(/<br\s*\/?>/gi, '\n');
+      md = md.replace(/<hr\s*\/?>/gi, '\n---\n\n');
+
+      // Clean up remaining HTML
+      md = md.replace(/<div[^>]*>(.*?)<\/div>/gi, '$1\n');
+      md = md.replace(/<[^>]+>/g, '');
+
+      // Clean up whitespace
+      md = md.replace(/\n{3,}/g, '\n\n');
+      md = md.replace(/&nbsp;/g, ' ');
+      md = md.replace(/&amp;/g, '&');
+      md = md.replace(/&lt;/g, '<');
+      md = md.replace(/&gt;/g, '>');
+
+      return md.trim();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('visible');
+    }
+
+    function showModal(id) {
+      document.getElementById(id).classList.add('visible');
+    }
+
+    // Formatting commands
+    function execCommand(cmd, value = null) {
+      document.execCommand(cmd, false, value);
+      editor.focus();
+      markDirty();
+    }
+
+    function toggleFormat(cmd) {
+      execCommand(cmd);
+      updateToolbarState();
+    }
+
+    function updateToolbarState() {
+      document.getElementById('boldBtn').classList.toggle('active', document.queryCommandState('bold'));
+      document.getElementById('italicBtn').classList.toggle('active', document.queryCommandState('italic'));
+      document.getElementById('underlineBtn').classList.toggle('active', document.queryCommandState('underline'));
+      document.getElementById('strikeBtn').classList.toggle('active', document.queryCommandState('strikeThrough'));
+    }
+
+    // Find & Replace
+    function findNext() {
+      const searchText = document.getElementById('findInput').value;
+      if (!searchText) return;
+
+      if (window.find) {
+        window.find(searchText);
+      }
+    }
+
+    function replaceText() {
+      const searchText = document.getElementById('findInput').value;
+      const replaceWith = document.getElementById('replaceInput').value;
+      if (!searchText) return;
+
+      const selection = window.getSelection();
+      if (selection.toString().toLowerCase() === searchText.toLowerCase()) {
+        document.execCommand('insertText', false, replaceWith);
+        markDirty();
+      }
+      findNext();
+    }
+
+    function replaceAll() {
+      const searchText = document.getElementById('findInput').value;
+      const replaceWith = document.getElementById('replaceInput').value;
+      if (!searchText) return;
+
+      const html = editor.innerHTML;
+      const regex = new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      editor.innerHTML = html.replace(regex, replaceWith);
+      markDirty();
+    }
+
+    // ========================================
+    // EVENT HANDLERS
+    // ========================================
+
+    // Icon mode interactions
+    iconMode.addEventListener('dblclick', (e) => {
+      if (!iconCustomizer.classList.contains('visible')) {
+        setViewMode('editor');
+      }
+    });
+
+    iconMode.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      iconCustomizer.classList.add('visible');
+    });
+
+    // Icon customizer
+    document.querySelectorAll('.icon-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+
+        if (opt.dataset.emoji) {
+          document.getElementById('customEmojiInput').value = opt.textContent;
+        } else {
+          document.getElementById('customEmojiInput').value = '';
+        }
+      });
+    });
+
+    document.getElementById('applyIconBtn').addEventListener('click', () => {
+      const customInput = document.getElementById('customEmojiInput').value.trim();
+      const selectedOpt = document.querySelector('.icon-option.selected');
+
+      if (customInput) {
+        state.customEmoji = customInput;
+        state.iconType = 'custom';
+      } else if (selectedOpt && selectedOpt.dataset.type) {
+        state.iconType = selectedOpt.dataset.type;
+        state.customEmoji = null;
+      } else if (selectedOpt && selectedOpt.dataset.emoji) {
+        state.customEmoji = selectedOpt.textContent;
+        state.iconType = 'custom';
+      }
+
+      updateIconView();
+      updateTitleBarIcon();
+      iconCustomizer.classList.remove('visible');
+    });
+
+    document.getElementById('cancelIconBtn').addEventListener('click', () => {
+      iconCustomizer.classList.remove('visible');
+    });
+
+    // Minimize button
+    document.getElementById('minimizeBtn').addEventListener('click', () => {
+      saveDocument();
+      setViewMode('icon');
+    });
+
+    // Title input
+    docTitleInput.addEventListener('input', () => {
+      state.title = docTitleInput.value;
+      markDirty();
+    });
+
+    // Save button
+    document.getElementById('saveBtn').addEventListener('click', saveDocument);
+
+    // Export button
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      showModal('exportModal');
+    });
+
+    // Export modal options
+    document.querySelectorAll('.modal-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        exportDocument(opt.dataset.format);
+      });
+    });
+
+    document.getElementById('closeExportModal').addEventListener('click', () => {
+      closeModal('exportModal');
+    });
+
+    // Editor events
+    editor.addEventListener('input', () => {
+      markDirty();
+      updateStats();
+      emit('document.changed', {
+        title: state.title,
+        content: editor.innerHTML,
+        textContent: editor.innerText
+      });
+    });
+
+    editor.addEventListener('keyup', updateToolbarState);
+    editor.addEventListener('mouseup', updateToolbarState);
+
+    // Toolbar buttons
+    document.getElementById('undoBtn').addEventListener('click', () => execCommand('undo'));
+    document.getElementById('redoBtn').addEventListener('click', () => execCommand('redo'));
+    document.getElementById('boldBtn').addEventListener('click', () => toggleFormat('bold'));
+    document.getElementById('italicBtn').addEventListener('click', () => toggleFormat('italic'));
+    document.getElementById('underlineBtn').addEventListener('click', () => toggleFormat('underline'));
+    document.getElementById('strikeBtn').addEventListener('click', () => toggleFormat('strikeThrough'));
+
+    document.getElementById('alignLeftBtn').addEventListener('click', () => execCommand('justifyLeft'));
+    document.getElementById('alignCenterBtn').addEventListener('click', () => execCommand('justifyCenter'));
+    document.getElementById('alignRightBtn').addEventListener('click', () => execCommand('justifyRight'));
+    document.getElementById('alignJustifyBtn').addEventListener('click', () => execCommand('justifyFull'));
+
+    document.getElementById('ulBtn').addEventListener('click', () => execCommand('insertUnorderedList'));
+    document.getElementById('olBtn').addEventListener('click', () => execCommand('insertOrderedList'));
+    document.getElementById('indentBtn').addEventListener('click', () => execCommand('indent'));
+    document.getElementById('outdentBtn').addEventListener('click', () => execCommand('outdent'));
+
+    document.getElementById('linkBtn').addEventListener('click', () => {
+      const url = prompt('Enter URL:');
+      if (url) execCommand('createLink', url);
+    });
+
+    document.getElementById('quoteBtn').addEventListener('click', () => {
+      execCommand('formatBlock', 'blockquote');
+    });
+
+    document.getElementById('codeBtn').addEventListener('click', () => {
+      execCommand('formatBlock', 'pre');
+    });
+
+    document.getElementById('clearFormattingBtn').addEventListener('click', () => {
+      execCommand('removeFormat');
+    });
+
+    // Font controls
+    document.getElementById('fontFamily').addEventListener('change', (e) => {
+      execCommand('fontName', e.target.value);
+    });
+
+    document.getElementById('fontSize').addEventListener('change', (e) => {
+      execCommand('fontSize', e.target.value);
+    });
+
+    document.getElementById('textColor').addEventListener('input', (e) => {
+      execCommand('foreColor', e.target.value);
+    });
+
+    document.getElementById('highlightColor').addEventListener('input', (e) => {
+      execCommand('hiliteColor', e.target.value);
+    });
+
+    // Menu dropdowns
+    document.querySelectorAll('.dropdown').forEach(dropdown => {
+      dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = dropdown.querySelector('.dropdown-menu');
+        document.querySelectorAll('.dropdown-menu').forEach(m => {
+          if (m !== menu) m.classList.remove('visible');
+        });
+        menu.classList.toggle('visible');
+      });
+    });
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('visible'));
+    });
+
+    // Menu actions
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const action = item.dataset.action;
+        switch (action) {
+          case 'new':
+            if (confirm('Create a new document? Unsaved changes will be lost.')) {
+              editor.innerHTML = '';
+              state.title = 'Untitled Document';
+              docTitleInput.value = state.title;
+              state.isDirty = false;
+              saveIndicator.classList.remove('unsaved');
+              saveStatus.textContent = 'New document';
+            }
+            break;
+          case 'save':
+            saveDocument();
+            break;
+          case 'export':
+            showModal('exportModal');
+            break;
+          case 'undo':
+            execCommand('undo');
+            break;
+          case 'redo':
+            execCommand('redo');
+            break;
+          case 'find':
+            findPanel.classList.toggle('visible');
+            if (findPanel.classList.contains('visible')) {
+              document.getElementById('findInput').focus();
+            }
+            break;
+          case 'selectAll':
+            execCommand('selectAll');
+            break;
+          case 'insertLink':
+            const url = prompt('Enter URL:');
+            if (url) execCommand('createLink', url);
+            break;
+          case 'insertHR':
+            execCommand('insertHorizontalRule');
+            break;
+          case 'insertBlockquote':
+            execCommand('formatBlock', 'blockquote');
+            break;
+          case 'insertCode':
+            execCommand('formatBlock', 'pre');
+            break;
+          case 'heading1':
+            execCommand('formatBlock', 'h1');
+            break;
+          case 'heading2':
+            execCommand('formatBlock', 'h2');
+            break;
+          case 'heading3':
+            execCommand('formatBlock', 'h3');
+            break;
+          case 'paragraph':
+            execCommand('formatBlock', 'p');
+            break;
+        }
+      });
+    });
+
+    // Find panel
+    document.getElementById('findNextBtn').addEventListener('click', findNext);
+    document.getElementById('replaceBtn').addEventListener('click', replaceText);
+    document.getElementById('replaceAllBtn').addEventListener('click', replaceAll);
+    document.getElementById('closeFindBtn').addEventListener('click', () => {
+      findPanel.classList.remove('visible');
+    });
+
+    document.getElementById('findInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') findNext();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 's':
+            e.preventDefault();
+            saveDocument();
+            break;
+          case 'f':
+            e.preventDefault();
+            findPanel.classList.toggle('visible');
+            if (findPanel.classList.contains('visible')) {
+              document.getElementById('findInput').focus();
+            }
+            break;
+          case 'b':
+            if (state.viewMode === 'editor') {
+              e.preventDefault();
+              toggleFormat('bold');
+            }
+            break;
+          case 'i':
+            if (state.viewMode === 'editor') {
+              e.preventDefault();
+              toggleFormat('italic');
+            }
+            break;
+          case 'u':
+            if (state.viewMode === 'editor') {
+              e.preventDefault();
+              toggleFormat('underline');
+            }
+            break;
+        }
+      }
+
+      // Escape to close modals/panels
+      if (e.key === 'Escape') {
+        findPanel.classList.remove('visible');
+        closeModal('exportModal');
+        iconCustomizer.classList.remove('visible');
+      }
+    });
+
+    // ========================================
+    // WIDGET API INTEGRATION
+    // ========================================
+    function init() {
+      if (!window.WidgetAPI) {
+        setTimeout(init, 50);
+        return;
+      }
+
+      log('Initializing Word Processor widget');
+
+      window.WidgetAPI.onEvent('*', (event) => {
+        switch (event.type) {
+          case 'document.load':
+            if (event.payload) {
+              state.title = event.payload.title || 'Untitled Document';
+              editor.innerHTML = event.payload.content || '';
+              docTitleInput.value = state.title;
+              updateStats();
+              updateIconView();
+              log('Document loaded');
+            }
+            break;
+
+          case 'document.clear':
+            editor.innerHTML = '';
+            state.title = 'Untitled Document';
+            docTitleInput.value = state.title;
+            state.isDirty = false;
+            updateStats();
+            updateIconView();
+            break;
+
+          case 'format.apply':
+            if (event.payload) {
+              Object.entries(event.payload).forEach(([cmd, value]) => {
+                execCommand(cmd, value);
+              });
+            }
+            break;
+
+          case 'view.toggle':
+            const mode = event.payload === 'editor' ? 'editor' : 'icon';
+            setViewMode(mode);
+            break;
+
+          case 'icon.set':
+            if (event.payload) {
+              if (event.payload.customEmoji) {
+                state.customEmoji = event.payload.customEmoji;
+                state.iconType = 'custom';
+              } else if (event.payload.iconType) {
+                state.iconType = event.payload.iconType;
+                state.customEmoji = null;
+              }
+              updateIconView();
+              updateTitleBarIcon();
+            }
+            break;
+
+          case 'export.request':
+            exportDocument(event.payload || 'html');
+            break;
+
+          // Listen for brand color changes
+          case 'brand:color-changed':
+            if (event.payload?.color) {
+              document.documentElement.style.setProperty('--accent-color', event.payload.color);
+            }
+            break;
+        }
+      });
+
+      // Register capabilities
+      if (window.WidgetAPI.registerCapabilities) {
+        window.WidgetAPI.registerCapabilities({
+          canEdit: ['text', 'document'],
+          canNest: true,
+          canBeNested: true
+        });
+      }
+
+      // Initialize
+      updateStats();
+      updateIconView();
+      updateTitleBarIcon();
+
+      emit('widget.ready', { capabilities: ['document', 'text', 'export'] });
+      log('Word Processor widget ready');
+    }
+
+    init();
+  </script>
+</body>
+</html>

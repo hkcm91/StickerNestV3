@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2d3748;
+        }
+        .title-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .title {
+            font-size: 13px;
+            color: #fc8181;
+            font-weight: 600;
+        }
+        .badge {
+            background: #e53e3e;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+            min-width: 18px;
+            text-align: center;
+        }
+        .badge.zero { background: #4a5568; }
+
+        .controls {
+            display: flex;
+            gap: 6px;
+        }
+        .ctrl-btn {
+            padding: 4px 8px;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            background: transparent;
+            color: #a0aec0;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .ctrl-btn:hover {
+            border-color: #fc8181;
+            color: #fc8181;
+        }
+
+        .filters {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: #a0aec0;
+            font-size: 10px;
+            cursor: pointer;
+            border: none;
+        }
+        .filter-pill:hover { background: rgba(255,255,255,0.15); }
+        .filter-pill.active { background: #fc8181; color: white; }
+
+        .notifications {
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        .notification {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .notification:hover {
+            background: rgba(0,0,0,0.3);
+            transform: translateX(3px);
+        }
+        .notification.unread {
+            background: rgba(252, 129, 129, 0.1);
+            border-left-color: #fc8181;
+        }
+        .notification.task { border-left-color: #4299e1; }
+        .notification.timer { border-left-color: #48bb78; }
+        .notification.note { border-left-color: #9f7aea; }
+
+        .notif-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .notif-icon.task { background: rgba(66, 153, 225, 0.2); }
+        .notif-icon.timer { background: rgba(72, 187, 120, 0.2); }
+        .notif-icon.note { background: rgba(159, 122, 234, 0.2); }
+        .notif-icon.system { background: rgba(160, 174, 192, 0.2); }
+
+        .notif-content { flex: 1; min-width: 0; }
+        .notif-title {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 3px;
+        }
+        .notif-body {
+            font-size: 11px;
+            color: #a0aec0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .notif-time {
+            font-size: 10px;
+            color: #718096;
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+        }
+        .empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+        .sound-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: #718096;
+        }
+        .sound-toggle input {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title-area">
+            <span class="title">Notifications</span>
+            <span class="badge" id="badge">0</span>
+        </div>
+        <div class="controls">
+            <button class="ctrl-btn" onclick="markAllRead()">Mark Read</button>
+            <button class="ctrl-btn" onclick="clearAll()">Clear</button>
+        </div>
+    </div>
+
+    <div class="filters">
+        <button class="filter-pill active" data-type="all" onclick="setFilter('all')">All</button>
+        <button class="filter-pill" data-type="task" onclick="setFilter('task')">Tasks</button>
+        <button class="filter-pill" data-type="timer" onclick="setFilter('timer')">Timer</button>
+        <button class="filter-pill" data-type="note" onclick="setFilter('note')">Notes</button>
+    </div>
+
+    <div class="notifications" id="notifications"></div>
+
+    <script>
+        // Event types we care about from the ecosystem
+        const EVENT_CONFIG = {
+            'project:task-created': { type: 'task', icon: '📋', title: 'New Task', getBody: p => p.task?.title },
+            'project:task-updated': { type: 'task', icon: '✏️', title: 'Task Updated', getBody: p => p.task?.title + ' - ' + p.change },
+            'project:task-deleted': { type: 'task', icon: '🗑️', title: 'Task Deleted', getBody: p => p.task?.title },
+            'project:task-selected': { type: 'task', icon: '👆', title: 'Task Selected', getBody: p => p.task?.title },
+            'timer:started': { type: 'timer', icon: '▶️', title: 'Timer Started', getBody: p => 'Tracking: ' + p.taskTitle },
+            'timer:stopped': { type: 'timer', icon: '⏹️', title: 'Timer Stopped', getBody: p => formatDuration(p.sessionTime) + ' recorded' },
+            'notes:created': { type: 'note', icon: '📝', title: 'Note Added', getBody: p => p.note?.content?.substring(0, 50) }
+        };
+
+        let state = {
+            notifications: [],
+            filter: 'all',
+            soundEnabled: false
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function formatDuration(ms) {
+            const mins = Math.floor(ms / 60000);
+            const hours = Math.floor(mins / 60);
+            if (hours > 0) return hours + 'h ' + (mins % 60) + 'm';
+            return mins + 'm';
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addNotification(eventType, payload) {
+            const config = EVENT_CONFIG[eventType];
+            if (!config) return;
+
+            const notification = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                type: config.type,
+                icon: config.icon,
+                title: config.title,
+                body: config.getBody(payload) || '',
+                timestamp: Date.now(),
+                unread: true,
+                eventType: eventType,
+                payload: payload
+            };
+
+            state.notifications.unshift(notification);
+
+            // Keep only last 50 notifications
+            if (state.notifications.length > 50) {
+                state.notifications = state.notifications.slice(0, 50);
+            }
+
+            renderNotifications();
+            updateBadge();
+
+            log('Notification: ' + notification.title);
+        }
+
+        function setFilter(type) {
+            state.filter = type;
+            document.querySelectorAll('.filter-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+            renderNotifications();
+        }
+
+        function getFilteredNotifications() {
+            if (state.filter === 'all') return state.notifications;
+            return state.notifications.filter(n => n.type === state.filter);
+        }
+
+        function markAllRead() {
+            state.notifications.forEach(n => n.unread = false);
+            renderNotifications();
+            updateBadge();
+            log('All notifications marked as read');
+        }
+
+        function clearAll() {
+            state.notifications = [];
+            renderNotifications();
+            updateBadge();
+            emit('notifications:cleared', {});
+            log('All notifications cleared');
+        }
+
+        function clickNotification(id) {
+            const notification = state.notifications.find(n => n.id === id);
+            if (notification) {
+                notification.unread = false;
+                renderNotifications();
+                updateBadge();
+
+                emit('notification:clicked', {
+                    notification: notification
+                });
+
+                log('Notification clicked: ' + notification.title);
+            }
+        }
+
+        function updateBadge() {
+            const unreadCount = state.notifications.filter(n => n.unread).length;
+            const badge = document.getElementById('badge');
+            badge.textContent = unreadCount;
+            badge.classList.toggle('zero', unreadCount === 0);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notifications');
+            const filtered = getFilteredNotifications();
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔔</div>
+                        <div>${state.notifications.length === 0 ? 'No notifications yet' : 'No ' + state.filter + ' notifications'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(n => `
+                <div class="notification ${n.type} ${n.unread ? 'unread' : ''}"
+                     onclick="clickNotification('${n.id}')">
+                    <div class="notif-icon ${n.type}">${n.icon}</div>
+                    <div class="notif-content">
+                        <div class="notif-title">${escapeHtml(n.title)}</div>
+                        <div class="notif-body">${escapeHtml(n.body)}</div>
+                    </div>
+                    <div class="notif-time">${formatTime(n.timestamp)}</div>
+                </div>
+            `).join('');
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Notification Center ready');
+            renderNotifications();
+            updateBadge();
+
+            // Listen to ALL events
+            window.WidgetAPI.onEvent('*', (event) => {
+                // Check if this is an event we want to show as notification
+                if (EVENT_CONFIG[event.type]) {
+                    addNotification(event.type, event.payload);
+                }
+            });
+        }
+
+        // Update relative times every minute
+        setInterval(() => renderNotifications(), 60000);
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

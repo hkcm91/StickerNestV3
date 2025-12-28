@@ -1,0 +1,64 @@
+{
+  "id": "shape-element",
+  "name": "Shape Element",
+  "version": "1.0.0",
+  "description": "SVG shape element for canvas - rectangles, circles, stars, and more",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "element",
+  "tags": ["shape", "element", "canvas", "svg", "flyer", "design"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": true,
+    "canEdit": ["vector"],
+    "canNest": false,
+    "canBeNested": true
+  },
+  "inputs": {
+    "shape.set": {
+      "type": "string",
+      "description": "Set shape type (rect, circle, triangle, star, heart, hexagon)"
+    },
+    "style.apply": {
+      "type": "object",
+      "description": "Apply style properties from editor"
+    },
+    "select": {
+      "type": "event",
+      "description": "Select this element"
+    },
+    "deselect": {
+      "type": "event",
+      "description": "Deselect this element"
+    }
+  },
+  "outputs": {
+    "selected": {
+      "type": "object",
+      "description": "Emitted when element is selected with current properties"
+    },
+    "changed": {
+      "type": "object",
+      "description": "Emitted when element properties change"
+    }
+  },
+  "events": {
+    "emits": ["canvas:element-selected", "canvas:element-changed"],
+    "listens": ["canvas:style-changed", "canvas:element-selected", "canvas:shape-set"]
+  },
+  "config": {
+    "defaultShape": "rect",
+    "defaultFill": "#8b5cf6",
+    "defaultStroke": "#6d28d9"
+  },
+  "size": {
+    "width": 150,
+    "height": 150,
+    "minWidth": 30,
+    "minHeight": 30,
+    "maxWidth": 600,
+    "maxHeight": 600
+  }
+}

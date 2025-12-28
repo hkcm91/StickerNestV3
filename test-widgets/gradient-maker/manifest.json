@@ -1,0 +1,80 @@
+{
+  "id": "gradient-maker",
+  "name": "Gradient Maker",
+  "version": "1.0.0",
+  "description": "Create beautiful linear, radial, and conic gradients with multiple color stops for backgrounds and design elements",
+  "kind": "2d",
+  "entry": "index.html",
+  "author": "StickerNest",
+  "category": "design",
+  "tags": ["gradient", "background", "color", "design", "flyer"],
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "canEdit": ["color", "background"],
+    "canNest": false,
+    "canBeNested": true
+  },
+  "inputs": {
+    "type.set": {
+      "type": "string",
+      "description": "Set gradient type (linear, radial, conic)"
+    },
+    "colors.set": {
+      "type": "array",
+      "description": "Set gradient color stops array"
+    },
+    "angle.set": {
+      "type": "number",
+      "description": "Set gradient angle for linear/conic"
+    },
+    "preset.apply": {
+      "type": "string",
+      "description": "Apply a preset gradient by name"
+    },
+    "gradient.export": {
+      "type": "event",
+      "description": "Export gradient as CSS"
+    }
+  },
+  "outputs": {
+    "gradient.changed": {
+      "type": "object",
+      "description": "Emitted when gradient settings change with CSS string"
+    },
+    "gradient.exported": {
+      "type": "object",
+      "description": "Emitted with CSS string and config object"
+    },
+    "gradient.apply": {
+      "type": "object",
+      "description": "Emitted when user wants to apply gradient to canvas"
+    },
+    "widget.ready": {
+      "type": "event",
+      "description": "Emitted when widget is initialized"
+    }
+  },
+  "broadcasts": {
+    "listens": ["brand:color-changed"],
+    "emits": ["background:gradient-changed", "brand:gradient-set"]
+  },
+  "config": {
+    "defaultType": "linear",
+    "defaultAngle": 135,
+    "defaultColors": ["#8b5cf6", "#ec4899"]
+  },
+  "size": {
+    "width": 380,
+    "height": 540,
+    "minWidth": 320,
+    "minHeight": 440,
+    "maxWidth": 600,
+    "maxHeight": 800
+  },
+  "skinSlots": [
+    { "name": "widgetBg", "type": "color", "variable": "--widget-bg" },
+    { "name": "controlsBg", "type": "color", "variable": "--controls-bg" },
+    { "name": "accentColor", "type": "color", "variable": "--accent-color" }
+  ]
+}

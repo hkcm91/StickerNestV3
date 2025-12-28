@@ -1,0 +1,529 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://stickernest.io/schemas/specjson.v2.json",
+  "title": "Widget Generator 2.0 SpecJSON",
+  "description": "Canonical specification format for declarative widget definition",
+  "type": "object",
+  "required": ["id", "version", "displayName", "category", "description", "visual", "state", "events", "actions", "api", "dependencies", "permissions"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique widget identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "minLength": 2,
+      "maxLength": 64
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable display name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "category": {
+      "type": "string",
+      "description": "Widget category",
+      "enum": ["productivity", "creativity", "social", "games", "media", "data", "utility", "education", "business", "lifestyle", "developer", "ai", "integration", "custom"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of widget functionality",
+      "maxLength": 500
+    },
+    "visual": {
+      "$ref": "#/definitions/VisualSpec"
+    },
+    "state": {
+      "$ref": "#/definitions/StateSpec"
+    },
+    "events": {
+      "$ref": "#/definitions/EventSpec"
+    },
+    "actions": {
+      "$ref": "#/definitions/ActionSpec"
+    },
+    "api": {
+      "$ref": "#/definitions/APISpec"
+    },
+    "dependencies": {
+      "$ref": "#/definitions/DependencySpec"
+    },
+    "permissions": {
+      "$ref": "#/definitions/PermissionSpec"
+    },
+    "moddlets": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ModdletSpec" }
+    },
+    "ai": {
+      "$ref": "#/definitions/AISpec"
+    },
+    "size": {
+      "$ref": "#/definitions/SizeSpec"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$",
+        "maxLength": 32
+      },
+      "maxItems": 10
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 100
+    }
+  },
+  "definitions": {
+    "VisualSpec": {
+      "type": "object",
+      "required": ["type", "skins"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["png", "svg", "lottie", "css", "canvas", "html"]
+        },
+        "defaultAsset": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_./-]+$"
+        },
+        "skins": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SkinSpec" }
+        },
+        "spriteSheet": { "$ref": "#/definitions/SpriteSheetSpec" },
+        "lottie": { "$ref": "#/definitions/LottieSpec" },
+        "cssVariables": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CSSVariableSpec" }
+        },
+        "background": { "$ref": "#/definitions/BackgroundSpec" }
+      }
+    },
+    "SkinSpec": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name": { "type": "string" },
+        "previewAsset": { "type": "string" },
+        "cssVariables": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "assets": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "SpriteSheetSpec": {
+      "type": "object",
+      "required": ["asset", "frameWidth", "frameHeight", "frameCount"],
+      "properties": {
+        "asset": { "type": "string" },
+        "frameWidth": { "type": "number", "minimum": 1 },
+        "frameHeight": { "type": "number", "minimum": 1 },
+        "frameCount": { "type": "number", "minimum": 1 },
+        "fps": { "type": "number", "minimum": 1, "default": 30 },
+        "animations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "number" },
+              "end": { "type": "number" },
+              "loop": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "LottieSpec": {
+      "type": "object",
+      "required": ["asset"],
+      "properties": {
+        "asset": { "type": "string" },
+        "autoplay": { "type": "boolean", "default": true },
+        "loop": { "type": "boolean", "default": true },
+        "speed": { "type": "number", "minimum": 0.1, "maximum": 10 },
+        "segments": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+    "CSSVariableSpec": {
+      "type": "object",
+      "required": ["name", "defaultValue"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^--[a-z][a-z0-9-]*$" },
+        "defaultValue": { "type": "string" },
+        "description": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["color", "size", "font", "number", "string"]
+        }
+      }
+    },
+    "BackgroundSpec": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["color", "gradient", "image", "transparent"]
+        },
+        "value": { "type": "string" }
+      }
+    },
+    "StateSpec": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/StateFieldSpec" }
+    },
+    "StateFieldSpec": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "object", "array", "any"]
+        },
+        "default": {},
+        "description": { "type": "string" },
+        "persist": { "type": "boolean" },
+        "validate": { "$ref": "#/definitions/StateValidation" }
+      }
+    },
+    "StateValidation": {
+      "type": "object",
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "pattern": { "type": "string" },
+        "enum": { "type": "array" },
+        "required": { "type": "boolean" }
+      }
+    },
+    "EventSpec": {
+      "type": "object",
+      "required": ["triggers"],
+      "properties": {
+        "triggers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "custom": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CustomEventSpec" }
+        },
+        "broadcasts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/BroadcastSpec" }
+        },
+        "subscriptions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SubscriptionSpec" }
+        }
+      }
+    },
+    "CustomEventSpec": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["string", "number", "boolean", "object", "array", "any"]
+          }
+        }
+      }
+    },
+    "BroadcastSpec": {
+      "type": "object",
+      "required": ["event"],
+      "properties": {
+        "event": { "type": "string" },
+        "description": { "type": "string" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["string", "number", "boolean", "object", "array", "any"]
+          }
+        }
+      }
+    },
+    "SubscriptionSpec": {
+      "type": "object",
+      "required": ["event", "handler"],
+      "properties": {
+        "event": { "type": "string" },
+        "handler": { "type": "string" }
+      }
+    },
+    "ActionSpec": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/ActionDefinition" }
+    },
+    "ActionDefinition": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["setState", "toggleState", "incrementState", "decrementState", "resetState", "emit", "broadcast", "animate", "playSound", "navigate", "fetch", "custom", "conditional", "sequence", "parallel"]
+        },
+        "description": { "type": "string" },
+        "params": { "$ref": "#/definitions/ActionParams" },
+        "condition": { "$ref": "#/definitions/ActionCondition" }
+      }
+    },
+    "ActionParams": {
+      "type": "object",
+      "properties": {
+        "stateKey": { "type": "string" },
+        "value": {},
+        "toggleKey": { "type": "string" },
+        "amount": { "type": "number" },
+        "eventType": { "type": "string" },
+        "eventPayload": {},
+        "broadcastEvent": { "type": "string" },
+        "animation": { "type": "string" },
+        "duration": { "type": "number" },
+        "sound": { "type": "string" },
+        "url": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "method": { "type": "string", "enum": ["GET", "POST", "PUT", "DELETE"] },
+        "customHandler": { "type": "string" },
+        "actions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ActionCondition": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["equals", "notEquals", "greaterThan", "lessThan", "contains", "custom"]
+        },
+        "stateKey": { "type": "string" },
+        "value": {},
+        "expression": { "type": "string" }
+      }
+    },
+    "APISpec": {
+      "type": "object",
+      "required": ["exposes", "accepts", "inputs", "outputs"],
+      "properties": {
+        "exposes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ExposedMethodSpec" }
+        },
+        "accepts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/AcceptedMethodSpec" }
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PortSpec" }
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PortSpec" }
+        }
+      }
+    },
+    "ExposedMethodSpec": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "returns": { "type": "string" }
+      }
+    },
+    "AcceptedMethodSpec": {
+      "type": "object",
+      "required": ["id", "handler"],
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "handler": { "type": "string" }
+      }
+    },
+    "PortSpec": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "object", "array", "any"]
+        },
+        "description": { "type": "string" },
+        "required": { "type": "boolean" },
+        "default": {}
+      }
+    },
+    "DependencySpec": {
+      "type": "object",
+      "properties": {
+        "npm": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "cdn": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CDNDependency" }
+        },
+        "widgets": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "browserAPIs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["localStorage", "sessionStorage", "indexedDB", "webGL", "webAudio", "webRTC", "geolocation", "notifications", "clipboard", "fullscreen", "mediaDevices"]
+          }
+        }
+      }
+    },
+    "CDNDependency": {
+      "type": "object",
+      "required": ["name", "url"],
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "integrity": { "type": "string" },
+        "global": { "type": "string" }
+      }
+    },
+    "PermissionSpec": {
+      "type": "object",
+      "required": ["allowPipelineUse", "allowForking", "allowMarketplace"],
+      "properties": {
+        "allowPipelineUse": { "type": "boolean" },
+        "allowForking": { "type": "boolean" },
+        "allowMarketplace": { "type": "boolean" },
+        "revenueShare": { "$ref": "#/definitions/RevenueShareSpec" },
+        "license": {
+          "type": "string",
+          "enum": ["MIT", "Apache-2.0", "GPL-3.0", "BSD-3-Clause", "proprietary", "custom"]
+        },
+        "requiredCapabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tracking": { "$ref": "#/definitions/TrackingSpec" }
+      }
+    },
+    "RevenueShareSpec": {
+      "type": "object",
+      "required": ["creator", "platform"],
+      "properties": {
+        "creator": { "type": "number", "minimum": 0, "maximum": 1 },
+        "platform": { "type": "number", "minimum": 0, "maximum": 1 },
+        "referrer": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "TrackingSpec": {
+      "type": "object",
+      "required": ["trackUsage", "trackRevenue"],
+      "properties": {
+        "trackUsage": { "type": "boolean" },
+        "trackRevenue": { "type": "boolean" },
+        "anonymizeData": { "type": "boolean" }
+      }
+    },
+    "ModdletSpec": {
+      "type": "object",
+      "required": ["id", "name", "type", "target", "modification"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["skin", "behavior", "action", "event", "state"]
+        },
+        "target": { "type": "string" },
+        "modification": {}
+      }
+    },
+    "AISpec": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "suggestions": {
+          "type": "object",
+          "properties": {
+            "enableAutoComplete": { "type": "boolean" },
+            "enableSmartConnections": { "type": "boolean" },
+            "contextKeywords": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "behavior": {
+          "type": "object",
+          "properties": {
+            "personality": { "type": "string" },
+            "responseStyle": { "type": "string", "enum": ["concise", "detailed", "creative"] },
+            "adaptToUser": { "type": "boolean" }
+          }
+        },
+        "contentGeneration": {
+          "type": "object",
+          "properties": {
+            "allowTextGeneration": { "type": "boolean" },
+            "allowImageGeneration": { "type": "boolean" },
+            "allowCodeGeneration": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "SizeSpec": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "number", "minimum": 1 },
+        "height": { "type": "number", "minimum": 1 },
+        "minWidth": { "type": "number", "minimum": 1 },
+        "minHeight": { "type": "number", "minimum": 1 },
+        "maxWidth": { "type": "number", "minimum": 1 },
+        "maxHeight": { "type": "number", "minimum": 1 },
+        "aspectRatio": { "type": "number", "minimum": 0 },
+        "lockAspectRatio": { "type": "boolean" },
+        "scaleMode": {
+          "type": "string",
+          "enum": ["crop", "scale", "stretch", "contain"]
+        }
+      }
+    }
+  }
+}

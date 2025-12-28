@@ -1,0 +1,61 @@
+{
+  "id": "tamagotchi-moodlet",
+  "name": "Tamagotchi Moodlet",
+  "version": "1.0.0",
+  "kind": "2d",
+  "entry": "index.html",
+  "description": "Sims-style moodlet tracker for life progress. Track hygiene, nutrition, hydration, productivity, health, and finances. Syncs with pet and todo widgets.",
+  "tags": ["tamagotchi", "moodlet", "mood", "tracker", "wellness", "habits", "gamification", "sims"],
+  "author": "StickerNest",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false
+  },
+  "inputs": {
+    "setMoodlet": {
+      "type": "object",
+      "description": "Set a specific moodlet {category: string, value: number, reason?: string, duration?: number}"
+    },
+    "taskCompleted": {
+      "type": "object",
+      "description": "Notify that a task was completed {category: string, task: string, impact?: number}"
+    },
+    "resetMoodlet": {
+      "type": "string",
+      "description": "Reset a specific moodlet category to neutral"
+    },
+    "resetAll": {
+      "type": "boolean",
+      "description": "Reset all moodlets to neutral"
+    },
+    "importState": {
+      "type": "object",
+      "description": "Import saved moodlet state"
+    }
+  },
+  "outputs": {
+    "moodChanged": {
+      "type": "object",
+      "description": "Emitted when overall mood changes {mood: string, intensity: number, moodlets: object}"
+    },
+    "moodletUpdated": {
+      "type": "object",
+      "description": "Emitted when a single moodlet updates {category: string, value: number, reason: string}"
+    },
+    "stateExport": {
+      "type": "object",
+      "description": "Full moodlet state for saving/syncing"
+    },
+    "taskCategoryUpdated": {
+      "type": "object",
+      "description": "Emitted when a task category is affected"
+    }
+  },
+  "size": {
+    "width": 320,
+    "height": 450,
+    "minWidth": 280,
+    "minHeight": 350
+  }
+}

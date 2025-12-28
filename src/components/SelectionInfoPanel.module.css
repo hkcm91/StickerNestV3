@@ -1,0 +1,32 @@
+/**
+ * StickerNest v2 - Selection Info Panel Styles
+ */
+
+.panel {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  z-index: 1000;
+}
+
+.multiSelectTitle {
+  color: #4a9eff;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.info {
+  line-height: 1.5;
+}
+
+.hint {
+  margin-top: 4px;
+  color: #888;
+  font-size: 9px;
+}

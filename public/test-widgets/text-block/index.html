@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text Block</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+    .text-block {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+    }
+    .text-block.selected {
+      outline: 2px solid #8b5cf6;
+      outline-offset: 2px;
+    }
+    .text-content {
+      width: 100%;
+      padding: 8px;
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 32px;
+      color: #ffffff;
+      text-align: center;
+      word-wrap: break-word;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .text-content[contenteditable="true"] {
+      cursor: text;
+      user-select: text;
+      outline: none;
+      background: rgba(139, 92, 246, 0.1);
+      border-radius: 4px;
+    }
+    .text-content:empty::before {
+      content: 'Click to edit';
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="text-block" id="textBlock">
+    <div class="text-content" id="textContent">Your Text</div>
+  </div>
+
+  <script>
+    const state = {
+      instanceId: null,
+      isSelected: false,
+      isEditing: false,
+      text: 'Your Text',
+      // Typography styles (from text-styles editor)
+      fontFamily: 'Inter',
+      fontSize: 32,
+      fontWeight: 400,
+      fontStyle: 'normal',
+      color: '#ffffff',
+      textAlign: 'center',
+      textTransform: 'none',
+      textDecoration: 'none',
+      letterSpacing: 0,
+      lineHeight: 1.4,
+      wordSpacing: 0,
+      // Effect styles (from text-effects editor)
+      textShadow: 'none',
+      WebkitTextStroke: 'none',
+      // Gradient text
+      useGradient: false,
+      gradientValue: null
+    };
+
+    const textBlock = document.getElementById('textBlock');
+    const textContent = document.getElementById('textContent');
+
+    function emit(eventType, payload) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: eventType, payload }
+      }, '*');
+    }
+
+    function applyStyles() {
+      const el = textContent;
+      el.style.fontFamily = `"${state.fontFamily}", sans-serif`;
+      el.style.fontSize = state.fontSize + 'px';
+      el.style.fontWeight = state.fontWeight;
+      el.style.fontStyle = state.fontStyle;
+      el.style.textAlign = state.textAlign;
+      el.style.textTransform = state.textTransform;
+      el.style.textDecoration = state.textDecoration;
+      el.style.letterSpacing = state.letterSpacing + 'px';
+      el.style.lineHeight = state.lineHeight;
+      el.style.wordSpacing = state.wordSpacing + 'px';
+      el.style.textShadow = state.textShadow || 'none';
+      el.style.webkitTextStroke = state.WebkitTextStroke || 'none';
+
+      // Handle gradient text vs solid color
+      if (state.useGradient && state.gradientValue) {
+        el.style.background = state.gradientValue;
+        el.style.webkitBackgroundClip = 'text';
+        el.style.webkitTextFillColor = 'transparent';
+        el.style.backgroundClip = 'text';
+        el.style.color = 'transparent';
+      } else {
+        el.style.background = 'none';
+        el.style.webkitBackgroundClip = 'unset';
+        el.style.webkitTextFillColor = state.color;
+        el.style.backgroundClip = 'unset';
+        el.style.color = state.color;
+      }
+    }
+
+    function getCurrentProperties() {
+      return {
+        elementId: state.instanceId,
+        elementType: 'text-block',
+        text: state.text,
+        style: {
+          fontFamily: state.fontFamily,
+          fontSize: state.fontSize,
+          fontWeight: state.fontWeight,
+          fontStyle: state.fontStyle,
+          color: state.color,
+          textAlign: state.textAlign,
+          textTransform: state.textTransform,
+          textDecoration: state.textDecoration,
+          letterSpacing: state.letterSpacing,
+          lineHeight: state.lineHeight,
+          textShadow: state.textShadow
+        }
+      };
+    }
+
+    function selectElement() {
+      if (state.isSelected) return;
+      state.isSelected = true;
+      textBlock.classList.add('selected');
+      emit('canvas:element-selected', getCurrentProperties());
+    }
+
+    function deselectElement() {
+      if (!state.isSelected) return;
+      state.isSelected = false;
+      textBlock.classList.remove('selected');
+      if (state.isEditing) exitEditMode();
+    }
+
+    function enterEditMode() {
+      state.isEditing = true;
+      textContent.contentEditable = 'true';
+      textContent.focus();
+      const range = document.createRange();
+      range.selectNodeContents(textContent);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    }
+
+    function exitEditMode() {
+      state.isEditing = false;
+      textContent.contentEditable = 'false';
+      state.text = textContent.textContent || state.text;
+      emit('canvas:element-changed', getCurrentProperties());
+    }
+
+    textBlock.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectElement();
+    });
+
+    textBlock.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      selectElement();
+      enterEditMode();
+    });
+
+    textContent.addEventListener('blur', () => {
+      if (state.isEditing) exitEditMode();
+    });
+
+    textContent.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+        exitEditMode();
+        e.preventDefault();
+      }
+    });
+
+    // Handle style changes from editors
+    function handleStyleChange(data) {
+      if (!data) return;
+
+      const style = data.style || data;
+
+      // Typography properties (from text-styles)
+      if (style.fontFamily !== undefined) state.fontFamily = style.fontFamily;
+      if (style.fontSize !== undefined) state.fontSize = style.fontSize;
+      if (style.fontWeight !== undefined) state.fontWeight = style.fontWeight;
+      if (style.fontStyle !== undefined) state.fontStyle = style.fontStyle;
+      if (style.color !== undefined) state.color = style.color;
+      if (style.textAlign !== undefined) state.textAlign = style.textAlign;
+      if (style.textTransform !== undefined) state.textTransform = style.textTransform;
+      if (style.textDecoration !== undefined) state.textDecoration = style.textDecoration;
+      if (style.letterSpacing !== undefined) state.letterSpacing = style.letterSpacing;
+      if (style.lineHeight !== undefined) state.lineHeight = style.lineHeight;
+      if (style.wordSpacing !== undefined) state.wordSpacing = style.wordSpacing;
+
+      // Effect properties (from text-effects)
+      if (style.textShadow !== undefined) state.textShadow = style.textShadow;
+      if (style.WebkitTextStroke !== undefined) state.WebkitTextStroke = style.WebkitTextStroke;
+      if (style.webkitTextStroke !== undefined) state.WebkitTextStroke = style.webkitTextStroke;
+
+      // Gradient text (from text-effects or gradient-maker)
+      if (style.backgroundImage !== undefined && style.backgroundImage !== 'none') {
+        state.useGradient = true;
+        state.gradientValue = style.backgroundImage;
+      }
+      if (style.WebkitTextFillColor === 'transparent' || style.webkitTextFillColor === 'transparent') {
+        state.useGradient = true;
+      }
+      if (style.WebkitTextFillColor && style.WebkitTextFillColor !== 'transparent') {
+        state.useGradient = false;
+        state.color = style.WebkitTextFillColor;
+      }
+
+      // Direct gradient from gradient-maker
+      if (data.gradient) {
+        state.useGradient = true;
+        const g = data.gradient;
+        if (g.type === 'linear') {
+          const stops = g.stops.map(s => `${s.color} ${s.offset}%`).join(', ');
+          state.gradientValue = `linear-gradient(${g.angle || 90}deg, ${stops})`;
+        } else if (g.type === 'radial') {
+          const stops = g.stops.map(s => `${s.color} ${s.offset}%`).join(', ');
+          state.gradientValue = `radial-gradient(circle, ${stops})`;
+        }
+      }
+
+      // Background style (solid color or gradient)
+      if (style.background !== undefined) {
+        if (style.background.includes('gradient')) {
+          state.useGradient = true;
+          state.gradientValue = style.background;
+        }
+      }
+
+      applyStyles();
+      emit('canvas:element-changed', getCurrentProperties());
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+
+      if (data.type === 'EVENT' && data.payload) {
+        const eventType = data.payload.type;
+        const eventPayload = data.payload.payload;
+
+        if (eventType === 'canvas:element-selected') {
+          if (eventPayload?.elementId !== state.instanceId) {
+            deselectElement();
+          }
+        }
+
+        if (eventType === 'canvas:style-changed') {
+          if (state.isSelected || eventPayload?.targetElementId === state.instanceId) {
+            handleStyleChange(eventPayload);
+          }
+        }
+      }
+
+      if (data.type === 'widget-input' || data.type === 'pipeline:input') {
+        if (data.portName === 'style.apply') handleStyleChange(data.value);
+        if (data.portName === 'text.set') {
+          state.text = data.value;
+          textContent.textContent = data.value;
+        }
+        if (data.portName === 'select') selectElement();
+        if (data.portName === 'deselect') deselectElement();
+      }
+
+      if (data.type === 'INIT' && data.instanceId) {
+        state.instanceId = data.instanceId;
+      }
+    });
+
+    applyStyles();
+    window.parent.postMessage({ type: 'READY' }, '*');
+  </script>
+</body>
+</html>

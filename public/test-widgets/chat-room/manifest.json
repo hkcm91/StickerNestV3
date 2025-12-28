@@ -1,0 +1,31 @@
+{
+    "id": "chat-room",
+    "name": "Chat Room",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "message": {
+            "type": "event",
+            "description": "Receives messages from other widgets"
+        },
+        "user-join": {
+            "type": "event",
+            "description": "User join notifications"
+        }
+    },
+    "outputs": {
+        "message-sent": {
+            "type": "event",
+            "description": "Emits when user sends a message"
+        },
+        "typing": {
+            "type": "event",
+            "description": "Emits typing indicator"
+        }
+    }
+}

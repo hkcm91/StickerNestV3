@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slideshow Widget</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #0a0a0a;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Main container */
+    .slideshow-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+    }
+
+    /* Slides */
+    .slides-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .slide.active {
+      opacity: 1;
+    }
+
+    .slide img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* Transition: Fade */
+    .transition-fade .slide {
+      transition: opacity 0.8s ease-in-out;
+    }
+
+    /* Transition: Slide */
+    .transition-slide .slide {
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      transform: translateX(100%);
+    }
+
+    .transition-slide .slide.active {
+      transform: translateX(0);
+    }
+
+    .transition-slide .slide.prev {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    /* Transition: Zoom */
+    .transition-zoom .slide {
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      transform: scale(0.8);
+    }
+
+    .transition-zoom .slide.active {
+      transform: scale(1);
+    }
+
+    /* Transition: Blur */
+    .transition-blur .slide {
+      transition: opacity 0.6s ease, filter 0.6s ease;
+      filter: blur(20px);
+    }
+
+    .transition-blur .slide.active {
+      filter: blur(0);
+    }
+
+    /* Ken Burns Effect */
+    .kenburns .slide img {
+      min-width: 110%;
+      min-height: 110%;
+      max-width: none;
+      max-height: none;
+      object-fit: cover;
+    }
+
+    .kenburns .slide.active img {
+      animation: kenburns 8s ease-out forwards;
+    }
+
+    @keyframes kenburns {
+      0% { transform: scale(1.1) translate(0, 0); }
+      100% { transform: scale(1) translate(2%, 2%); }
+    }
+
+    .kenburns .slide:nth-child(2n) img {
+      animation-name: kenburns-alt;
+    }
+
+    @keyframes kenburns-alt {
+      0% { transform: scale(1) translate(2%, 2%); }
+      100% { transform: scale(1.1) translate(-2%, -2%); }
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: rgba(255, 255, 255, 0.4);
+      text-align: center;
+      padding: 20px;
+    }
+
+    .empty-state .icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.05); }
+    }
+
+    .empty-state h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Navigation arrows */
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+
+    .slideshow-container:hover .nav-arrow {
+      opacity: 1;
+    }
+
+    .nav-arrow:hover {
+      background: rgba(0, 0, 0, 0.8);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .nav-arrow.prev { left: 12px; }
+    .nav-arrow.next { right: 12px; }
+
+    /* Caption */
+    .caption {
+      position: absolute;
+      bottom: 60px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      padding: 30px 20px 15px;
+      font-size: 14px;
+      color: #fff;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 5;
+    }
+
+    .slideshow-container:hover .caption {
+      opacity: 1;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      z-index: 5;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      width: 0;
+      transition: width 0.1s linear;
+    }
+
+    /* Thumbnail strip */
+    .thumbnail-strip {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+      max-width: 80%;
+      overflow-x: auto;
+    }
+
+    .slideshow-container:hover .thumbnail-strip {
+      opacity: 1;
+    }
+
+    .thumbnail-strip::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .thumbnail-strip::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+
+    .thumbnail {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: pointer;
+      flex-shrink: 0;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      opacity: 0.6;
+    }
+
+    .thumbnail:hover {
+      opacity: 1;
+    }
+
+    .thumbnail.active {
+      border-color: #e94560;
+      opacity: 1;
+    }
+
+    .thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Controls bar */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: linear-gradient(180deg, rgba(15, 15, 15, 0.95) 0%, rgba(10, 10, 10, 1) 100%);
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .control-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .control-btn.active {
+      background: rgba(233, 69, 96, 0.4);
+      color: #ff6b6b;
+    }
+
+    .control-btn.play-pause {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+      font-size: 16px;
+      box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+    }
+
+    .control-btn.play-pause:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+    }
+
+    .divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 0 4px;
+    }
+
+    /* Counter */
+    .counter {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      min-width: 50px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Speed control */
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .speed-control input {
+      width: 60px;
+      height: 4px;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .speed-control input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Transition menu */
+    .transition-menu {
+      position: relative;
+    }
+
+    .transition-dropdown {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(8px);
+      border-radius: 8px;
+      padding: 6px;
+      margin-bottom: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 100px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .transition-menu:hover .transition-dropdown {
+      display: flex;
+    }
+
+    .transition-option {
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .transition-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .transition-option.active {
+      background: rgba(233, 69, 96, 0.3);
+      color: #ff6b6b;
+    }
+
+    /* Image info overlay */
+    .image-info {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    .slideshow-container:hover .image-info {
+      opacity: 1;
+    }
+
+    .info-badge {
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Fullscreen styles */
+    .fullscreen-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .slideshow-container:hover .fullscreen-btn {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="slideshow-container transition-fade" id="slideshowContainer">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">*</div>
+      <h3>No Images</h3>
+      <p>Connect to Gallery widget<br>to start your slideshow</p>
+    </div>
+
+    <div class="slides-wrapper" id="slidesWrapper"></div>
+
+    <button class="nav-arrow prev" id="prevBtn">&lt;</button>
+    <button class="nav-arrow next" id="nextBtn">&gt;</button>
+
+    <div class="image-info" id="imageInfo">
+      <span class="info-badge" id="imageNumber">1 / 1</span>
+    </div>
+
+    <button class="control-btn fullscreen-btn" id="fullscreenBtn" title="Fullscreen">&#9974;</button>
+
+    <div class="caption" id="caption"></div>
+
+    <div class="thumbnail-strip" id="thumbnailStrip"></div>
+
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="counter" id="counter">0 / 0</div>
+
+    <div class="divider"></div>
+
+    <button class="control-btn" id="prevControl" title="Previous">&lt;</button>
+    <button class="control-btn play-pause" id="playPauseBtn" title="Play/Pause">||</button>
+    <button class="control-btn" id="nextControl" title="Next">&gt;</button>
+
+    <div class="divider"></div>
+
+    <button class="control-btn" id="shuffleBtn" title="Shuffle">&#8646;</button>
+    <button class="control-btn" id="loopBtn" title="Loop">&#8634;</button>
+    <button class="control-btn" id="kenburnsBtn" title="Ken Burns effect">K</button>
+
+    <div class="divider"></div>
+
+    <div class="transition-menu">
+      <button class="control-btn" id="transitionBtn" title="Transition">&#9670;</button>
+      <div class="transition-dropdown" id="transitionDropdown">
+        <button class="transition-option active" data-transition="fade">Fade</button>
+        <button class="transition-option" data-transition="slide">Slide</button>
+        <button class="transition-option" data-transition="zoom">Zoom</button>
+        <button class="transition-option" data-transition="blur">Blur</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="speed-control">
+      <span>Speed</span>
+      <input type="range" id="speedSlider" min="1000" max="10000" value="4000" step="500">
+    </div>
+  </div>
+
+  <script>
+    // State
+    let images = [];
+    let displayOrder = [];
+    let currentIndex = 0;
+    let isPlaying = true;
+    let isShuffled = false;
+    let isLooping = true;
+    let hasKenBurns = false;
+    let intervalId = null;
+    let intervalMs = 4000;
+    let progressStart = 0;
+    let animationFrameId = null;
+    let currentTransition = 'fade';
+
+    // DOM Elements
+    const slideshowContainer = document.getElementById('slideshowContainer');
+    const slidesWrapper = document.getElementById('slidesWrapper');
+    const emptyState = document.getElementById('emptyState');
+    const caption = document.getElementById('caption');
+    const counter = document.getElementById('counter');
+    const imageNumber = document.getElementById('imageNumber');
+    const thumbnailStrip = document.getElementById('thumbnailStrip');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const prevControl = document.getElementById('prevControl');
+    const nextControl = document.getElementById('nextControl');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const loopBtn = document.getElementById('loopBtn');
+    const kenburnsBtn = document.getElementById('kenburnsBtn');
+    const transitionBtn = document.getElementById('transitionBtn');
+    const transitionDropdown = document.getElementById('transitionDropdown');
+    const speedSlider = document.getElementById('speedSlider');
+    const progressBar = document.getElementById('progressBar');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    // Utility: Emit output
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    // Utility: Emit event
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload: payload }
+      }, '*');
+    }
+
+    // Shuffle array (Fisher-Yates)
+    function shuffleArray(arr) {
+      const shuffled = [...arr];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    // Update display order
+    function updateDisplayOrder() {
+      displayOrder = isShuffled
+        ? shuffleArray(images.map((_, i) => i))
+        : images.map((_, i) => i);
+    }
+
+    // Update UI
+    function updateUI() {
+      const count = images.length;
+      emptyState.style.display = count === 0 ? 'flex' : 'none';
+      slidesWrapper.style.display = count === 0 ? 'none' : 'block';
+
+      const displayIdx = displayOrder.indexOf(currentIndex);
+      counter.textContent = count === 0 ? '0 / 0' : `${displayIdx + 1} / ${count}`;
+      imageNumber.textContent = count === 0 ? '' : `${displayIdx + 1} / ${count}`;
+
+      playPauseBtn.innerHTML = isPlaying ? '||' : '&#9654;';
+      shuffleBtn.classList.toggle('active', isShuffled);
+      loopBtn.classList.toggle('active', isLooping);
+      kenburnsBtn.classList.toggle('active', hasKenBurns);
+      slideshowContainer.classList.toggle('kenburns', hasKenBurns);
+    }
+
+    // Render slides
+    function renderSlides() {
+      slidesWrapper.innerHTML = '';
+      thumbnailStrip.innerHTML = '';
+
+      images.forEach((img, index) => {
+        // Slide
+        const slide = document.createElement('div');
+        slide.className = 'slide' + (index === currentIndex ? ' active' : '');
+        slide.dataset.index = index;
+
+        const imgEl = document.createElement('img');
+        imgEl.src = img.url;
+        imgEl.alt = img.name || '';
+        imgEl.loading = 'lazy';
+        slide.appendChild(imgEl);
+
+        slide.onclick = () => {
+          emitOutput('slideClicked', {
+            index: currentIndex,
+            url: images[currentIndex].url,
+            name: images[currentIndex].name || ''
+          });
+          emitEvent('slideshow:clicked', {
+            index: currentIndex,
+            url: images[currentIndex].url,
+            name: images[currentIndex].name || ''
+          });
+        };
+
+        slidesWrapper.appendChild(slide);
+
+        // Thumbnail
+        const thumb = document.createElement('div');
+        thumb.className = 'thumbnail' + (index === currentIndex ? ' active' : '');
+        thumb.dataset.index = index;
+
+        const thumbImg = document.createElement('img');
+        thumbImg.src = img.thumbnail || img.url;
+        thumbImg.alt = img.name || '';
+        thumb.appendChild(thumbImg);
+
+        thumb.onclick = () => goToSlide(index);
+
+        thumbnailStrip.appendChild(thumb);
+      });
+
+      updateCaption();
+      updateUI();
+    }
+
+    // Update caption
+    function updateCaption() {
+      if (images.length > 0 && images[currentIndex]) {
+        caption.textContent = images[currentIndex].name || '';
+      } else {
+        caption.textContent = '';
+      }
+    }
+
+    // Go to specific slide
+    function goToSlide(index) {
+      if (images.length === 0) return;
+
+      const prevIndex = currentIndex;
+
+      if (isLooping) {
+        currentIndex = ((index % images.length) + images.length) % images.length;
+      } else {
+        currentIndex = Math.max(0, Math.min(images.length - 1, index));
+        if (currentIndex === prevIndex && index !== prevIndex) return;
+      }
+
+      // Update slides
+      const slides = slidesWrapper.querySelectorAll('.slide');
+      slides.forEach((slide, i) => {
+        slide.classList.remove('active', 'prev');
+        if (i === currentIndex) {
+          slide.classList.add('active');
+        } else if (i === prevIndex) {
+          slide.classList.add('prev');
+        }
+      });
+
+      // Update thumbnails
+      const thumbs = thumbnailStrip.querySelectorAll('.thumbnail');
+      thumbs.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === currentIndex);
+      });
+
+      // Scroll thumbnail into view
+      const activeThumb = thumbnailStrip.querySelector('.thumbnail.active');
+      if (activeThumb) {
+        activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+
+      updateCaption();
+      updateUI();
+      resetProgress();
+
+      emitOutput('currentImage', {
+        index: currentIndex,
+        url: images[currentIndex].url,
+        name: images[currentIndex].name || '',
+        total: images.length
+      });
+      emitEvent('slideshow:changed', {
+        index: currentIndex,
+        url: images[currentIndex].url,
+        name: images[currentIndex].name || '',
+        total: images.length
+      });
+    }
+
+    // Next slide (using display order)
+    function nextSlide() {
+      const displayIdx = displayOrder.indexOf(currentIndex);
+      const nextDisplayIdx = (displayIdx + 1) % displayOrder.length;
+      goToSlide(displayOrder[nextDisplayIdx]);
+    }
+
+    // Previous slide (using display order)
+    function prevSlide() {
+      const displayIdx = displayOrder.indexOf(currentIndex);
+      const prevDisplayIdx = (displayIdx - 1 + displayOrder.length) % displayOrder.length;
+      goToSlide(displayOrder[prevDisplayIdx]);
+    }
+
+    // Play/Pause
+    function play() {
+      if (images.length < 2) return;
+      isPlaying = true;
+      resetProgress();
+      startInterval();
+      updateUI();
+      emitOutput('playStateChanged', { playing: true });
+    }
+
+    function pause() {
+      isPlaying = false;
+      stopInterval();
+      updateUI();
+      emitOutput('playStateChanged', { playing: false });
+    }
+
+    function togglePlayPause() {
+      isPlaying ? pause() : play();
+    }
+
+    // Interval management
+    function startInterval() {
+      stopInterval();
+      if (!isPlaying || images.length < 2) return;
+
+      progressStart = Date.now();
+      intervalId = setInterval(() => {
+        nextSlide();
+        progressStart = Date.now();
+      }, intervalMs);
+
+      updateProgress();
+    }
+
+    function stopInterval() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      progressBar.style.width = '0%';
+    }
+
+    function resetProgress() {
+      progressStart = Date.now();
+      if (isPlaying) startInterval();
+    }
+
+    function updateProgress() {
+      if (!isPlaying) return;
+
+      const elapsed = Date.now() - progressStart;
+      const progress = Math.min((elapsed / intervalMs) * 100, 100);
+      progressBar.style.width = progress + '%';
+
+      animationFrameId = requestAnimationFrame(updateProgress);
+    }
+
+    // Toggle shuffle
+    function toggleShuffle() {
+      isShuffled = !isShuffled;
+      updateDisplayOrder();
+      updateUI();
+    }
+
+    // Toggle loop
+    function toggleLoop() {
+      isLooping = !isLooping;
+      updateUI();
+    }
+
+    // Toggle Ken Burns
+    function toggleKenBurns() {
+      hasKenBurns = !hasKenBurns;
+      updateUI();
+    }
+
+    // Set transition
+    function setTransition(type) {
+      currentTransition = type;
+      slideshowContainer.className = `slideshow-container transition-${type}` + (hasKenBurns ? ' kenburns' : '');
+
+      // Update dropdown
+      transitionDropdown.querySelectorAll('.transition-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.transition === type);
+      });
+    }
+
+    // Set images
+    function setImages(data) {
+      if (!data) return;
+
+      const newImages = data.images || data;
+      if (!Array.isArray(newImages)) return;
+
+      images = newImages.filter(img => img && img.url).map(img => ({
+        url: img.url,
+        name: img.name || '',
+        id: img.id || '',
+        thumbnail: img.thumbnail || ''
+      }));
+
+      currentIndex = 0;
+      updateDisplayOrder();
+      renderSlides();
+
+      if (isPlaying && images.length >= 2) {
+        startInterval();
+      }
+    }
+
+    // Add single image
+    function addImage(imageData) {
+      if (!imageData || !imageData.url) return;
+      if (images.find(img => img.url === imageData.url)) return;
+
+      images.push({
+        url: imageData.url,
+        name: imageData.name || '',
+        id: imageData.id || '',
+        thumbnail: imageData.thumbnail || ''
+      });
+
+      updateDisplayOrder();
+      renderSlides();
+
+      if (isPlaying && images.length >= 2 && !intervalId) {
+        startInterval();
+      }
+    }
+
+    // Clear all
+    function clearAll() {
+      images = [];
+      displayOrder = [];
+      currentIndex = 0;
+      stopInterval();
+      renderSlides();
+    }
+
+    // Set interval
+    function setIntervalMs(ms) {
+      intervalMs = Math.max(1000, Math.min(30000, ms));
+      speedSlider.value = intervalMs;
+      if (isPlaying) resetProgress();
+    }
+
+    // Fullscreen
+    function toggleFullscreen() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen();
+      }
+    }
+
+    // Event listeners
+    prevBtn.onclick = prevSlide;
+    nextBtn.onclick = nextSlide;
+    prevControl.onclick = prevSlide;
+    nextControl.onclick = nextSlide;
+    playPauseBtn.onclick = togglePlayPause;
+    shuffleBtn.onclick = toggleShuffle;
+    loopBtn.onclick = toggleLoop;
+    kenburnsBtn.onclick = toggleKenBurns;
+    fullscreenBtn.onclick = toggleFullscreen;
+
+    speedSlider.oninput = (e) => setIntervalMs(parseInt(e.target.value, 10));
+
+    transitionDropdown.querySelectorAll('.transition-option').forEach(opt => {
+      opt.onclick = () => setTransition(opt.dataset.transition);
+    });
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowLeft': prevSlide(); break;
+        case 'ArrowRight': nextSlide(); break;
+        case ' ': e.preventDefault(); togglePlayPause(); break;
+        case 's': toggleShuffle(); break;
+        case 'l': toggleLoop(); break;
+        case 'k': toggleKenBurns(); break;
+        case 'f': toggleFullscreen(); break;
+      }
+    });
+
+    // Handle incoming messages
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'setImages':
+          case 'galleryChanged':
+          case 'allImages':
+            setImages(value);
+            break;
+          case 'addImage':
+          case 'imageAdded':
+            addImage(value);
+            break;
+          case 'setInterval':
+            if (typeof value === 'number') setIntervalMs(value);
+            break;
+          case 'play':
+            play();
+            break;
+          case 'pause':
+            pause();
+            break;
+          case 'next':
+            nextSlide();
+            break;
+          case 'previous':
+            prevSlide();
+            break;
+          case 'shuffle':
+            if (typeof value === 'boolean') {
+              isShuffled = value;
+              updateDisplayOrder();
+              updateUI();
+            } else {
+              toggleShuffle();
+            }
+            break;
+          case 'setTransition':
+            if (typeof value === 'string') setTransition(value);
+            break;
+          case 'clear':
+            clearAll();
+            break;
+        }
+        return;
+      }
+
+      if (data.type === 'widget:event') {
+        const portName = data.payload?.type;
+        const value = data.payload?.payload;
+        switch (portName) {
+          case 'setImages':
+          case 'galleryChanged':
+          case 'allImages':
+            setImages(value);
+            break;
+          case 'addImage':
+          case 'imageAdded':
+            addImage(value);
+            break;
+          case 'setInterval':
+            if (typeof value === 'number') setIntervalMs(value);
+            break;
+          case 'play': play(); break;
+          case 'pause': pause(); break;
+          case 'next': nextSlide(); break;
+          case 'previous': prevSlide(); break;
+          case 'clear': clearAll(); break;
+        }
+      }
+
+      if (data.type === 'broadcast' && data.payload) {
+        if (data.payload.type === 'gallery:changed') {
+          setImages(data.payload.payload);
+        }
+        if (data.payload.type === 'gallery:image-added') {
+          addImage(data.payload.payload);
+        }
+      }
+    });
+
+    // Signal ready
+    window.parent.postMessage({ type: 'READY' }, '*');
+    updateUI();
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+    "id": "filter-overlay",
+    "name": "Filter Overlay",
+    "version": "1.0.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "inputs": {
+        "effect-params": {
+            "type": "event",
+            "description": "Update filter parameters"
+        }
+    },
+    "outputs": {}
+}

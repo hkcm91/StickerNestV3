@@ -1,0 +1,48 @@
+{
+    "id": "pipeline-test-text",
+    "name": "Pipeline Text",
+    "version": "1.1.0",
+    "kind": "2d",
+    "entry": "index.html",
+    "description": "Test text display for pipeline validation - receives text updates",
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "io": {
+        "inputs": [
+            {
+                "id": "setText",
+                "type": "string",
+                "description": "Set the display text"
+            },
+            {
+                "id": "setData",
+                "type": "object",
+                "description": "Set text from object data (uses .message property)"
+            },
+            {
+                "id": "trigger",
+                "type": "trigger",
+                "description": "Flash the display when triggered"
+            },
+            {
+                "id": "clicked",
+                "type": "trigger",
+                "description": "Handle click triggers from buttons"
+            },
+            {
+                "id": "clickData",
+                "type": "object",
+                "description": "Handle click data from buttons"
+            }
+        ],
+        "outputs": [
+            {
+                "id": "textChanged",
+                "type": "string",
+                "description": "Emitted when text changes"
+            }
+        ]
+    }
+}

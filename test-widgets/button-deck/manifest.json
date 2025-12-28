@@ -1,0 +1,56 @@
+{
+  "id": "button-deck",
+  "name": "Button Deck",
+  "version": "1.0.0",
+  "description": "Stream deck style widget with unlimited configurable buttons that emit custom events",
+  "kind": "2d",
+  "entry": "index.html",
+  "capabilities": {
+    "draggable": true,
+    "resizable": true
+  },
+  "inputs": {
+    "config.setButtons": {
+      "type": "array",
+      "description": "Set button configuration array"
+    },
+    "button.trigger": {
+      "type": "object",
+      "description": "Programmatically trigger a button by ID"
+    },
+    "button.setEnabled": {
+      "type": "object",
+      "description": "Enable/disable a specific button"
+    },
+    "button.setLabel": {
+      "type": "object",
+      "description": "Update a button's label"
+    }
+  },
+  "outputs": {
+    "button.pressed": {
+      "type": "object",
+      "description": "Emitted when any button is pressed - contains buttonId, label, payload"
+    },
+    "button.released": {
+      "type": "object",
+      "description": "Emitted when any button is released"
+    },
+    "deck.ready": {
+      "type": "event",
+      "description": "Emitted when deck is initialized"
+    }
+  },
+  "config": {
+    "columns": 4,
+    "rows": 3,
+    "buttonSize": 60,
+    "gap": 8,
+    "defaultButtons": []
+  },
+  "skinSlots": [
+    { "name": "buttonBg", "type": "color", "variable": "--deck-button-bg" },
+    { "name": "buttonText", "type": "color", "variable": "--deck-button-text" },
+    { "name": "buttonActive", "type": "color", "variable": "--deck-button-active" }
+  ]
+}

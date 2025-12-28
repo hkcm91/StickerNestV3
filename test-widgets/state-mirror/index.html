@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .header h1 { font-size: 0.9rem; color: #c084fc; margin: 0; }
+        .badge { background: #c084fc; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.6rem; }
+        .instance-id { font-size: 0.7rem; color: #64748b; margin-bottom: 10px; font-family: monospace; }
+        .state-panels { display: flex; gap: 8px; margin-bottom: 10px; }
+        .panel { flex: 1; background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px; }
+        .panel-title { font-size: 0.7rem; color: #94a3b8; margin-bottom: 6px; }
+        .state-value { font-family: monospace; font-size: 0.8rem; color: #c084fc; word-break: break-all; }
+        .controls { display: flex; gap: 6px; margin-bottom: 10px; }
+        .ctrl-btn {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .ctrl-btn:hover { background: rgba(192,132,252,0.2); border-color: #c084fc; }
+        .sync-status { display: flex; justify-content: space-between; font-size: 0.65rem; margin-bottom: 10px; }
+        .sync-indicator { display: flex; align-items: center; gap: 4px; }
+        .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
+        .sync-dot.out-of-sync { background: #ef4444; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .log { max-height: 60px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 6px; font-size: 0.6rem; font-family: monospace; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>State Mirror</h1>
+        <span class="badge">DEBUG</span>
+    </div>
+
+    <div class="instance-id" id="instanceId">Instance: loading...</div>
+
+    <div class="state-panels">
+        <div class="panel">
+            <div class="panel-title">Local State</div>
+            <div class="state-value" id="localState">-</div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">Remote State</div>
+            <div class="state-value" id="remoteState">-</div>
+        </div>
+    </div>
+
+    <div class="sync-status">
+        <div class="sync-indicator">
+            <span class="sync-dot" id="syncDot"></span>
+            <span id="syncStatus">Waiting for sync...</span>
+        </div>
+        <span id="lastSync">Never synced</span>
+    </div>
+
+    <div class="controls">
+        <button class="ctrl-btn" id="incrementBtn">Increment</button>
+        <button class="ctrl-btn" id="randomBtn">Random</button>
+        <button class="ctrl-btn" id="resetBtn">Reset</button>
+        <button class="ctrl-btn" id="broadcastBtn">Broadcast</button>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+        const instanceId = 'mirror_' + Math.random().toString(36).substring(2, 8);
+        let localState = { counter: 0, value: 'initial', timestamp: Date.now() };
+        let remoteState = null;
+        let lastSyncTime = null;
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            logEl.innerHTML = `<div>${time} ${msg}</div>` + logEl.innerHTML;
+            if (logEl.children.length > 10) logEl.lastChild.remove();
+        }
+
+        function updateUI() {
+            document.getElementById('instanceId').textContent = `Instance: ${instanceId}`;
+            document.getElementById('localState').textContent = JSON.stringify(localState, null, 1);
+            document.getElementById('remoteState').textContent = remoteState ? JSON.stringify(remoteState.state, null, 1) : '-';
+
+            const syncDot = document.getElementById('syncDot');
+            const syncStatus = document.getElementById('syncStatus');
+
+            if (!remoteState) {
+                syncDot.className = 'sync-dot';
+                syncStatus.textContent = 'No remote data';
+            } else {
+                const isInSync = JSON.stringify(localState) === JSON.stringify(remoteState.state);
+                syncDot.className = 'sync-dot' + (isInSync ? '' : ' out-of-sync');
+                syncStatus.textContent = isInSync ? 'In sync' : 'Out of sync';
+            }
+
+            if (lastSyncTime) {
+                const ago = Math.round((Date.now() - lastSyncTime) / 1000);
+                document.getElementById('lastSync').textContent = `${ago}s ago`;
+            }
+        }
+
+        function broadcast() {
+            localState.timestamp = Date.now();
+            emit('widget:state-mirror', {
+                instanceId,
+                state: localState,
+                timestamp: Date.now()
+            });
+            log('Broadcast state');
+        }
+
+        function handleStateSync(event) {
+            const payload = event.payload || {};
+            if (payload.instanceId === instanceId) return; // Ignore our own broadcasts
+
+            remoteState = {
+                instanceId: payload.instanceId,
+                state: payload.state,
+                timestamp: payload.timestamp
+            };
+            lastSyncTime = Date.now();
+            log(`Received state from ${payload.instanceId}`);
+            updateUI();
+        }
+
+        document.getElementById('incrementBtn').addEventListener('click', () => {
+            localState.counter++;
+            localState.timestamp = Date.now();
+            updateUI();
+            broadcast();
+        });
+
+        document.getElementById('randomBtn').addEventListener('click', () => {
+            localState.value = Math.random().toString(36).substring(2, 10);
+            localState.timestamp = Date.now();
+            updateUI();
+            broadcast();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            localState = { counter: 0, value: 'initial', timestamp: Date.now() };
+            updateUI();
+            broadcast();
+        });
+
+        document.getElementById('broadcastBtn').addEventListener('click', () => {
+            broadcast();
+        });
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('State Mirror ready: ' + instanceId);
+            window.WidgetAPI.onEvent('widget:state-mirror', handleStateSync);
+
+            // Initial broadcast
+            setTimeout(broadcast, 500);
+            updateUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>

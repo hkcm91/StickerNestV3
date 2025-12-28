@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoRA Trainer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .header h1 .icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .settings-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-btn.active {
+      background: rgba(245, 158, 11, 0.3);
+      border-color: #f59e0b;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      display: none;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .settings-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .api-key-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .api-key-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    .api-key-input:focus {
+      outline: none;
+      border-color: #f59e0b;
+    }
+
+    .save-key-btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #f59e0b;
+      color: #000;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .save-key-btn:hover {
+      background: #d97706;
+    }
+
+    .key-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .key-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .key-status .dot.valid { background: #10b981; }
+    .key-status .dot.unknown { background: #6b7280; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: #f59e0b;
+      border-bottom-color: #f59e0b;
+    }
+
+    /* Tab Content */
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .tab-content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* Section */
+    .section {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .section-action {
+      font-size: 11px;
+      color: #f59e0b;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .section-action:hover {
+      color: #fbbf24;
+    }
+
+    /* Training Images Grid */
+    .training-images {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .training-image {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .training-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .training-image .remove-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .training-image:hover .remove-btn {
+      opacity: 1;
+    }
+
+    .add-image-btn {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .add-image-btn:hover {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .add-image-btn .icon {
+      font-size: 20px;
+    }
+
+    .image-count {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 8px;
+    }
+
+    /* Input Fields */
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-group input, .input-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .input-group input:focus, .input-group select:focus {
+      outline: none;
+      border-color: #f59e0b;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .input-help {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 4px;
+    }
+
+    /* Training Progress */
+    .training-progress {
+      display: none;
+    }
+
+    .training-progress.active {
+      display: block;
+    }
+
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .progress-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .progress-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .cancel-btn {
+      padding: 6px 12px;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 6px;
+      background: transparent;
+      color: #ef4444;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 8px;
+    }
+
+    .progress-eta {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 4px;
+    }
+
+    /* Trained LoRAs List */
+    .lora-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lora-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lora-item:hover {
+      border-color: rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .lora-item.selected {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .lora-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .lora-info {
+      flex: 1;
+    }
+
+    .lora-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .lora-trigger {
+      font-size: 11px;
+      color: #f59e0b;
+      font-family: monospace;
+    }
+
+    .lora-date {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .lora-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .lora-action-btn {
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: transparent;
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lora-action-btn:hover {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .lora-action-btn.primary {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: #000;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    .train-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .train-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .train-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 300;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Hidden inputs */
+    .hidden-input {
+      display: none;
+    }
+
+    /* Caption Panel */
+    .caption-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      flex-direction: column;
+      z-index: 200;
+    }
+
+    .caption-modal.active {
+      display: flex;
+    }
+
+    .caption-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .caption-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .caption-close {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .caption-content {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .caption-image-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .caption-image-preview {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .caption-image-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .caption-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 12px;
+    }
+
+    .caption-nav-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .caption-nav-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .caption-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .caption-nav-counter {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .caption-edit-panel {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .caption-section {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .caption-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 10px;
+    }
+
+    .caption-textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 12px;
+      resize: none;
+    }
+
+    .caption-textarea:focus {
+      outline: none;
+      border-color: #f59e0b;
+    }
+
+    .auto-caption-btn {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+
+    .auto-caption-btn:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    .auto-caption-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .auto-caption-btn .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(245, 158, 11, 0.3);
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Preprocessing Options */
+    .preprocess-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preprocess-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .preprocess-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #f59e0b;
+    }
+
+    .preprocess-option label {
+      flex: 1;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .preprocess-select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 12px;
+    }
+
+    /* Batch Actions */
+    .batch-actions {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .batch-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .batch-btn.primary {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+    }
+
+    .batch-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .batch-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Caption Indicator */
+    .training-image .caption-indicator {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      padding: 2px 6px;
+      background: rgba(245, 158, 11, 0.9);
+      border-radius: 4px;
+      font-size: 8px;
+      font-weight: 600;
+      color: #000;
+    }
+
+    .training-image .edit-caption-btn {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .training-image:hover .edit-caption-btn {
+      opacity: 1;
+    }
+
+    /* Caption All Button */
+    .caption-all-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      border-radius: 6px;
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .caption-all-btn:hover {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    /* Caption Mode Toggle */
+    .caption-mode-toggle {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      padding: 2px;
+      margin-bottom: 10px;
+    }
+
+    .caption-mode-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .caption-mode-btn.active {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .caption-templates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .caption-template {
+      padding: 4px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .caption-template:hover {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span class="icon">L</span>
+      LoRA Trainer
+    </h1>
+    <button class="settings-btn" id="settingsBtn" title="Settings">S</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-title">Replicate API Configuration</div>
+    <div class="api-key-row">
+      <input type="password" class="api-key-input" id="apiKeyInput" placeholder="Enter Replicate API key...">
+      <button class="save-key-btn" id="saveKeyBtn">Save</button>
+    </div>
+    <div class="key-status">
+      <span class="dot" id="keyStatusDot"></span>
+      <span id="keyStatusText">No API key configured</span>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="train">Train New</button>
+    <button class="tab-btn" data-tab="library">My LoRAs</button>
+  </div>
+
+  <!-- Train Tab -->
+  <div class="tab-content active" id="trainTab">
+    <!-- Training Images -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Training Images</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="caption-all-btn" id="captionAllBtn" title="Auto-caption all images">
+            <span>AI Caption</span>
+          </button>
+          <span class="section-action" id="clearImagesBtn">Clear All</span>
+        </div>
+      </div>
+      <div class="training-images" id="trainingImagesGrid">
+        <button class="add-image-btn" id="addImagesBtn">
+          <span class="icon">+</span>
+          <span>Add</span>
+        </button>
+      </div>
+      <div class="image-count" id="imageCount">0 images (minimum 5-10 recommended)</div>
+    </div>
+
+    <!-- Training Settings -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Training Settings</span>
+      </div>
+
+      <div class="input-group">
+        <label>Trigger Word</label>
+        <input type="text" id="triggerWordInput" placeholder="e.g., MYCHAR, MYSTYLE">
+        <div class="input-help">This word will activate your LoRA in prompts</div>
+      </div>
+
+      <div class="input-group">
+        <label>LoRA Name</label>
+        <input type="text" id="loraNameInput" placeholder="My Custom LoRA">
+      </div>
+
+      <div class="input-row">
+        <div class="input-group">
+          <label>Training Steps</label>
+          <select id="stepsSelect">
+            <option value="500">500 (Fast)</option>
+            <option value="1000" selected>1000 (Balanced)</option>
+            <option value="1500">1500 (Quality)</option>
+            <option value="2000">2000 (Max)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Resolution</label>
+          <select id="resolutionSelect">
+            <option value="512" selected>512px</option>
+            <option value="768">768px</option>
+            <option value="1024">1024px</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group">
+          <label>Learning Rate</label>
+          <select id="lrSelect">
+            <option value="0.0001">0.0001 (Low)</option>
+            <option value="0.0004" selected>0.0004 (Default)</option>
+            <option value="0.001">0.001 (High)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Base Model</label>
+          <select id="baseModelSelect">
+            <option value="flux" selected>FLUX.1</option>
+            <option value="sdxl">SDXL</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Training Progress -->
+    <div class="section training-progress" id="trainingProgress">
+      <div class="progress-header">
+        <div class="progress-title">
+          <div class="progress-spinner"></div>
+          <span>Training LoRA...</span>
+        </div>
+        <button class="cancel-btn" id="cancelTrainingBtn">Cancel</button>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="progress-text" id="progressText">Preparing training...</div>
+      <div class="progress-eta" id="progressEta">Estimated time: 15-30 minutes</div>
+    </div>
+  </div>
+
+  <!-- Library Tab -->
+  <div class="tab-content" id="libraryTab">
+    <div class="lora-list" id="loraList">
+      <div class="empty-state" id="emptyState">
+        <div class="icon">L</div>
+        <h3>No LoRAs Yet</h3>
+        <p>Train your first LoRA to see it here</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <button class="train-btn" id="trainBtn">Start Training</button>
+  </div>
+
+  <!-- Hidden inputs -->
+  <input type="file" class="hidden-input" id="imageFileInput" accept="image/*" multiple>
+
+  <!-- Caption Modal -->
+  <div class="caption-modal" id="captionModal">
+    <div class="caption-header">
+      <h3>
+        <span style="color: #f59e0b;">C</span>
+        Edit Captions
+      </h3>
+      <button class="caption-close" id="captionClose">&times;</button>
+    </div>
+    <div class="caption-content">
+      <div class="caption-image-panel">
+        <div class="caption-image-preview">
+          <img id="captionPreviewImg" src="" alt="">
+        </div>
+        <div class="caption-nav">
+          <button class="caption-nav-btn" id="captionPrevBtn">&lt;</button>
+          <span class="caption-nav-counter" id="captionCounter">1 / 1</span>
+          <button class="caption-nav-btn" id="captionNextBtn">&gt;</button>
+        </div>
+      </div>
+      <div class="caption-edit-panel">
+        <div class="caption-section">
+          <div class="caption-section-title">Caption</div>
+          <div class="caption-mode-toggle">
+            <button class="caption-mode-btn active" data-mode="auto">AI Auto</button>
+            <button class="caption-mode-btn" data-mode="manual">Manual</button>
+          </div>
+          <textarea class="caption-textarea" id="captionTextarea" placeholder="Describe this image..."></textarea>
+          <button class="auto-caption-btn" id="autoCaptionBtn">
+            <span>Generate Caption</span>
+          </button>
+          <div class="caption-templates">
+            <button class="caption-template" data-template="portrait">Portrait</button>
+            <button class="caption-template" data-template="photo">Photo</button>
+            <button class="caption-template" data-template="art">Art</button>
+            <button class="caption-template" data-template="character">Character</button>
+          </div>
+        </div>
+        <div class="caption-section">
+          <div class="caption-section-title">Preprocessing</div>
+          <div class="preprocess-options">
+            <div class="preprocess-option">
+              <input type="checkbox" id="preprocessCrop" checked>
+              <label for="preprocessCrop">Center crop to square</label>
+            </div>
+            <div class="preprocess-option">
+              <input type="checkbox" id="preprocessFlip">
+              <label for="preprocessFlip">Include flipped version</label>
+            </div>
+            <select class="preprocess-select" id="preprocessResize">
+              <option value="512">Resize to 512px</option>
+              <option value="768">Resize to 768px</option>
+              <option value="1024">Resize to 1024px</option>
+              <option value="none">Keep original size</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="batch-actions">
+      <button class="batch-btn secondary" id="captionAllBatchBtn">Caption All</button>
+      <button class="batch-btn primary" id="saveCaptionsBtn">Save & Close</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==========================================
+    // Caption Templates
+    // ==========================================
+    const CAPTION_TEMPLATES = {
+      portrait: 'a portrait photo of [trigger], facing camera, detailed face, professional photography',
+      photo: 'a photo of [trigger], high quality, detailed, professional photography',
+      art: 'artwork of [trigger], artistic style, detailed illustration',
+      character: 'a character portrait of [trigger], full body, detailed, concept art style'
+    };
+
+    // ==========================================
+    // State
+    // ==========================================
+    const state = {
+      apiKey: null,
+      trainingImages: [],
+      triggerWord: '',
+      loraName: '',
+      steps: 1000,
+      resolution: 512,
+      learningRate: 0.0004,
+      baseModel: 'flux',
+      isTraining: false,
+      isCaptioning: false,
+      trainedLoras: [],
+      selectedLoraId: null,
+      activeTab: 'train',
+      captionModalIndex: 0,
+      captionMode: 'auto',
+      preprocessing: {
+        crop: true,
+        flip: false,
+        resize: '512'
+      }
+    };
+
+    // ==========================================
+    // DOM Elements
+    // ==========================================
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const saveKeyBtn = document.getElementById('saveKeyBtn');
+    const keyStatusDot = document.getElementById('keyStatusDot');
+    const keyStatusText = document.getElementById('keyStatusText');
+    const trainingImagesGrid = document.getElementById('trainingImagesGrid');
+    const imageCount = document.getElementById('imageCount');
+    const triggerWordInput = document.getElementById('triggerWordInput');
+    const loraNameInput = document.getElementById('loraNameInput');
+    const trainingProgress = document.getElementById('trainingProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const progressEta = document.getElementById('progressEta');
+    const loraList = document.getElementById('loraList');
+    const emptyState = document.getElementById('emptyState');
+    const trainBtn = document.getElementById('trainBtn');
+    const imageFileInput = document.getElementById('imageFileInput');
+    const toast = document.getElementById('toast');
+
+    // ==========================================
+    // Utilities
+    // ==========================================
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function emitOutput(portName, value) {
+      window.parent.postMessage({
+        type: 'widget:emit',
+        payload: { type: portName, payload: value }
+      }, '*');
+    }
+
+    function emitEvent(eventType, payload) {
+      window.parent.postMessage({
+        type: 'EVENT',
+        payload: { type: eventType, scope: 'canvas', payload }
+      }, '*');
+    }
+
+    function updateKeyStatus() {
+      keyStatusDot.className = state.apiKey ? 'dot valid' : 'dot unknown';
+      keyStatusText.textContent = state.apiKey ? 'API key configured' : 'No API key configured';
+      apiKeyInput.value = state.apiKey ? '********' : '';
+    }
+
+    function updateImageCount() {
+      const count = state.trainingImages.length;
+      imageCount.textContent = `${count} image${count !== 1 ? 's' : ''} (minimum 5-10 recommended)`;
+    }
+
+    function renderTrainingImages() {
+      trainingImagesGrid.querySelectorAll('.training-image').forEach(el => el.remove());
+      const addBtn = document.getElementById('addImagesBtn');
+
+      state.trainingImages.forEach((img, index) => {
+        const item = document.createElement('div');
+        item.className = 'training-image';
+        const hasCaption = img.caption && img.caption.trim().length > 0;
+        item.innerHTML = `
+          <img src="${img.url}" alt="Training image">
+          ${hasCaption ? '<span class="caption-indicator">C</span>' : ''}
+          <button class="edit-caption-btn" onclick="openCaptionModal(${index})">E</button>
+          <button class="remove-btn" onclick="removeTrainingImage(${index})">&times;</button>
+        `;
+        trainingImagesGrid.insertBefore(item, addBtn);
+      });
+
+      updateImageCount();
+    }
+
+    function renderLoraList() {
+      loraList.querySelectorAll('.lora-item').forEach(el => el.remove());
+
+      if (state.trainedLoras.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      state.trainedLoras.forEach((lora, index) => {
+        const item = document.createElement('div');
+        item.className = `lora-item ${state.selectedLoraId === lora.id ? 'selected' : ''}`;
+        item.innerHTML = `
+          <div class="lora-icon">L</div>
+          <div class="lora-info">
+            <div class="lora-name">${lora.name}</div>
+            <div class="lora-trigger">${lora.triggerWord}</div>
+            <div class="lora-date">${new Date(lora.createdAt).toLocaleDateString()}</div>
+          </div>
+          <div class="lora-actions">
+            <button class="lora-action-btn primary" onclick="useLora(${index})">Use</button>
+            <button class="lora-action-btn" onclick="deleteLora(${index})">X</button>
+          </div>
+        `;
+        item.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('lora-action-btn')) {
+            selectLora(index);
+          }
+        });
+        loraList.insertBefore(item, emptyState);
+      });
+    }
+
+    // ==========================================
+    // Training Image Functions
+    // ==========================================
+    function addTrainingImage(imageData) {
+      const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      state.trainingImages.push({ id, url: imageData.url, name: imageData.name });
+      renderTrainingImages();
+    }
+
+    function removeTrainingImage(index) {
+      state.trainingImages.splice(index, 1);
+      renderTrainingImages();
+    }
+
+    window.removeTrainingImage = removeTrainingImage;
+
+    // ==========================================
+    // LoRA Functions
+    // ==========================================
+    function selectLora(index) {
+      const lora = state.trainedLoras[index];
+      state.selectedLoraId = lora.id;
+      renderLoraList();
+    }
+
+    function useLora(index) {
+      const lora = state.trainedLoras[index];
+      emitOutput('loraSelected', {
+        url: lora.url,
+        name: lora.name,
+        triggerWord: lora.triggerWord,
+        scale: 1.0,
+      });
+      emitEvent('lora:selected', {
+        url: lora.url,
+        name: lora.name,
+        triggerWord: lora.triggerWord,
+        scale: 1.0,
+      });
+      showToast(`LoRA "${lora.name}" sent to generators`);
+    }
+
+    function deleteLora(index) {
+      const lora = state.trainedLoras[index];
+      state.trainedLoras.splice(index, 1);
+      localStorage.setItem('trainedLoras', JSON.stringify(state.trainedLoras));
+      if (state.selectedLoraId === lora.id) {
+        state.selectedLoraId = null;
+      }
+      renderLoraList();
+      showToast('LoRA deleted');
+    }
+
+    window.useLora = useLora;
+    window.deleteLora = deleteLora;
+
+    // ==========================================
+    // Caption Functions
+    // ==========================================
+    function openCaptionModal(index) {
+      state.captionModalIndex = index;
+      updateCaptionModal();
+      document.getElementById('captionModal').classList.add('active');
+    }
+
+    function closeCaptionModal() {
+      // Save current caption before closing
+      const img = state.trainingImages[state.captionModalIndex];
+      if (img) {
+        img.caption = document.getElementById('captionTextarea').value;
+      }
+      document.getElementById('captionModal').classList.remove('active');
+      renderTrainingImages();
+    }
+
+    function updateCaptionModal() {
+      const img = state.trainingImages[state.captionModalIndex];
+      if (!img) return;
+
+      document.getElementById('captionPreviewImg').src = img.url;
+      document.getElementById('captionTextarea').value = img.caption || '';
+      document.getElementById('captionCounter').textContent =
+        `${state.captionModalIndex + 1} / ${state.trainingImages.length}`;
+
+      document.getElementById('captionPrevBtn').disabled = state.captionModalIndex === 0;
+      document.getElementById('captionNextBtn').disabled =
+        state.captionModalIndex >= state.trainingImages.length - 1;
+    }
+
+    function navigateCaption(direction) {
+      // Save current caption
+      const currentImg = state.trainingImages[state.captionModalIndex];
+      if (currentImg) {
+        currentImg.caption = document.getElementById('captionTextarea').value;
+      }
+
+      // Navigate
+      state.captionModalIndex += direction;
+      state.captionModalIndex = Math.max(0, Math.min(state.captionModalIndex, state.trainingImages.length - 1));
+      updateCaptionModal();
+    }
+
+    async function generateCaption(imageUrl) {
+      if (!state.apiKey) {
+        showToast('Please configure API key first');
+        return null;
+      }
+
+      try {
+        // Use BLIP or similar model for captioning
+        const response = await fetch('https://api.replicate.com/v1/predictions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${state.apiKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'wait'
+          },
+          body: JSON.stringify({
+            version: 'salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746',
+            input: {
+              image: imageUrl,
+              task: 'image_captioning'
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        let result = await response.json();
+
+        // Poll if needed
+        while (result.status === 'starting' || result.status === 'processing') {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+            headers: { 'Authorization': `Bearer ${state.apiKey}` }
+          });
+          result = await pollRes.json();
+        }
+
+        if (result.status === 'failed') {
+          throw new Error(result.error || 'Caption generation failed');
+        }
+
+        return result.output;
+      } catch (error) {
+        console.error('Caption generation failed:', error);
+        return null;
+      }
+    }
+
+    async function autoCaptionCurrent() {
+      const img = state.trainingImages[state.captionModalIndex];
+      if (!img) return;
+
+      const btn = document.getElementById('autoCaptionBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span><span>Generating...</span>';
+
+      try {
+        const caption = await generateCaption(img.url);
+        if (caption) {
+          // Add trigger word if set
+          const trigger = triggerWordInput.value.trim();
+          const finalCaption = trigger ? caption.replace(/^(a |an |the )/i, `$1${trigger}, `) : caption;
+          document.getElementById('captionTextarea').value = finalCaption;
+          img.caption = finalCaption;
+          showToast('Caption generated!');
+        } else {
+          showToast('Failed to generate caption');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Generate Caption</span>';
+      }
+    }
+
+    async function captionAllImages() {
+      if (state.trainingImages.length === 0) {
+        showToast('No images to caption');
+        return;
+      }
+
+      if (!state.apiKey) {
+        showToast('Please configure API key first');
+        return;
+      }
+
+      state.isCaptioning = true;
+      const btn = document.getElementById('captionAllBatchBtn');
+      btn.disabled = true;
+      btn.textContent = 'Captioning...';
+
+      let successCount = 0;
+      for (let i = 0; i < state.trainingImages.length; i++) {
+        const img = state.trainingImages[i];
+        if (!img.caption) {
+          const caption = await generateCaption(img.url);
+          if (caption) {
+            const trigger = triggerWordInput.value.trim();
+            img.caption = trigger ? caption.replace(/^(a |an |the )/i, `$1${trigger}, `) : caption;
+            successCount++;
+
+            // Update UI if modal is on this image
+            if (state.captionModalIndex === i) {
+              document.getElementById('captionTextarea').value = img.caption;
+            }
+          }
+        }
+        btn.textContent = `Captioning ${i + 1}/${state.trainingImages.length}...`;
+      }
+
+      state.isCaptioning = false;
+      btn.disabled = false;
+      btn.textContent = 'Caption All';
+      renderTrainingImages();
+      showToast(`Captioned ${successCount} images`);
+    }
+
+    function applyTemplate(template) {
+      const trigger = triggerWordInput.value.trim() || '[trigger]';
+      const caption = CAPTION_TEMPLATES[template].replace('[trigger]', trigger);
+      document.getElementById('captionTextarea').value = caption;
+
+      const img = state.trainingImages[state.captionModalIndex];
+      if (img) {
+        img.caption = caption;
+      }
+    }
+
+    window.openCaptionModal = openCaptionModal;
+
+    // ==========================================
+    // Training API
+    // ==========================================
+    async function startTraining() {
+      if (!state.apiKey) {
+        showToast('Please configure API key first');
+        settingsPanel.classList.add('active');
+        settingsBtn.classList.add('active');
+        return;
+      }
+
+      if (state.trainingImages.length < 3) {
+        showToast('Please add at least 3 training images');
+        return;
+      }
+
+      const triggerWord = triggerWordInput.value.trim();
+      if (!triggerWord) {
+        showToast('Please enter a trigger word');
+        return;
+      }
+
+      const loraName = loraNameInput.value.trim() || `LoRA_${Date.now()}`;
+
+      state.isTraining = true;
+      trainBtn.disabled = true;
+      trainingProgress.classList.add('active');
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Preparing training data...';
+
+      emitOutput('trainingStarted', { triggerWord, name: loraName });
+
+      try {
+        // Get model based on selection
+        const modelId = state.baseModel === 'flux'
+          ? 'ostris/flux-dev-lora-trainer:d995297071a44dcb72244e6c19462111649ec86a9ff7e6b7c5a4a51c17ec6e78'
+          : 'ostris/flux-dev-lora-trainer:d995297071a44dcb72244e6c19462111649ec86a9ff7e6b7c5a4a51c17ec6e78'; // Same for now
+
+        const input = {
+          input_images: state.trainingImages.map(img => img.url),
+          trigger_word: triggerWord,
+          steps: parseInt(document.getElementById('stepsSelect').value),
+          learning_rate: parseFloat(document.getElementById('lrSelect').value),
+          resolution: parseInt(document.getElementById('resolutionSelect').value),
+        };
+
+        progressText.textContent = 'Starting training job...';
+        progressFill.style.width = '5%';
+
+        const response = await fetch('https://api.replicate.com/v1/predictions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${state.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            version: modelId.split(':')[1],
+            input,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Training failed to start: ${response.status}`);
+        }
+
+        let result = await response.json();
+
+        // Poll for completion
+        const startTime = Date.now();
+        while (result.status === 'starting' || result.status === 'processing') {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const progress = Math.min(5 + (elapsed / 1800) * 90, 95); // Estimate based on 30min
+          progressFill.style.width = `${progress}%`;
+          progressText.textContent = `Training... (${result.status})`;
+          progressEta.textContent = `Elapsed: ${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+
+          emitOutput('trainingProgress', { progress, status: result.status, elapsed });
+
+          await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10s
+
+          const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+            headers: { 'Authorization': `Bearer ${state.apiKey}` },
+          });
+          result = await pollResponse.json();
+        }
+
+        progressFill.style.width = '100%';
+
+        if (result.status === 'failed') {
+          throw new Error(result.error || 'Training failed');
+        }
+
+        // Save trained LoRA
+        const trainedLora = {
+          id: 'lora_' + Date.now(),
+          name: loraName,
+          triggerWord: triggerWord,
+          url: result.output,
+          baseModel: state.baseModel,
+          createdAt: Date.now(),
+          trainingImages: state.trainingImages.length,
+        };
+
+        state.trainedLoras.push(trainedLora);
+        localStorage.setItem('trainedLoras', JSON.stringify(state.trainedLoras));
+
+        emitOutput('trainingCompleted', trainedLora);
+        emitEvent('lora:training-completed', trainedLora);
+
+        showToast('Training completed successfully!');
+        renderLoraList();
+
+        // Clear training data
+        state.trainingImages = [];
+        renderTrainingImages();
+        triggerWordInput.value = '';
+        loraNameInput.value = '';
+      } catch (error) {
+        console.error('Training failed:', error);
+        emitOutput('trainingFailed', { error: error.message });
+        showToast('Training failed: ' + error.message);
+      } finally {
+        state.isTraining = false;
+        trainBtn.disabled = false;
+        trainingProgress.classList.remove('active');
+      }
+    }
+
+    // ==========================================
+    // Event Listeners
+    // ==========================================
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.toggle('active');
+      settingsBtn.classList.toggle('active');
+    });
+
+    saveKeyBtn.addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      if (key && key !== '********') {
+        state.apiKey = key;
+        localStorage.setItem('loraTrainerApiKey', key);
+        updateKeyStatus();
+        showToast('API key saved');
+      }
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        state.activeTab = tab;
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        btn.classList.add('active');
+        document.getElementById(`${tab}Tab`).classList.add('active');
+
+        // Update footer button
+        trainBtn.textContent = tab === 'train' ? 'Start Training' : 'Use Selected LoRA';
+      });
+    });
+
+    document.getElementById('addImagesBtn').addEventListener('click', () => {
+      imageFileInput.click();
+    });
+
+    imageFileInput.addEventListener('change', (e) => {
+      Array.from(e.target.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            addTrainingImage({ url: ev.target.result, name: file.name });
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      e.target.value = '';
+    });
+
+    document.getElementById('clearImagesBtn').addEventListener('click', () => {
+      state.trainingImages = [];
+      renderTrainingImages();
+    });
+
+    document.getElementById('cancelTrainingBtn').addEventListener('click', () => {
+      // Note: Actual cancellation would need the prediction ID
+      state.isTraining = false;
+      trainBtn.disabled = false;
+      trainingProgress.classList.remove('active');
+      showToast('Training cancelled');
+    });
+
+    trainBtn.addEventListener('click', () => {
+      if (state.activeTab === 'train') {
+        startTraining();
+      } else if (state.selectedLoraId) {
+        const lora = state.trainedLoras.find(l => l.id === state.selectedLoraId);
+        if (lora) {
+          useLora(state.trainedLoras.indexOf(lora));
+        }
+      }
+    });
+
+    // Caption modal events
+    document.getElementById('captionClose').addEventListener('click', closeCaptionModal);
+    document.getElementById('saveCaptionsBtn').addEventListener('click', closeCaptionModal);
+    document.getElementById('captionPrevBtn').addEventListener('click', () => navigateCaption(-1));
+    document.getElementById('captionNextBtn').addEventListener('click', () => navigateCaption(1));
+    document.getElementById('autoCaptionBtn').addEventListener('click', autoCaptionCurrent);
+    document.getElementById('captionAllBatchBtn').addEventListener('click', captionAllImages);
+    document.getElementById('captionAllBtn').addEventListener('click', () => {
+      if (state.trainingImages.length > 0) {
+        openCaptionModal(0);
+      } else {
+        showToast('Add images first');
+      }
+    });
+
+    // Caption templates
+    document.querySelectorAll('.caption-template').forEach(btn => {
+      btn.addEventListener('click', () => applyTemplate(btn.dataset.template));
+    });
+
+    // Caption mode toggle
+    document.querySelectorAll('.caption-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.captionMode = btn.dataset.mode;
+        document.querySelectorAll('.caption-mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Preprocessing options
+    document.getElementById('preprocessCrop').addEventListener('change', (e) => {
+      state.preprocessing.crop = e.target.checked;
+    });
+    document.getElementById('preprocessFlip').addEventListener('change', (e) => {
+      state.preprocessing.flip = e.target.checked;
+    });
+    document.getElementById('preprocessResize').addEventListener('change', (e) => {
+      state.preprocessing.resize = e.target.value;
+    });
+
+    // ==========================================
+    // Message Handling
+    // ==========================================
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.type === 'pipeline:input') {
+        const { portName, value } = data;
+        switch (portName) {
+          case 'addTrainingImages':
+            if (value?.images) {
+              value.images.forEach(img => addTrainingImage(img));
+            }
+            break;
+          case 'setApiKey':
+            if (value?.apiKey) {
+              state.apiKey = value.apiKey;
+              localStorage.setItem('loraTrainerApiKey', value.apiKey);
+              updateKeyStatus();
+            }
+            break;
+          case 'startTraining':
+            if (value?.triggerWord) {
+              triggerWordInput.value = value.triggerWord;
+              if (value.name) loraNameInput.value = value.name;
+              startTraining();
+            }
+            break;
+          case 'cancelTraining':
+            if (state.isTraining) {
+              state.isTraining = false;
+              trainBtn.disabled = false;
+              trainingProgress.classList.remove('active');
+            }
+            break;
+          case 'selectLora':
+            const lora = state.trainedLoras.find(l => l.id === value);
+            if (lora) {
+              selectLora(state.trainedLoras.indexOf(lora));
+            }
+            break;
+        }
+        return;
+      }
+
+      // Handle canvas events
+      if (data.type === 'widget:event') {
+        const eventType = data.payload?.type;
+        const payload = data.payload?.payload;
+
+        switch (eventType) {
+          case 'gallery:image-selected':
+            if (payload?.url && state.activeTab === 'train') {
+              addTrainingImage(payload);
+              showToast('Image added to training set');
+            }
+            break;
+        }
+      }
+    });
+
+    // ==========================================
+    // Initialization
+    // ==========================================
+    function init() {
+      // Load API key
+      try {
+        const savedKey = localStorage.getItem('loraTrainerApiKey');
+        if (savedKey) {
+          state.apiKey = savedKey;
+        }
+      } catch (e) {
+        console.error('Failed to load API key:', e);
+      }
+
+      // Load trained LoRAs
+      try {
+        const savedLoras = localStorage.getItem('trainedLoras');
+        if (savedLoras) {
+          state.trainedLoras = JSON.parse(savedLoras);
+        }
+      } catch (e) {
+        console.error('Failed to load LoRAs:', e);
+      }
+
+      updateKeyStatus();
+      renderTrainingImages();
+      renderLoraList();
+    }
+
+    window.parent.postMessage({ type: 'READY' }, '*');
+    init();
+  </script>
+</body>
+</html>

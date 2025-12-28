@@ -1,0 +1,40 @@
+{
+    "id": "stickernest.preview-export",
+    "name": "Preview & Export",
+    "version": "1.0.0",
+    "kind": "ui",
+    "entry": "index.tsx",
+    "description": "Preview and export generated images.",
+    "author": "StickerNest",
+    "tags": [
+        "preview",
+        "export",
+        "ui",
+        "pipeline"
+    ],
+    "inputs": {
+        "imageUrl": {
+            "type": "string",
+            "description": "URL of the image to preview",
+            "required": true
+        }
+    },
+    "outputs": {
+        "preview:export.request": {
+            "type": "event",
+            "description": "Emitted when export is requested"
+        },
+        "preview:export.completed": {
+            "type": "event",
+            "description": "Emitted when export is completed"
+        }
+    },
+    "capabilities": {
+        "draggable": true,
+        "resizable": true
+    },
+    "size": {
+        "width": 400,
+        "height": 400
+    }
+}

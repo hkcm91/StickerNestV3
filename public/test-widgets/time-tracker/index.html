@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 15px;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .title {
+            font-size: 13px;
+            color: #90cdf4;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .status {
+            font-size: 10px;
+            color: #718096;
+        }
+        .status.connected { color: #68d391; }
+
+        .timer-display {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .time {
+            font-size: 42px;
+            font-weight: 700;
+            font-family: 'SF Mono', Monaco, monospace;
+            color: #fff;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(99, 179, 237, 0.5);
+        }
+        .time.running {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .milliseconds {
+            font-size: 18px;
+            color: #718096;
+        }
+
+        .current-task {
+            background: rgba(66, 153, 225, 0.2);
+            border: 1px solid rgba(66, 153, 225, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .current-task-label {
+            font-size: 10px;
+            color: #90cdf4;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .current-task-title {
+            font-size: 14px;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .no-task {
+            color: #718096;
+            font-style: italic;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-start {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+        .btn-start:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+        }
+        .btn-stop {
+            background: linear-gradient(135deg, #fc8181, #e53e3e);
+            color: white;
+        }
+        .btn-stop:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+        }
+        .btn-reset {
+            background: rgba(255,255,255,0.1);
+            color: #a0aec0;
+        }
+        .btn-reset:hover:not(:disabled) {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .history {
+            flex: 1;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 150px;
+        }
+        .history-title {
+            font-size: 11px;
+            color: #718096;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        .history-task {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 10px;
+        }
+        .history-time {
+            color: #68d391;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-weight: 500;
+        }
+
+        .total-today {
+            text-align: center;
+            padding: 10px;
+            background: rgba(72, 187, 120, 0.1);
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .total-label {
+            font-size: 10px;
+            color: #718096;
+            text-transform: uppercase;
+        }
+        .total-time {
+            font-size: 18px;
+            font-weight: 600;
+            color: #68d391;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">Time Tracker</div>
+        <div class="status" id="status">Waiting for task selection...</div>
+    </div>
+
+    <div class="timer-display">
+        <div class="time" id="time">00:00:00</div>
+    </div>
+
+    <div class="current-task" id="currentTask">
+        <div class="current-task-label">Current Task</div>
+        <div class="current-task-title no-task">Select a task from Project Tracker</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-start" id="startBtn" onclick="startTimer()" disabled>
+            <span>▶</span> Start
+        </button>
+        <button class="btn btn-stop" id="stopBtn" onclick="stopTimer()" disabled>
+            <span>■</span> Stop
+        </button>
+        <button class="btn btn-reset" onclick="resetTimer()">Reset</button>
+    </div>
+
+    <div class="history">
+        <div class="history-title">Today's Sessions</div>
+        <div id="historyList"></div>
+    </div>
+
+    <div class="total-today">
+        <div class="total-label">Total Today</div>
+        <div class="total-time" id="totalToday">0h 0m</div>
+    </div>
+
+    <script>
+        const EVENTS = {
+            TASK_SELECTED: 'project:task-selected',
+            TASKS_SYNC: 'project:tasks-sync',
+            TIME_UPDATE: 'project:task-time-update',
+            TIMER_STARTED: 'timer:started',
+            TIMER_STOPPED: 'timer:stopped',
+            REQUEST_TASKS: 'project:request-tasks'
+        };
+
+        let state = {
+            currentTask: null,
+            isRunning: false,
+            startTime: null,
+            elapsed: 0,
+            sessions: [],
+            tasks: {}
+        };
+
+        let timerInterval = null;
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return [hours, minutes, seconds]
+                .map(v => v.toString().padStart(2, '0'))
+                .join(':');
+        }
+
+        function formatDuration(ms) {
+            const hours = Math.floor(ms / 3600000);
+            const minutes = Math.floor((ms % 3600000) / 60000);
+            if (hours > 0) return hours + 'h ' + minutes + 'm';
+            return minutes + 'm';
+        }
+
+        function updateDisplay() {
+            const timeEl = document.getElementById('time');
+            const total = state.elapsed + (state.isRunning ? (Date.now() - state.startTime) : 0);
+            timeEl.textContent = formatTime(total);
+            timeEl.classList.toggle('running', state.isRunning);
+        }
+
+        function startTimer() {
+            if (!state.currentTask || state.isRunning) return;
+
+            state.isRunning = true;
+            state.startTime = Date.now();
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('status').textContent = 'Tracking: ' + state.currentTask.title;
+            document.getElementById('status').className = 'status connected';
+
+            timerInterval = setInterval(updateDisplay, 100);
+
+            log('Timer started for: ' + state.currentTask.title);
+            emit(EVENTS.TIMER_STARTED, {
+                taskId: state.currentTask.id,
+                taskTitle: state.currentTask.title,
+                startTime: state.startTime
+            });
+        }
+
+        function stopTimer() {
+            if (!state.isRunning) return;
+
+            const sessionTime = Date.now() - state.startTime;
+            state.elapsed += sessionTime;
+            state.isRunning = false;
+
+            clearInterval(timerInterval);
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('status').textContent = 'Paused';
+            document.getElementById('status').className = 'status';
+
+            // Record session
+            const session = {
+                taskId: state.currentTask.id,
+                taskTitle: state.currentTask.title,
+                duration: sessionTime,
+                endTime: Date.now()
+            };
+            state.sessions.unshift(session);
+            renderHistory();
+
+            // Update task's total time
+            const totalTime = (state.tasks[state.currentTask.id]?.timeSpent || 0) + sessionTime;
+            state.tasks[state.currentTask.id] = {
+                ...state.currentTask,
+                timeSpent: totalTime
+            };
+
+            log('Timer stopped. Session: ' + formatDuration(sessionTime));
+            emit(EVENTS.TIMER_STOPPED, {
+                taskId: state.currentTask.id,
+                sessionTime: sessionTime,
+                totalTime: totalTime
+            });
+
+            // Send time update to project tracker
+            emit(EVENTS.TIME_UPDATE, {
+                taskId: state.currentTask.id,
+                timeSpent: totalTime
+            });
+
+            updateDisplay();
+        }
+
+        function resetTimer() {
+            if (state.isRunning) stopTimer();
+            state.elapsed = 0;
+            updateDisplay();
+            log('Timer reset');
+        }
+
+        function setCurrentTask(task) {
+            // Stop current timer if running
+            if (state.isRunning) stopTimer();
+
+            state.currentTask = task;
+            state.elapsed = task.timeSpent || 0;
+
+            const taskEl = document.getElementById('currentTask');
+            taskEl.innerHTML = `
+                <div class="current-task-label">Current Task</div>
+                <div class="current-task-title">${escapeHtml(task.title)}</div>
+            `;
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('status').textContent = 'Ready to track';
+            document.getElementById('status').className = 'status connected';
+
+            updateDisplay();
+            log('Task loaded: ' + task.title + ' (' + formatDuration(state.elapsed) + ' tracked)');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            const todaySessions = state.sessions.filter(s => {
+                const today = new Date();
+                const sessionDate = new Date(s.endTime);
+                return sessionDate.toDateString() === today.toDateString();
+            });
+
+            if (todaySessions.length === 0) {
+                container.innerHTML = '<div style="color: #718096; font-size: 11px; text-align: center; padding: 10px;">No sessions today</div>';
+            } else {
+                container.innerHTML = todaySessions.slice(0, 5).map(s => `
+                    <div class="history-item">
+                        <span class="history-task">${escapeHtml(s.taskTitle)}</span>
+                        <span class="history-time">${formatDuration(s.duration)}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Update total
+            const totalMs = todaySessions.reduce((sum, s) => sum + s.duration, 0);
+            document.getElementById('totalToday').textContent = formatDuration(totalMs);
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Time Tracker ready');
+            renderHistory();
+
+            // Request current tasks
+            emit(EVENTS.REQUEST_TASKS, {});
+
+            window.WidgetAPI.onEvent('*', (event) => {
+                switch (event.type) {
+                    case EVENTS.TASK_SELECTED:
+                        if (event.payload.task) {
+                            setCurrentTask(event.payload.task);
+                        }
+                        break;
+
+                    case EVENTS.TASKS_SYNC:
+                        // Update our task cache
+                        if (event.payload.tasks) {
+                            event.payload.tasks.forEach(t => {
+                                state.tasks[t.id] = t;
+                            });
+                            // If we have a selected task from sync
+                            if (event.payload.selectedTaskId && !state.currentTask) {
+                                const task = state.tasks[event.payload.selectedTaskId];
+                                if (task) setCurrentTask(task);
+                            }
+                        }
+                        break;
+                }
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>

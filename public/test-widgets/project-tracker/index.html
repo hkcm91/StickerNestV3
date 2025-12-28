@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2d3748;
+        }
+        .title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #90cdf4;
+        }
+        .task-count {
+            font-size: 11px;
+            color: #718096;
+        }
+        .add-task {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .add-task input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #2d3748;
+            border-radius: 6px;
+            background: #2d3748;
+            color: #e2e8f0;
+            font-size: 13px;
+        }
+        .add-task input:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+        .add-task input::placeholder { color: #718096; }
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover { background: #3182ce; }
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 10px;
+        }
+        .btn-danger { background: #e53e3e; color: white; }
+        .btn-danger:hover { background: #c53030; }
+        .btn-success { background: #38a169; color: white; }
+        .btn-success:hover { background: #2f855a; }
+
+        .filters {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .filter-btn {
+            padding: 4px 10px;
+            border: 1px solid #2d3748;
+            border-radius: 12px;
+            background: transparent;
+            color: #a0aec0;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: #4299e1; color: #4299e1; }
+        .filter-btn.active {
+            background: #4299e1;
+            border-color: #4299e1;
+            color: white;
+        }
+
+        .task-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #2d3748;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .task-item:hover { background: #3d4a5c; }
+        .task-item.selected {
+            border-color: #4299e1;
+            background: #2c3e50;
+        }
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+            color: #718096;
+        }
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #4a5568;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .task-checkbox:hover { border-color: #4299e1; }
+        .task-checkbox.checked {
+            background: #38a169;
+            border-color: #38a169;
+        }
+        .task-checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 11px;
+        }
+        .task-content { flex: 1; min-width: 0; }
+        .task-title {
+            font-size: 13px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        .task-meta {
+            display: flex;
+            gap: 10px;
+            font-size: 10px;
+            color: #718096;
+        }
+        .task-meta span {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .task-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .task-item:hover .task-actions { opacity: 1; }
+
+        .priority-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .priority-high { background: #e53e3e; }
+        .priority-medium { background: #ed8936; }
+        .priority-low { background: #38a169; }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #718096;
+        }
+        .empty-state-icon { font-size: 32px; margin-bottom: 10px; }
+
+        .priority-select {
+            padding: 4px 8px;
+            border: 1px solid #2d3748;
+            border-radius: 4px;
+            background: #2d3748;
+            color: #e2e8f0;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="title">Project Tracker</span>
+        <span class="task-count" id="taskCount">0 tasks</span>
+    </div>
+
+    <div class="add-task">
+        <input type="text" id="taskInput" placeholder="Add a new task..." onkeydown="handleKeyDown(event)">
+        <select class="priority-select" id="prioritySelect">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+        </select>
+        <button class="btn btn-primary" onclick="addTask()">Add</button>
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" data-filter="active" onclick="setFilter('active')">Active</button>
+        <button class="filter-btn" data-filter="completed" onclick="setFilter('completed')">Done</button>
+    </div>
+
+    <div class="task-list" id="taskList"></div>
+
+    <script>
+        // Shared state - this is the source of truth for tasks
+        let state = {
+            tasks: [],
+            selectedTaskId: null,
+            filter: 'all'
+        };
+
+        // Event types for the ecosystem
+        const EVENTS = {
+            TASK_CREATED: 'project:task-created',
+            TASK_UPDATED: 'project:task-updated',
+            TASK_DELETED: 'project:task-deleted',
+            TASK_SELECTED: 'project:task-selected',
+            TASKS_SYNC: 'project:tasks-sync',
+            REQUEST_TASKS: 'project:request-tasks',
+            TIME_UPDATE: 'project:task-time-update',
+            NOTE_ADDED: 'project:task-note-added'
+        };
+
+        function emit(type, payload) {
+            if (window.WidgetAPI) {
+                window.WidgetAPI.emitEvent({ type, scope: 'canvas', payload });
+            }
+        }
+
+        function log(msg) {
+            if (window.WidgetAPI) window.WidgetAPI.log(msg);
+        }
+
+        function generateId() {
+            return 'task-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const prioritySelect = document.getElementById('prioritySelect');
+            const title = input.value.trim();
+            if (!title) return;
+
+            const task = {
+                id: generateId(),
+                title: title,
+                completed: false,
+                priority: prioritySelect.value,
+                createdAt: Date.now(),
+                timeSpent: 0,
+                notes: []
+            };
+
+            state.tasks.unshift(task);
+            input.value = '';
+            renderTasks();
+
+            log('Task created: ' + title);
+            emit(EVENTS.TASK_CREATED, { task });
+            broadcastSync();
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter') addTask();
+        }
+
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                task.completedAt = task.completed ? Date.now() : null;
+                renderTasks();
+
+                log('Task ' + (task.completed ? 'completed' : 'reopened') + ': ' + task.title);
+                emit(EVENTS.TASK_UPDATED, { task, change: 'status' });
+                broadcastSync();
+            }
+        }
+
+        function selectTask(id) {
+            state.selectedTaskId = state.selectedTaskId === id ? null : id;
+            renderTasks();
+
+            const task = state.tasks.find(t => t.id === id);
+            if (task && state.selectedTaskId) {
+                log('Task selected: ' + task.title);
+                emit(EVENTS.TASK_SELECTED, { task });
+            }
+        }
+
+        function deleteTask(id, e) {
+            e.stopPropagation();
+            const task = state.tasks.find(t => t.id === id);
+            state.tasks = state.tasks.filter(t => t.id !== id);
+            if (state.selectedTaskId === id) state.selectedTaskId = null;
+            renderTasks();
+
+            if (task) {
+                log('Task deleted: ' + task.title);
+                emit(EVENTS.TASK_DELETED, { taskId: id, task });
+                broadcastSync();
+            }
+        }
+
+        function setFilter(filter) {
+            state.filter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+            renderTasks();
+        }
+
+        function getFilteredTasks() {
+            switch (state.filter) {
+                case 'active': return state.tasks.filter(t => !t.completed);
+                case 'completed': return state.tasks.filter(t => t.completed);
+                default: return state.tasks;
+            }
+        }
+
+        function formatTime(ms) {
+            if (!ms) return '0m';
+            const mins = Math.floor(ms / 60000);
+            const hours = Math.floor(mins / 60);
+            if (hours > 0) return hours + 'h ' + (mins % 60) + 'm';
+            return mins + 'm';
+        }
+
+        function renderTasks() {
+            const tasks = getFilteredTasks();
+            const container = document.getElementById('taskList');
+
+            document.getElementById('taskCount').textContent =
+                state.tasks.length + ' task' + (state.tasks.length !== 1 ? 's' : '') +
+                ' (' + state.tasks.filter(t => !t.completed).length + ' active)';
+
+            if (tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div>${state.filter === 'all' ? 'No tasks yet' : 'No ' + state.filter + ' tasks'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = tasks.map(task => `
+                <div class="task-item ${task.completed ? 'completed' : ''} ${state.selectedTaskId === task.id ? 'selected' : ''}"
+                     onclick="selectTask('${task.id}')">
+                    <div class="priority-dot priority-${task.priority}"></div>
+                    <div class="task-checkbox ${task.completed ? 'checked' : ''}"
+                         onclick="event.stopPropagation(); toggleTask('${task.id}')"></div>
+                    <div class="task-content">
+                        <div class="task-title">${escapeHtml(task.title)}</div>
+                        <div class="task-meta">
+                            <span>⏱ ${formatTime(task.timeSpent)}</span>
+                            <span>📝 ${task.notes?.length || 0}</span>
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteTask('${task.id}', event)">×</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function broadcastSync() {
+            emit(EVENTS.TASKS_SYNC, { tasks: state.tasks, selectedTaskId: state.selectedTaskId });
+        }
+
+        function handleTimeUpdate(payload) {
+            const { taskId, timeSpent } = payload;
+            const task = state.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.timeSpent = timeSpent;
+                renderTasks();
+                log('Time updated for: ' + task.title + ' (' + formatTime(timeSpent) + ')');
+            }
+        }
+
+        function handleNoteAdded(payload) {
+            const { taskId, note } = payload;
+            const task = state.tasks.find(t => t.id === taskId);
+            if (task) {
+                if (!task.notes) task.notes = [];
+                task.notes.push(note);
+                renderTasks();
+                log('Note added to: ' + task.title);
+            }
+        }
+
+        function init() {
+            if (!window.WidgetAPI) {
+                setTimeout(init, 50);
+                return;
+            }
+
+            log('Project Tracker ready');
+
+            // Add some sample tasks
+            state.tasks = [
+                { id: generateId(), title: 'Design new dashboard layout', completed: false, priority: 'high', createdAt: Date.now() - 86400000, timeSpent: 3600000, notes: [] },
+                { id: generateId(), title: 'Review pull requests', completed: false, priority: 'medium', createdAt: Date.now() - 43200000, timeSpent: 1800000, notes: [] },
+                { id: generateId(), title: 'Update documentation', completed: true, priority: 'low', createdAt: Date.now() - 172800000, timeSpent: 7200000, notes: [], completedAt: Date.now() - 3600000 }
+            ];
+
+            renderTasks();
+
+            // Broadcast initial state
+            setTimeout(() => broadcastSync(), 500);
+
+            // Listen for ecosystem events
+            window.WidgetAPI.onEvent('*', (event) => {
+                switch (event.type) {
+                    case EVENTS.REQUEST_TASKS:
+                        broadcastSync();
+                        break;
+                    case EVENTS.TIME_UPDATE:
+                        handleTimeUpdate(event.payload);
+                        break;
+                    case EVENTS.NOTE_ADDED:
+                        handleNoteAdded(event.payload);
+                        break;
+                }
+            });
+        }
+
+        init();
+    
+        // Message listener for parent communication
+        window.addEventListener('message', (event) => {
+            const { type, instanceId, payload } = event.data || {};
+            if (type === 'INIT') {
+                console.log('Widget initialized:', instanceId);
+            }
+            if (type === 'widget-input') {
+                console.log('Widget input:', event.data.portName, payload);
+            }
+        });
+
+        // Signal ready to parent
+        window.parent.postMessage({ type: 'READY' }, '*');
+    </script>
+</body>
+</html>
