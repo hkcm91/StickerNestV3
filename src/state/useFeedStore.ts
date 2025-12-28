@@ -286,17 +286,82 @@ export const useFeedStore = create<FeedState & FeedActions>()(
             return { feedCache: newCache, seenActivityIds: seenIds };
           });
         } catch (err) {
-          set((state) => {
-            const newCache = new Map(state.feedCache);
-            const existing = newCache.get(feedKey);
-            if (existing) {
-              newCache.set(feedKey, { ...existing, isLoading: false });
-            }
-            return {
-              feedCache: newCache,
-              error: err instanceof Error ? err.message : 'Failed to fetch feed',
-            };
-          });
+          const errorMessage = err instanceof Error ? err.message : 'Failed to fetch feed';
+          const isBackendUnavailable = errorMessage.includes('Backend server') ||
+                                       errorMessage.includes('NETWORK_ERROR') ||
+                                       errorMessage.includes('fetch');
+
+          if (isBackendUnavailable) {
+            // Graceful degradation: use mock activities when backend unavailable
+            console.warn('[useFeedStore] Backend unavailable, using mock feed data');
+
+            const mockActivities: FeedActivity[] = [
+              {
+                id: 'mock-activity-1',
+                type: 'widget_created',
+                actorId: 'mock-user-1',
+                actorName: 'alice_demo',
+                actorAvatar: null,
+                objectId: 'widget-123',
+                objectType: 'widget',
+                objectName: 'My Cool Widget',
+                createdAt: new Date(Date.now() - 3600000).toISOString(),
+                metadata: {},
+              },
+              {
+                id: 'mock-activity-2',
+                type: 'canvas_published',
+                actorId: 'mock-user-2',
+                actorName: 'bob_demo',
+                actorAvatar: null,
+                objectId: 'canvas-456',
+                objectType: 'canvas',
+                objectName: 'Demo Canvas',
+                createdAt: new Date(Date.now() - 7200000).toISOString(),
+                metadata: {},
+              },
+              {
+                id: 'mock-activity-3',
+                type: 'follow',
+                actorId: 'mock-user-3',
+                actorName: 'charlie_demo',
+                actorAvatar: null,
+                objectId: 'demo-user-123',
+                objectType: 'user',
+                objectName: 'You',
+                createdAt: new Date(Date.now() - 10800000).toISOString(),
+                metadata: {},
+              },
+            ];
+
+            set((state) => {
+              const newCache = new Map(state.feedCache);
+              const seenIds = new Set(state.seenActivityIds);
+              mockActivities.forEach((a) => seenIds.add(a.id));
+
+              newCache.set(feedKey, {
+                activities: mockActivities,
+                offset: mockActivities.length,
+                hasMore: false,
+                lastFetchedAt: Date.now(),
+                isLoading: false,
+              });
+
+              return { feedCache: newCache, seenActivityIds: seenIds, error: null };
+            });
+          } else {
+            set((state) => {
+              const newCache = new Map(state.feedCache);
+              const existing = newCache.get(feedKey);
+              if (existing) {
+                newCache.set(feedKey, { ...existing, isLoading: false });
+              }
+              return {
+                feedCache: newCache,
+                error: errorMessage,
+              };
+            });
+          }
         }
       },
 

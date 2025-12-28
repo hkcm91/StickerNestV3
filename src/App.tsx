@@ -25,6 +25,7 @@ import { CanvasPage } from './pages/CanvasPage';
 import { useDebugShortcuts } from './hooks/useDebugShortcuts';
 import { useViewport } from './hooks/useResponsive';
 import { useCanvasManager } from './services/canvasManager';
+import { useSocialStore } from './state/useSocialStore';
 import './App.css';
 
 // =============================================================================
@@ -94,6 +95,14 @@ const App: React.FC = () => {
           console.log('[App] TransportManager initialized:', TransportManager.getStatus());
         }
 
+        // Initialize SocialStore with user ID to fetch relationships
+        const socialStore = useSocialStore.getState();
+        if (userId && socialStore.currentUserId !== userId) {
+          console.log('[App] Initializing useSocialStore with userId:', userId);
+          await socialStore.initialize(userId);
+          console.log('[App] useSocialStore initialized - following:', socialStore.following.size);
+        }
+
         // Initialize SocialEventBridge for social store -> EventBus bridging
         if (!socialBridgeRef.current) {
           console.log('[App] Initializing SocialEventBridge...');
@@ -112,7 +121,7 @@ const App: React.FC = () => {
     };
 
     initializeSocialInfrastructure();
-  }, [runtime.eventBus]);
+  }, [runtime.eventBus, userId]);
 
   // Cleanup runtime on unmount
   useEffect(() => {

@@ -496,6 +496,10 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
   const pendingCapabilityRequests = new Map();
   let capabilityRequestId = 0;
 
+  // Pending API requests
+  const pendingApiRequests = new Map();
+  let apiRequestId = 0;
+
   // Post message to parent
   function postToParent(type, payload) {
     const message = {
@@ -826,6 +830,29 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
     // Legacy compatibility
     debugLog: function(msg, data) {
       postToParent('DEBUG_LOG', { level: 'log', message: msg, data: data, timestamp: Date.now() });
+    },
+
+    // API requests (for fetching social data, etc.)
+    request: function(action, data) {
+      return new Promise(function(resolve, reject) {
+        const reqId = 'req-' + (++apiRequestId) + '-' + Date.now();
+
+        // Store resolver with timeout
+        const timeoutId = setTimeout(function() {
+          if (pendingApiRequests.has(reqId)) {
+            pendingApiRequests.delete(reqId);
+            reject(new Error('Request timeout: ' + action));
+          }
+        }, 30000);
+
+        pendingApiRequests.set(reqId, { resolve: resolve, reject: reject, timeoutId: timeoutId });
+
+        postToParent('REQUEST', {
+          requestId: reqId,
+          action: action,
+          data: data || {}
+        });
+      });
     }
   };
 
@@ -866,6 +893,25 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
       case 'SETTINGS_UPDATE':
         handleSettingsUpdate(data.payload);
         break;
+      case 'RESPONSE':
+        handleApiResponse(data.payload);
+        break;
+    }
+  }
+
+  function handleApiResponse(payload) {
+    const { requestId, result, error } = payload;
+    const pending = pendingApiRequests.get(requestId);
+
+    if (pending) {
+      clearTimeout(pending.timeoutId);
+      pendingApiRequests.delete(requestId);
+
+      if (error) {
+        pending.reject(new Error(error));
+      } else {
+        pending.resolve(result);
+      }
     }
   }
 

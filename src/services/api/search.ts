@@ -13,6 +13,80 @@ import type {
   SearchQuery,
 } from './types';
 
+// Mock users for local development when backend is unavailable
+const MOCK_USERS: ExtendedUserProfile[] = [
+  {
+    id: 'mock-user-1',
+    username: 'alice_demo',
+    displayName: 'Alice Demo',
+    email: 'alice@demo.com',
+    avatarUrl: null,
+    bio: 'Demo user for testing social features',
+    isVerified: true,
+    isCreator: true,
+    followersCount: 150,
+    followingCount: 75,
+    canvasCount: 12,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-user-2',
+    username: 'bob_builder',
+    displayName: 'Bob Builder',
+    email: 'bob@demo.com',
+    avatarUrl: null,
+    bio: 'Widget creator and canvas enthusiast',
+    isVerified: false,
+    isCreator: true,
+    followersCount: 89,
+    followingCount: 42,
+    canvasCount: 8,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-user-3',
+    username: 'charlie_creative',
+    displayName: 'Charlie Creative',
+    email: 'charlie@demo.com',
+    avatarUrl: null,
+    bio: 'Artist and sticker designer',
+    isVerified: true,
+    isCreator: false,
+    followersCount: 234,
+    followingCount: 156,
+    canvasCount: 25,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-user-4',
+    username: 'diana_dev',
+    displayName: 'Diana Developer',
+    email: 'diana@demo.com',
+    avatarUrl: null,
+    bio: 'Full-stack developer building cool widgets',
+    isVerified: false,
+    isCreator: true,
+    followersCount: 67,
+    followingCount: 120,
+    canvasCount: 5,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-user-5',
+    username: 'eve_explorer',
+    displayName: 'Eve Explorer',
+    email: 'eve@demo.com',
+    avatarUrl: null,
+    bio: 'Discovering amazing canvases every day',
+    isVerified: false,
+    isCreator: false,
+    followersCount: 45,
+    followingCount: 200,
+    canvasCount: 3,
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export const searchApi = {
   /**
    * Global search
@@ -51,10 +125,37 @@ export const searchApi = {
     page = 1,
     pageSize = 20
   ): Promise<ApiResponse<PaginatedResponse<ExtendedUserProfile>>> {
-    return request<PaginatedResponse<ExtendedUserProfile>>(
-      `/search/users?q=${encodeURIComponent(q)}&page=${page}&pageSize=${pageSize}`,
-      { method: 'GET' }
-    );
+    try {
+      const result = await request<PaginatedResponse<ExtendedUserProfile>>(
+        `/search/users?q=${encodeURIComponent(q)}&page=${page}&pageSize=${pageSize}`,
+        { method: 'GET' }
+      );
+      return result;
+    } catch (error) {
+      // Fallback to mock data when backend unavailable
+      console.warn('[searchApi] Backend unavailable, using mock user data');
+      const query = q.toLowerCase();
+      const filtered = MOCK_USERS.filter(
+        user =>
+          user.username.toLowerCase().includes(query) ||
+          (user.displayName && user.displayName.toLowerCase().includes(query)) ||
+          (user.bio && user.bio.toLowerCase().includes(query))
+      );
+
+      const start = (page - 1) * pageSize;
+      const items = filtered.slice(start, start + pageSize);
+
+      return {
+        success: true,
+        data: {
+          items,
+          total: filtered.length,
+          page,
+          pageSize,
+          totalPages: Math.ceil(filtered.length / pageSize),
+        },
+      };
+    }
   },
 
   /**

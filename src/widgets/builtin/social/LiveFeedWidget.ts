@@ -529,8 +529,7 @@ export const LiveFeedWidgetHTML = `
           state.activities = [];
           state.pendingActivities = [];
           refreshBanner.classList.remove('visible');
-          renderActivities();
-          API.setState({ feedType: state.feedType });
+          fetchFeed(); // Fetch new data for this feed type
         });
       });
 
@@ -552,6 +551,49 @@ export const LiveFeedWidgetHTML = `
         }
       });
 
+      // Fetch feed data from API
+      async function fetchFeed() {
+        state.isLoading = true;
+        renderActivities();
+
+        try {
+          API.log('Fetching feed: ' + state.feedType);
+          const result = await API.request('social:getFeed', {
+            type: state.feedType,
+            userId: state.userId,
+            limit: 20
+          });
+
+          if (result && result.activities) {
+            // Transform activities to expected format
+            state.activities = result.activities.map(function(a) {
+              return {
+                id: a.id,
+                actor_id: a.actorId || a.actor_id,
+                verb: a.type || a.verb || 'published',
+                object_type: a.objectType || a.object_type || 'widget',
+                object_id: a.objectId || a.object_id,
+                created_at: a.createdAt || a.created_at,
+                metadata: a.metadata || { title: a.objectName || a.object_name },
+                profiles: {
+                  username: a.actorName || a.actor_name || 'Unknown',
+                  avatar_url: a.actorAvatar || a.actor_avatar
+                }
+              };
+            });
+            state.hasMore = result.hasMore || false;
+            API.log('Feed loaded: ' + state.activities.length + ' activities');
+          }
+        } catch (err) {
+          API.error('Failed to fetch feed', err);
+          // Keep any existing activities on error
+        }
+
+        state.isLoading = false;
+        renderActivities();
+        API.setState({ feedType: state.feedType, activities: state.activities });
+      }
+
       // Initialize
       API.onMount(function(context) {
         const saved = context.state || {};
@@ -564,7 +606,9 @@ export const LiveFeedWidgetHTML = `
           tab.classList.toggle('active', tab.dataset.feed === state.feedType);
         });
 
-        renderActivities();
+        // Fetch fresh data
+        fetchFeed();
+
         API.log('LiveFeedWidget mounted: ' + state.feedType);
       });
 

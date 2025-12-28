@@ -430,10 +430,77 @@ export const useNotificationStore = create<NotificationState & NotificationActio
               };
             });
           } catch (err) {
-            set({
-              isLoading: false,
-              error: err instanceof Error ? err.message : 'Failed to fetch notifications',
-            });
+            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch notifications';
+            const isBackendUnavailable = errorMessage.includes('Backend server') ||
+                                         errorMessage.includes('NETWORK_ERROR') ||
+                                         errorMessage.includes('fetch');
+
+            if (isBackendUnavailable) {
+              console.warn('[useNotificationStore] Backend unavailable, using mock notifications');
+
+              const mockNotifications: Notification[] = [
+                {
+                  id: 'mock-notif-1',
+                  recipient_id: 'demo-user-123',
+                  actor_id: 'mock-user-1',
+                  type: 'follow',
+                  object_type: 'user',
+                  object_id: 'demo-user-123',
+                  message: 'started following you',
+                  metadata: null,
+                  read_at: null,
+                  created_at: new Date(Date.now() - 1800000).toISOString(),
+                  profiles: { id: 'mock-user-1', username: 'alice_demo', avatar_url: null },
+                },
+                {
+                  id: 'mock-notif-2',
+                  recipient_id: 'demo-user-123',
+                  actor_id: 'mock-user-2',
+                  type: 'like',
+                  object_type: 'widget',
+                  object_id: 'widget-123',
+                  message: 'liked your widget',
+                  metadata: null,
+                  read_at: new Date(Date.now() - 86400000).toISOString(),
+                  created_at: new Date(Date.now() - 86400000).toISOString(),
+                  profiles: { id: 'mock-user-2', username: 'bob_demo', avatar_url: null },
+                },
+                {
+                  id: 'mock-notif-3',
+                  recipient_id: 'demo-user-123',
+                  actor_id: null,
+                  type: 'system',
+                  object_type: null,
+                  object_id: null,
+                  message: 'Welcome to StickerNest! Start creating widgets.',
+                  metadata: null,
+                  read_at: new Date(Date.now() - 172800000).toISOString(),
+                  created_at: new Date(Date.now() - 172800000).toISOString(),
+                  profiles: null,
+                },
+              ];
+
+              const unreadCount = mockNotifications.filter((n) => !n.read_at).length;
+
+              set((state) => {
+                const groups = groupNotifications(mockNotifications, state.readIds);
+                return {
+                  notifications: mockNotifications,
+                  groups,
+                  unreadCount,
+                  offset: mockNotifications.length,
+                  hasMore: false,
+                  isLoading: false,
+                  lastFetchedAt: Date.now(),
+                  error: null,
+                };
+              });
+            } else {
+              set({
+                isLoading: false,
+                error: errorMessage,
+              });
+            }
           }
         },
 

@@ -16,6 +16,10 @@ import {
   setWidgetState,
   hasWidgetState,
 } from '../state/useWidgetStateStore';
+import { useFeedStore } from '../state/useFeedStore';
+import { useSocialStore } from '../state/useSocialStore';
+import { useNotificationStore } from '../state/useNotificationStore';
+import { searchApi } from '../services/api/search';
 
 /** Message types for parent <-> iframe communication */
 type ParentToWidgetMessageType =
@@ -25,7 +29,8 @@ type ParentToWidgetMessageType =
   | 'DESTROY'
   | 'RESIZE'
   | 'CAPABILITY'
-  | 'SETTINGS_UPDATE';
+  | 'SETTINGS_UPDATE'
+  | 'RESPONSE';
 
 type WidgetToParentMessageType =
   | 'READY'
@@ -35,7 +40,8 @@ type WidgetToParentMessageType =
   | 'ERROR'
   | 'OUTPUT'
   | 'CAPABILITY_REQUEST'
-  | 'CANVAS_REQUEST';
+  | 'CANVAS_REQUEST'
+  | 'REQUEST';
 
 export interface ParentToWidgetMessage {
   type: ParentToWidgetMessageType;
@@ -371,7 +377,7 @@ export class WidgetSandboxHost {
   private validateProtocol(data: any): void {
     const knownTypes = [
       // New protocol
-      'READY', 'EVENT', 'STATE_PATCH', 'DEBUG_LOG', 'ERROR', 'OUTPUT', 'CAPABILITY_REQUEST', 'CANVAS_REQUEST',
+      'READY', 'EVENT', 'STATE_PATCH', 'DEBUG_LOG', 'ERROR', 'OUTPUT', 'CAPABILITY_REQUEST', 'CANVAS_REQUEST', 'REQUEST',
       // Legacy protocol
       'widget:emit', 'widget:ready', 'widget:event', 'widget:broadcast'
     ];
@@ -486,6 +492,9 @@ export class WidgetSandboxHost {
         break;
       case 'CANVAS_REQUEST':
         this.handleCanvasRequest(message.payload);
+        break;
+      case 'REQUEST':
+        this.handleApiRequest(message.payload);
         break;
     }
   }
@@ -879,6 +888,214 @@ export class WidgetSandboxHost {
         return true;
       default:
         return { error: `Unknown storage action: ${action}` };
+    }
+  }
+
+  /**
+   * Handle API requests from widgets (social, storage, etc.)
+   * This enables widgets to fetch data using API.request()
+   */
+  private async handleApiRequest(payload: any): Promise<void> {
+    const { requestId, action, data } = payload;
+
+    console.log(`[WidgetSandbox] 📡 API request from ${this.manifest.name}:`, { action, requestId });
+
+    try {
+      let result: any = null;
+
+      // Route based on action prefix
+      if (action.startsWith('social:')) {
+        result = await this.handleSocialApiRequest(action, data);
+      } else if (action.startsWith('storage:')) {
+        result = this.handleStorageCapability(action.replace('storage:', ''), data);
+      } else {
+        throw new Error(`Unknown API action: ${action}`);
+      }
+
+      // Send success response
+      this.postMessageToWidget({
+        type: 'RESPONSE',
+        payload: { requestId, result, error: null },
+        instanceId: this.widgetInstance.id
+      });
+    } catch (err) {
+      // Send error response
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`[WidgetSandbox] API request failed:`, errorMessage);
+
+      this.postMessageToWidget({
+        type: 'RESPONSE',
+        payload: { requestId, result: null, error: errorMessage },
+        instanceId: this.widgetInstance.id
+      });
+    }
+  }
+
+  /**
+   * Handle social API requests (getFeed, getNotifications, etc.)
+   */
+  private async handleSocialApiRequest(action: string, data: any): Promise<any> {
+    switch (action) {
+      case 'social:getFeed': {
+        const feedStore = useFeedStore.getState();
+        const { type = 'global', limit = 20, userId } = data || {};
+
+        // Fetch feed from store (will use mock data if backend unavailable)
+        await feedStore.fetchFeed(type, userId);
+
+        // Get cached activities
+        const feedKey = type === 'user' ? `user:${userId}` :
+                        type === 'friends' ? 'friends' :
+                        type === 'canvas' ? `canvas:${userId}` : 'global';
+        const cacheEntry = feedStore.feedCache.get(feedKey);
+
+        return {
+          activities: cacheEntry?.activities?.slice(0, limit) || [],
+          hasMore: cacheEntry?.hasMore || false
+        };
+      }
+
+      case 'social:getFollowing': {
+        const socialStore = useSocialStore.getState();
+        return {
+          following: Array.from(socialStore.following),
+          profiles: Array.from(socialStore.profileCache.values())
+        };
+      }
+
+      case 'social:getFollowers': {
+        const socialStore = useSocialStore.getState();
+        return {
+          followers: Array.from(socialStore.followers),
+          profiles: Array.from(socialStore.profileCache.values())
+        };
+      }
+
+      case 'social:getNotifications': {
+        const notifStore = useNotificationStore.getState();
+        await notifStore.fetchNotifications();
+        return {
+          notifications: notifStore.notifications,
+          unreadCount: notifStore.unreadCount
+        };
+      }
+
+      case 'social:isFollowing': {
+        const socialStore = useSocialStore.getState();
+        return { isFollowing: socialStore.isFollowing(data.userId) };
+      }
+
+      case 'social:follow': {
+        const socialStore = useSocialStore.getState();
+        await socialStore.followUser(data.userId);
+        return { success: true };
+      }
+
+      case 'social:unfollow': {
+        const socialStore = useSocialStore.getState();
+        await socialStore.unfollowUser(data.userId);
+        return { success: true };
+      }
+
+      case 'social:getCurrentUser': {
+        const socialStore = useSocialStore.getState();
+        return {
+          userId: socialStore.currentUserId,
+          following: Array.from(socialStore.following),
+          followers: Array.from(socialStore.followers)
+        };
+      }
+
+      case 'social:getProfile': {
+        const socialStore = useSocialStore.getState();
+        const { userId } = data || {};
+
+        if (!userId) {
+          throw new Error('userId is required for getProfile');
+        }
+
+        // Check cache first
+        const cached = socialStore.profileCache.get(userId);
+        if (cached) {
+          return {
+            profile: {
+              ...cached,
+              isFollowing: socialStore.isFollowing(userId)
+            }
+          };
+        }
+
+        // Try to find user via search API (has mock fallback)
+        try {
+          const searchResult = await searchApi.searchUsers(userId.slice(0, 8), 1, 5);
+          if (searchResult.success && searchResult.data?.items?.length > 0) {
+            // Find exact match or use first result
+            const foundUser = searchResult.data.items.find(u => u.id === userId)
+                          || searchResult.data.items[0];
+            return {
+              profile: {
+                id: foundUser.id,
+                username: foundUser.username,
+                displayName: foundUser.displayName || foundUser.username,
+                bio: foundUser.bio || '',
+                avatarUrl: foundUser.avatarUrl || null,
+                followersCount: foundUser.followersCount || 0,
+                followingCount: foundUser.followingCount || 0,
+                isFollowing: socialStore.isFollowing(foundUser.id)
+              }
+            };
+          }
+        } catch (err) {
+          console.warn('[WidgetSandboxHost] Search API failed, using fallback profile');
+        }
+
+        // Return mock profile as fallback
+        return {
+          profile: {
+            id: userId,
+            username: `user_${userId.slice(0, 6)}`,
+            displayName: `User ${userId.slice(0, 6)}`,
+            bio: '',
+            avatarUrl: null,
+            followersCount: 0,
+            followingCount: 0,
+            isFollowing: socialStore.isFollowing(userId)
+          }
+        };
+      }
+
+      case 'social:searchUsers': {
+        const { query, page = 1, pageSize = 20 } = data || {};
+
+        if (!query) {
+          return { users: [], total: 0 };
+        }
+
+        // Use searchApi which has mock fallback
+        const result = await searchApi.searchUsers(query, page, pageSize);
+
+        if (result.success && result.data) {
+          // Check follow status for each user
+          const socialStore = useSocialStore.getState();
+          const usersWithFollowStatus = result.data.items.map(user => ({
+            ...user,
+            isFollowing: socialStore.isFollowing(user.id)
+          }));
+
+          return {
+            users: usersWithFollowStatus,
+            total: result.data.total,
+            page: result.data.page,
+            pageSize: result.data.pageSize,
+            totalPages: result.data.totalPages
+          };
+        }
+
+        return { users: [], total: 0 };
+      }
+
+      default:
+        throw new Error(`Unknown social action: ${action}`);
     }
   }
 

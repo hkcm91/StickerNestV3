@@ -455,19 +455,34 @@ export const UserCardWidgetHTML = `
       });
 
       // Handle follow click
-      followBtn.addEventListener('click', (e) => {
+      followBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
 
-        state.isFollowing = !state.isFollowing;
+        const wasFollowing = state.isFollowing;
+        const previousFollowers = state.followers;
 
         // Optimistic update
+        state.isFollowing = !wasFollowing;
         if (state.isFollowing) {
           state.followers++;
         } else {
           state.followers = Math.max(0, state.followers - 1);
         }
-
         render();
+
+        // Call actual API
+        try {
+          const action = state.isFollowing ? 'social:follow' : 'social:unfollow';
+          await API.request(action, { userId: state.userId });
+          API.log((state.isFollowing ? 'Followed' : 'Unfollowed') + ' user: ' + state.userId);
+        } catch (err) {
+          // Rollback on error
+          API.error('Follow action failed', err);
+          state.isFollowing = wasFollowing;
+          state.followers = previousFollowers;
+          render();
+          return;
+        }
 
         API.emitOutput('follow.toggled', {
           userId: state.userId,
@@ -495,11 +510,40 @@ export const UserCardWidgetHTML = `
         API.log('UserCardWidget mounted for user: ' + state.userId);
       });
 
+      // Fetch user profile from API
+      async function fetchUserProfile(userId) {
+        if (!userId) return;
+
+        try {
+          API.log('Fetching profile for: ' + userId);
+          const result = await API.request('social:getProfile', { userId: userId });
+
+          if (result && result.profile) {
+            const p = result.profile;
+            state.userId = p.id || userId;
+            state.username = p.displayName || p.username || '';
+            state.avatarUrl = p.avatarUrl || p.avatar_url || null;
+            state.bio = p.bio || '';
+            state.followers = p.followersCount || p.followers || 0;
+            state.following = p.followingCount || p.following || 0;
+            state.isFollowing = p.isFollowing || false;
+            state.isOnline = p.isOnline || false;
+
+            API.log('Profile loaded: ' + state.username);
+          }
+        } catch (err) {
+          API.error('Failed to fetch profile', err);
+        }
+
+        render();
+        API.setState(state);
+      }
+
       // Handle user.set input
       API.onInput('user.set', function(userId) {
         state.userId = userId;
-        // Clear existing data - would fetch from API
-        state.username = '';
+        // Clear existing data while loading
+        state.username = 'Loading...';
         state.avatarUrl = null;
         state.bio = '';
         state.followers = 0;
@@ -508,8 +552,9 @@ export const UserCardWidgetHTML = `
         state.isOnline = false;
 
         render();
-        API.setState({ userId: state.userId });
-        API.log('User set to: ' + userId);
+
+        // Fetch profile data from API
+        fetchUserProfile(userId);
       });
 
       // Handle data.set input (full user data)
