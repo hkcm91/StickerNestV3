@@ -87,7 +87,8 @@ export const ShoppingListWidgetManifest: WidgetManifest = {
   },
 };
 
-export const ShoppingListWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getShoppingListWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -829,5 +830,5 @@ export const ShoppingListWidgetHTML = `
 
 export const ShoppingListWidget: BuiltinWidget = {
   manifest: ShoppingListWidgetManifest,
-  html: ShoppingListWidgetHTML,
+  get html() { return getShoppingListWidgetHTML(); },
 };

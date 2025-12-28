@@ -83,7 +83,8 @@ export const RecipeManagerWidgetManifest: WidgetManifest = {
   },
 };
 
-export const RecipeManagerWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getRecipeManagerWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1145,5 +1146,5 @@ export const RecipeManagerWidgetHTML = `
 
 export const RecipeManagerWidget: BuiltinWidget = {
   manifest: RecipeManagerWidgetManifest,
-  html: RecipeManagerWidgetHTML,
+  get html() { return getRecipeManagerWidgetHTML(); },
 };

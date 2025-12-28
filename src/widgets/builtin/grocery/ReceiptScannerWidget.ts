@@ -86,7 +86,8 @@ export const ReceiptScannerWidgetManifest: WidgetManifest = {
   },
 };
 
-export const ReceiptScannerWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getReceiptScannerWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1007,5 +1008,5 @@ export const ReceiptScannerWidgetHTML = `
 
 export const ReceiptScannerWidget: BuiltinWidget = {
   manifest: ReceiptScannerWidgetManifest,
-  html: ReceiptScannerWidgetHTML,
+  get html() { return getReceiptScannerWidgetHTML(); },
 };

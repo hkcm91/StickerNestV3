@@ -82,7 +82,8 @@ export const MealPlannerWidgetManifest: WidgetManifest = {
   },
 };
 
-export const MealPlannerWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getMealPlannerWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -997,5 +998,5 @@ export const MealPlannerWidgetHTML = `
 
 export const MealPlannerWidget: BuiltinWidget = {
   manifest: MealPlannerWidgetManifest,
-  html: MealPlannerWidgetHTML,
+  get html() { return getMealPlannerWidgetHTML(); },
 };

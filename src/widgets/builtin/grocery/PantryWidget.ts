@@ -99,7 +99,8 @@ export const PantryWidgetManifest: WidgetManifest = {
   },
 };
 
-export const PantryWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getPantryWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1014,5 +1015,5 @@ export const PantryWidgetHTML = `
 
 export const PantryWidget: BuiltinWidget = {
   manifest: PantryWidgetManifest,
-  html: PantryWidgetHTML,
+  get html() { return getPantryWidgetHTML(); },
 };

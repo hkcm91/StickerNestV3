@@ -70,7 +70,8 @@ export const PriceTrackerWidgetManifest: WidgetManifest = {
   },
 };
 
-export const PriceTrackerWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getPriceTrackerWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -766,5 +767,5 @@ export const PriceTrackerWidgetHTML = `
 
 export const PriceTrackerWidget: BuiltinWidget = {
   manifest: PriceTrackerWidgetManifest,
-  html: PriceTrackerWidgetHTML,
+  get html() { return getPriceTrackerWidgetHTML(); },
 };

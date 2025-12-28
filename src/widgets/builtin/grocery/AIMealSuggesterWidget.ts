@@ -85,7 +85,8 @@ export const AIMealSuggesterWidgetManifest: WidgetManifest = {
   },
 };
 
-export const AIMealSuggesterWidgetHTML = `
+// Use a function to avoid TDZ issues with PORT_CHANNEL_SELECTOR imports
+const getAIMealSuggesterWidgetHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -921,5 +922,5 @@ export const AIMealSuggesterWidgetHTML = `
 
 export const AIMealSuggesterWidget: BuiltinWidget = {
   manifest: AIMealSuggesterWidgetManifest,
-  html: AIMealSuggesterWidgetHTML,
+  get html() { return getAIMealSuggesterWidgetHTML(); },
 };

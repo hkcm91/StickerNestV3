@@ -12,8 +12,8 @@ import type { WidgetManifest } from '../../types/manifest';
 export interface BuiltinWidget {
   /** Widget manifest */
   manifest: WidgetManifest;
-  /** Widget HTML content (inline) */
-  html?: string;
+  /** Widget HTML content (inline) - can be string or lazy getter function */
+  html?: string | (() => string);
   /** React component for the widget */
   component?: React.ComponentType;
 }
