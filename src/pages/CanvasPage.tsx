@@ -5,7 +5,8 @@
  * Handles canvas viewing, editing, widget management, and sticker interactions.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RuntimeContext } from '../runtime/RuntimeContext';
 import { CanvasRenderer } from '../components/CanvasRenderer';
@@ -143,7 +144,7 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   const isFullscreen = useCanvasStore(state => state.isFullscreen);
   const setFullscreen = useCanvasStore(state => state.setFullscreen);
 
-  // Sticker store
+  // Sticker store - use useShallow to prevent infinite loops
   const {
     addSticker,
     removeSticker,
@@ -156,7 +157,19 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
     selectedStickerId,
     selectSticker,
     stickers: allStickers,
-  } = useStickerStore();
+  } = useStickerStore(useShallow((s) => ({
+    addSticker: s.addSticker,
+    removeSticker: s.removeSticker,
+    addDockZone: s.addDockZone,
+    getDockZonesByCanvas: s.getDockZonesByCanvas,
+    updateDockZone: s.updateDockZone,
+    dockWidget: s.dockWidget,
+    undockWidget: s.undockWidget,
+    draggedWidgetId: s.draggedWidgetId,
+    selectedStickerId: s.selectedStickerId,
+    selectSticker: s.selectSticker,
+    stickers: s.stickers,
+  })));
 
   // Get selected sticker instance
   const selectedSticker = selectedStickerId ? allStickers.get(selectedStickerId) : null;
@@ -182,14 +195,14 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   useEffect(() => {
     const checkPermissions = async () => {
       if (!activeCanvasId || !isAuthenticated) {
-        // For unauthenticated users or no canvas, default to view-only
+        // For unauthenticated users or no canvas, use dev mode permissions
         setPermissions({
           hasAccess: true,
-          role: 'viewer' as CollabRole,
-          canEdit: isLocalDevMode, // Allow editing in dev mode
-          canInvite: false,
-          canManage: false,
-          isOwner: false,
+          role: isLocalDevMode ? 'owner' as CollabRole : 'viewer' as CollabRole,
+          canEdit: isLocalDevMode,
+          canInvite: isLocalDevMode, // Allow inviting in dev mode
+          canManage: isLocalDevMode, // Allow managing in dev mode
+          isOwner: isLocalDevMode,   // Treat as owner in dev mode
         });
         return;
       }
@@ -315,7 +328,9 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   }, [isCollabConnected, canvasPan, canvasScale, broadcastCursor]);
 
   // Broadcast selection changes when selection changes
-  const selectedWidgetIds = useCanvasStore((s) => Array.from(s.selection));
+  // Use the raw Set to avoid creating new array references on each render
+  const selectionSet = useCanvasStore((s) => s.selection);
+  const selectedWidgetIds = useMemo(() => Array.from(selectionSet), [selectionSet]);
   useEffect(() => {
     if (isCollabConnected) {
       broadcastSelection(selectedWidgetIds);

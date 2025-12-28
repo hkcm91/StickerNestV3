@@ -78,8 +78,14 @@ export function useCollaboration(options: UseCollaborationOptions = {}): UseColl
 
   // State from collaboration store
   const connectionStatus = useCollaborationStore((s) => s.connectionStatus);
-  const collaborators = useCollaborationStore((s) => Array.from(s.collaborators.values()));
+  const collaboratorsMap = useCollaborationStore((s) => s.collaborators);
   const localUser = useCollaborationStore((s) => s.localUser);
+
+  // Memoize collaborators array to prevent infinite loops
+  const collaborators = useMemo(
+    () => Array.from(collaboratorsMap.values()),
+    [collaboratorsMap]
+  );
 
   // Local state for remote users
   const [remoteUsers, setRemoteUsers] = useState<RemoteUser[]>([]);

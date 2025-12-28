@@ -173,10 +173,14 @@ export const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   const toggleCanvasLock = useCanvasExtendedStore(s => s.toggleCanvasLock);
 
   // Canvas appearance store (for settings dropdown integration)
-  const appearanceStyle = useCanvasAppearanceStore(s => s.getCanvasStyle());
+  // Use individual values and compute style with useMemo to avoid infinite loops
   const appearanceBorder = useCanvasAppearanceStore(s => s.border);
   const appearanceBackground = useCanvasAppearanceStore(s => s.background);
   const appearanceGlass = useCanvasAppearanceStore(s => s.glass);
+  const appearanceColors = useCanvasAppearanceStore(s => s.colors);
+  const appearanceStyle = useMemo(() => {
+    return useCanvasAppearanceStore.getState().getCanvasStyle();
+  }, [appearanceBorder, appearanceBackground, appearanceGlass, appearanceColors]);
 
   // Sticker store
   const allStickers = useStickerStore(state => state.stickers);

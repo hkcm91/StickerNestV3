@@ -6,7 +6,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { useCollaborationStore, selectRemoteCollaborators } from '../../state/useCollaborationStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useCollaborationStore } from '../../state/useCollaborationStore';
 
 // ==================
 // Types
@@ -172,9 +173,19 @@ export const CollaboratorAvatars: React.FC<CollaboratorAvatarsProps> = ({
   showStatus = true,
   onAvatarClick,
 }) => {
-  // Get remote collaborators from store
-  const collaborators = useCollaborationStore(selectRemoteCollaborators);
-  const connectionStatus = useCollaborationStore((s) => s.connectionStatus);
+  // Get remote collaborators from store with shallow comparison to prevent infinite loops
+  const { collaboratorsMap, connectionStatus } = useCollaborationStore(
+    useShallow((s) => ({
+      collaboratorsMap: s.collaborators,
+      connectionStatus: s.connectionStatus,
+    }))
+  );
+
+  // Memoize the filtered array to prevent new references on each render
+  const collaborators = useMemo(
+    () => Array.from(collaboratorsMap.values()).filter((c) => !c.isLocal),
+    [collaboratorsMap]
+  );
 
   // Split into visible and overflow
   const visibleCollaborators = collaborators.slice(0, maxVisible);

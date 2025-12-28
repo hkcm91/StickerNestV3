@@ -5,8 +5,9 @@
  * Can be placed in toolbars or status bars.
  */
 
-import React from 'react';
-import { useCollaborationStore, selectRemoteCollaborators, selectConnectionStatus } from '../../state/useCollaborationStore';
+import React, { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useCollaborationStore } from '../../state/useCollaborationStore';
 
 // ==================
 // Types
@@ -88,8 +89,19 @@ export const PresenceBadge: React.FC<PresenceBadgeProps> = ({
   compact = false,
   onClick,
 }) => {
-  const collaborators = useCollaborationStore(selectRemoteCollaborators);
-  const connectionStatus = useCollaborationStore(selectConnectionStatus);
+  // Use shallow comparison to prevent infinite loops
+  const { collaboratorsMap, connectionStatus } = useCollaborationStore(
+    useShallow((s) => ({
+      collaboratorsMap: s.collaborators,
+      connectionStatus: s.connectionStatus,
+    }))
+  );
+
+  // Memoize to prevent new array reference on each render
+  const collaborators = useMemo(
+    () => Array.from(collaboratorsMap.values()).filter((c) => !c.isLocal),
+    [collaboratorsMap]
+  );
 
   const isConnected = connectionStatus === 'connected';
   const isReconnecting = connectionStatus === 'reconnecting';
