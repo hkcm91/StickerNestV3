@@ -38,6 +38,11 @@ import { MobileBottomSheet, MobileActionButton } from '../components/MobileNav';
 import { useDebugShortcuts, useShowShortcutsHint } from '../hooks/useDebugShortcuts';
 import { debug } from '../utils/debug';
 import { SocialManager } from '../runtime/SocialManager';
+import { CursorOverlay, SelectionHighlight, CollaboratorAvatars, PresenceBadge } from '../components/collaboration';
+import { useCollaboration } from '../hooks/useCollaboration';
+import { CollaborationService } from '../services/CollaborationService';
+import { CollaboratorManager, InviteDialog } from '../components/permissions';
+import { CanvasPermissionService, type PermissionCheckResult, type CollabRole } from '../services/CanvasPermissionService';
 import styles from './CanvasPage.module.css';
 
 // =============================================================================
@@ -113,6 +118,18 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showSizeDialog, setShowSizeDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showCollaboratorManager, setShowCollaboratorManager] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+
+  // Permission state
+  const [permissions, setPermissions] = useState<PermissionCheckResult>({
+    hasAccess: true,
+    role: null,
+    canEdit: true,
+    canInvite: false,
+    canManage: false,
+    isOwner: false,
+  });
 
   // Canvas settings state
   const [canvasSettings, setCanvasSettings] = useState<CanvasSettings>(DEFAULT_CANVAS_SETTINGS);
@@ -160,6 +177,34 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   useEffect(() => {
     initialize(activeCanvasId, user.userId);
   }, [initialize, user.userId, activeCanvasId]);
+
+  // Check permissions when canvas changes
+  useEffect(() => {
+    const checkPermissions = async () => {
+      if (!activeCanvasId || !isAuthenticated) {
+        // For unauthenticated users or no canvas, default to view-only
+        setPermissions({
+          hasAccess: true,
+          role: 'viewer' as CollabRole,
+          canEdit: isLocalDevMode, // Allow editing in dev mode
+          canInvite: false,
+          canManage: false,
+          isOwner: false,
+        });
+        return;
+      }
+
+      const result = await CanvasPermissionService.checkAccess(activeCanvasId);
+      setPermissions(result);
+
+      // If no access, redirect or show error
+      if (!result.hasAccess) {
+        setSaveStatus('You do not have access to this canvas');
+      }
+    };
+
+    checkPermissions();
+  }, [activeCanvasId, isAuthenticated, isLocalDevMode]);
 
   // Create default dock zone for the canvas if one doesn't exist
   const dockZones = getDockZonesByCanvas(activeCanvasId);
@@ -237,6 +282,97 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   useEffect(() => {
     new SocialManager(runtime.eventBus, user.userId);
   }, [runtime.eventBus, user.userId]);
+
+  // Collaboration hook for cursor/selection broadcasting
+  const {
+    isConnected: isCollabConnected,
+    collaboratorCount,
+    broadcastCursor,
+    broadcastSelection,
+    broadcastWidgetMove,
+    broadcastWidgetResize,
+    broadcastWidgetCreate,
+    broadcastWidgetDelete,
+  } = useCollaboration();
+
+  // Canvas viewport for cursor overlay
+  const canvasScale = useCanvasStore((s) => s.scale);
+  const canvasPan = useCanvasStore((s) => s.pan);
+
+  // Broadcast cursor position on mouse move over canvas
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isCollabConnected) return;
+
+    // Get position relative to canvas container
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Convert to canvas coordinates (accounting for pan and zoom)
+    const x = (e.clientX - rect.left - canvasPan.x) / canvasScale;
+    const y = (e.clientY - rect.top - canvasPan.y) / canvasScale;
+
+    broadcastCursor(x, y);
+  }, [isCollabConnected, canvasPan, canvasScale, broadcastCursor]);
+
+  // Broadcast selection changes when selection changes
+  const selectedWidgetIds = useCanvasStore((s) => Array.from(s.selection));
+  useEffect(() => {
+    if (isCollabConnected) {
+      broadcastSelection(selectedWidgetIds);
+    }
+  }, [selectedWidgetIds, isCollabConnected, broadcastSelection]);
+
+  // Listen for local widget changes and broadcast to collaborators
+  useEffect(() => {
+    if (!isCollabConnected) return;
+
+    const unsubMove = runtime.eventBus.on('widget:move', (event) => {
+      const { widgetId, position } = event.payload || {};
+      if (widgetId && position) {
+        broadcastWidgetMove(widgetId, position);
+      }
+    });
+
+    const unsubResize = runtime.eventBus.on('widget:resize', (event) => {
+      const { widgetId, width, height } = event.payload || {};
+      if (widgetId && width && height) {
+        broadcastWidgetResize(widgetId, { width, height });
+      }
+    });
+
+    const unsubAdded = runtime.eventBus.on('widget:added', (event) => {
+      const widget = event.payload;
+      if (widget?.widgetInstanceId) {
+        const instance = runtime.getWidgetInstance(widget.widgetInstanceId);
+        if (instance) {
+          broadcastWidgetCreate({
+            id: instance.id,
+            widgetDefId: instance.widgetDefId,
+            version: instance.version,
+            position: instance.position,
+            width: instance.width,
+            height: instance.height,
+            zIndex: instance.zIndex,
+            state: instance.state,
+          });
+        }
+      }
+    });
+
+    const unsubRemoved = runtime.eventBus.on('widget:removed', (event) => {
+      const { widgetInstanceId } = event.payload || {};
+      if (widgetInstanceId) {
+        broadcastWidgetDelete(widgetInstanceId);
+      }
+    });
+
+    return () => {
+      unsubMove();
+      unsubResize();
+      unsubAdded();
+      unsubRemoved();
+    };
+  }, [isCollabConnected, runtime, broadcastWidgetMove, broadcastWidgetResize, broadcastWidgetCreate, broadcastWidgetDelete]);
 
   // Toggle fullscreen with browser API
   const enterFullscreen = useCallback(async () => {
@@ -425,11 +561,24 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   // =============================================================================
 
   const handleCanvasModeChange = useCallback((mode: CanvasMode) => {
+    // Check permissions for edit modes
+    if ((mode === 'edit' || mode === 'connect') && !permissions.canEdit) {
+      setSaveStatus('You do not have edit permission on this canvas');
+      setTimeout(() => setSaveStatus(null), 3000);
+      return;
+    }
     setStoreMode(mode);
     onModeChange?.(mode);
-  }, [setStoreMode, onModeChange]);
+  }, [setStoreMode, onModeChange, permissions.canEdit]);
 
   const handleSaveDashboard = useCallback(async () => {
+    // Check edit permission
+    if (!permissions.canEdit) {
+      setSaveStatus('You do not have permission to save this canvas');
+      setTimeout(() => setSaveStatus(null), 3000);
+      return;
+    }
+
     setIsSaving(true);
     setSaveStatus(null);
     try {
@@ -447,7 +596,7 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [saveCanvas, storeWidgets.size]);
+  }, [saveCanvas, storeWidgets.size, permissions.canEdit]);
 
   const handleLoadDashboard = useCallback(async (canvasId: string) => {
     setIsLoading(true);
@@ -506,15 +655,29 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   }, [createCanvas, navigate]);
 
   const handleRenameCanvas = useCallback(async (canvasId: string, newName: string) => {
+    // Only owners can rename
+    if (!permissions.isOwner && canvasId === activeCanvasId) {
+      setSaveStatus('Only the owner can rename this canvas');
+      setTimeout(() => setSaveStatus(null), 3000);
+      return;
+    }
+
     const result = await updateCanvasMetadata(canvasId, { name: newName });
     if (result.success) {
       await refreshCanvases();
       setSaveStatus(`Renamed to "${newName}"`);
       setTimeout(() => setSaveStatus(null), 2000);
     }
-  }, [updateCanvasMetadata, refreshCanvases]);
+  }, [updateCanvasMetadata, refreshCanvases, permissions.isOwner, activeCanvasId]);
 
   const handleDeleteCanvas = useCallback(async (canvasId: string) => {
+    // Only owners can delete
+    if (!permissions.isOwner && canvasId === activeCanvasId) {
+      setSaveStatus('Only the owner can delete this canvas');
+      setTimeout(() => setSaveStatus(null), 3000);
+      return;
+    }
+
     const result = await deleteCanvas(canvasId);
     if (result.success) {
       if (canvasId === activeCanvasId) {
@@ -523,7 +686,7 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
       setSaveStatus('Canvas deleted');
       setTimeout(() => setSaveStatus(null), 2000);
     }
-  }, [deleteCanvas, activeCanvasId, navigate]);
+  }, [deleteCanvas, activeCanvasId, navigate, permissions.isOwner]);
 
   const handleSelectCanvas = useCallback((canvasId: string) => {
     navigate(`/canvas/${canvasId}`);
@@ -547,8 +710,12 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
             className={`sn-touch-target ${styles.modeSelect} ${isMobile ? styles.modeSelectMobile : ''}`}
           >
             <option value="view">View</option>
-            <option value="edit">Edit</option>
-            <option value="connect">Connect</option>
+            <option value="edit" disabled={!permissions.canEdit}>
+              Edit {!permissions.canEdit ? '(no permission)' : ''}
+            </option>
+            <option value="connect" disabled={!permissions.canEdit}>
+              Connect {!permissions.canEdit ? '(no permission)' : ''}
+            </option>
           </select>
         </div>
 
@@ -581,8 +748,9 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
         <div className={styles.actionButtons}>
           <button
             onClick={handleSaveDashboard}
-            disabled={isSaving}
+            disabled={isSaving || !permissions.canEdit}
             className={`sn-touch-target ${styles.saveButton}`}
+            title={!permissions.canEdit ? 'You do not have edit permission' : undefined}
           >
             {isSaving ? 'Saving...' : (isMobile ? '💾' : '💾 Save')}
           </button>
@@ -599,6 +767,26 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
           >
             {isMobile ? '🔗' : '🔗 Share'}
           </button>
+          {/* Invite button - only if user can invite */}
+          {(permissions.canInvite || permissions.isOwner) && !isMobile && (
+            <button
+              onClick={() => setShowInviteDialog(true)}
+              className={`sn-touch-target ${styles.secondaryButton}`}
+              title="Invite collaborators"
+            >
+              👥 Invite
+            </button>
+          )}
+          {/* Collaborators button - only if user can manage */}
+          {(permissions.canManage || permissions.isOwner) && !isMobile && (
+            <button
+              onClick={() => setShowCollaboratorManager(true)}
+              className={`sn-touch-target ${styles.secondaryButton}`}
+              title="Manage collaborators"
+            >
+              ⚙️ Access
+            </button>
+          )}
 
           {/* Desktop-only buttons */}
           {!isMobile && (
@@ -666,6 +854,24 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
           </>
         )}
 
+        {/* Collaboration status */}
+        {!isMobile && (
+          <div className={styles.collaborationStatus}>
+            <CollaboratorAvatars
+              maxVisible={4}
+              size={28}
+              showStatus={true}
+            />
+            {collaboratorCount === 0 && (
+              <PresenceBadge
+                showCount={false}
+                showStatus={true}
+                compact={false}
+              />
+            )}
+          </div>
+        )}
+
         {/* User menu */}
         <div className={styles.userMenu}>
           {!isMobile && (
@@ -691,7 +897,11 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
       {!isMobile && !isFullscreen && <ContextToolbar />}
 
       {/* Canvas Area */}
-      <div ref={canvasContainerRef} className={styles.canvasArea}>
+      <div
+        ref={canvasContainerRef}
+        className={styles.canvasArea}
+        onMouseMove={handleCanvasMouseMove}
+      >
         <CanvasRenderer
           runtime={runtime}
           canvasRuntime={canvasRuntime}
@@ -700,6 +910,25 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
           canvasHeight={currentCanvas?.height || 1080}
           settings={canvasSettings}
         />
+
+        {/* Collaboration Overlays - Remote cursors and selections */}
+        {isCollabConnected && (
+          <>
+            <CursorOverlay
+              zoom={canvasScale}
+              panOffset={canvasPan}
+              staleTimeout={3000}
+              interpolate={true}
+              showLabels={true}
+            />
+            <SelectionHighlight
+              zoom={canvasScale}
+              panOffset={canvasPan}
+              staleTimeout={5000}
+              showLabels={true}
+            />
+          </>
+        )}
 
         {/* Fullscreen controls - only shown in fullscreen mode */}
         {isFullscreen && (
@@ -949,6 +1178,24 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
         onClose={() => setShowSettingsDialog(false)}
         settings={canvasSettings}
         onSave={setCanvasSettings}
+      />
+
+      {/* Collaborator Manager */}
+      <CollaboratorManager
+        canvasId={activeCanvasId}
+        isOpen={showCollaboratorManager}
+        onClose={() => setShowCollaboratorManager(false)}
+        currentUserRole={permissions.role}
+        canManage={permissions.canManage || permissions.isOwner}
+        onLeave={() => navigate('/shared')}
+      />
+
+      {/* Invite Dialog */}
+      <InviteDialog
+        canvasId={activeCanvasId}
+        isOpen={showInviteDialog}
+        onClose={() => setShowInviteDialog(false)}
+        canInvite={permissions.canInvite || permissions.isOwner}
       />
 
       {/* Sticker Properties Panel */}

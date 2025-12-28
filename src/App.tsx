@@ -10,11 +10,14 @@ import { useParams } from 'react-router-dom';
 import { RuntimeContext } from './runtime/RuntimeContext';
 import { CanvasRuntime } from './runtime/CanvasRuntime';
 import { TransportManager } from './runtime/TransportManager';
+import { PresenceManager } from './runtime/PresenceManager';
 import { createSocialEventBridge, type SocialEventBridge } from './runtime/SocialEventBridge';
 import {
   initializeSelfImproving,
   destroySelfImproving,
 } from './runtime/SelfImprovingPipelineIntegration';
+import { CollaborationService, disconnectCollaboration } from './services/CollaborationService';
+import { getAccessToken } from './services/api/client';
 import { ReflectionDashboard } from './components/ai-reflection';
 import { DebugPanel } from './components/DebugPanel';
 import { DefaultLayout, type AppTab } from './layouts/DefaultLayout';
@@ -27,6 +30,12 @@ import { useViewport } from './hooks/useResponsive';
 import { useCanvasManager } from './services/canvasManager';
 import { useSocialStore } from './state/useSocialStore';
 import './App.css';
+
+// WebSocket server URL - defaults to same host with /ws path
+const WS_URL = import.meta.env.VITE_WS_URL ||
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
+    : 'ws://localhost:3001/ws');
 
 // =============================================================================
 // Component
@@ -80,7 +89,7 @@ const App: React.FC = () => {
   // Track SocialEventBridge instance
   const socialBridgeRef = useRef<SocialEventBridge | null>(null);
 
-  // Initialize TransportManager, SocialEventBridge, and Self-Improving AI for cross-tab communication
+  // Initialize TransportManager, SocialEventBridge, Collaboration, and Self-Improving AI
   useEffect(() => {
     const initializeSocialInfrastructure = async () => {
       try {
@@ -90,9 +99,50 @@ const App: React.FC = () => {
           await TransportManager.initialize(runtime.eventBus, {
             enableBroadcastChannel: true,
             enableSharedWorker: true,
+            // WebSocket is now handled by CollaborationService for multi-user
             autoConnect: true
           });
           console.log('[App] TransportManager initialized:', TransportManager.getStatus());
+        }
+
+        // Initialize PresenceManager for cursor/selection tracking
+        console.log('[App] Initializing PresenceManager...');
+        await PresenceManager.initialize(runtime.eventBus, {
+          cursorThrottleMs: 50,
+          interpolateCursors: true,
+        });
+        PresenceManager.setCanvasId(activeCanvasId);
+        console.log('[App] PresenceManager initialized');
+
+        // Initialize CollaborationService for real-time multi-user editing
+        const authToken = getAccessToken();
+        if (authToken && profile) {
+          console.log('[App] Initializing CollaborationService...');
+          try {
+            await CollaborationService.initialize({
+              serverUrl: WS_URL,
+              authToken,
+              user: {
+                id: profile.id,
+                displayName: profile.username || profile.email,
+                avatarUrl: profile.avatarUrl,
+              },
+              autoReconnect: true,
+              maxReconnectAttempts: 10,
+              reconnectDelay: 1000,
+            }, runtime.eventBus);
+
+            // Auto-join current canvas
+            if (activeCanvasId) {
+              await CollaborationService.joinCanvas(activeCanvasId);
+            }
+            console.log('[App] CollaborationService initialized and joined canvas:', activeCanvasId);
+          } catch (wsError) {
+            // WebSocket connection is optional - don't block other initialization
+            console.warn('[App] CollaborationService initialization failed (multi-user disabled):', wsError);
+          }
+        } else {
+          console.log('[App] Skipping CollaborationService - no auth token or profile');
         }
 
         // Initialize SocialStore with user ID to fetch relationships
@@ -121,7 +171,7 @@ const App: React.FC = () => {
     };
 
     initializeSocialInfrastructure();
-  }, [runtime.eventBus, userId]);
+  }, [runtime.eventBus, userId, activeCanvasId, profile]);
 
   // Cleanup runtime on unmount
   useEffect(() => {
@@ -134,6 +184,10 @@ const App: React.FC = () => {
       }
       // Cleanup self-improving AI
       destroySelfImproving();
+      // Shutdown collaboration service
+      disconnectCollaboration();
+      // Shutdown presence manager
+      PresenceManager.shutdown();
       // Shutdown transport manager
       TransportManager.shutdown();
     };

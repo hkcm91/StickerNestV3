@@ -35,6 +35,8 @@ const AuthCallbackPage = lazyWithRetry(() => import('../pages/AuthCallbackPage')
 const BusinessCardDemoPage = lazyWithRetryNamed(() => import('../pages/BusinessCardDemoPage'), 'BusinessCardDemoPage');
 const DemoMessagingPage = lazyWithRetry(() => import('../pages/DemoMessagingPage'));
 const StickerLabPage = lazyWithRetry(() => import('../pages/StickerLabPage'));
+const InviteAcceptPage = lazyWithRetry(() => import('../pages/InviteAcceptPage'));
+const SharedWithMePage = lazyWithRetry(() => import('../pages/SharedWithMePage'));
 
 // Loading component
 const LoadingSpinner: React.FC = () => (
@@ -148,6 +150,16 @@ const router = createBrowserRouter([
       {
         path: 'favorites',
         element: <FavoritesPage />,
+      },
+      // Shared with me - canvases shared by others
+      {
+        path: 'shared',
+        element: <SharedWithMePage />,
+      },
+      // Invite acceptance page
+      {
+        path: 'invite/:token',
+        element: <InviteAcceptPage />,
       },
       // Redirect old dashboard route to app
       {

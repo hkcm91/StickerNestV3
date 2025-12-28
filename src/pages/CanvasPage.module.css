@@ -194,6 +194,19 @@
   gap: 12px;
 }
 
+/* =============================================================================
+   Collaboration Status
+   ============================================================================= */
+
+.collaborationStatus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 8px;
+  padding-right: 16px;
+  border-right: 1px solid var(--sn-border-secondary, rgba(255, 255, 255, 0.1));
+}
+
 .username {
   font-size: 12px;
   color: var(--sn-text-secondary, #94a3b8);
