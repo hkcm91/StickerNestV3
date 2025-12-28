@@ -34,7 +34,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const CommentWidgetManifest: WidgetManifest = {
   id: 'stickernest.comment-widget',

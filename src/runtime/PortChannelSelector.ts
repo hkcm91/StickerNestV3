@@ -343,9 +343,15 @@ window.PortChannelSelector = (function() {
 `,
 });
 
-// Export strings from the frozen bundle to ensure proper initialization order
-export const PORT_CHANNEL_SELECTOR_STYLES = _PORT_CHANNEL_SELECTOR_BUNDLE.STYLES;
-export const PORT_CHANNEL_SELECTOR_SCRIPT = _PORT_CHANNEL_SELECTOR_BUNDLE.SCRIPT;
+// Export getter functions to avoid TDZ issues when used in template literals at module load time
+// Using functions ensures the value is resolved at call time, not at import time
+export function PORT_CHANNEL_SELECTOR_STYLES(): string {
+  return _PORT_CHANNEL_SELECTOR_BUNDLE.STYLES;
+}
+
+export function PORT_CHANNEL_SELECTOR_SCRIPT(): string {
+  return _PORT_CHANNEL_SELECTOR_BUNDLE.SCRIPT;
+}
 
 /**
  * Combined styles and script for embedding in widgets
@@ -353,10 +359,10 @@ export const PORT_CHANNEL_SELECTOR_SCRIPT = _PORT_CHANNEL_SELECTOR_BUNDLE.SCRIPT
 export function getPortChannelSelectorEmbed(): string {
   return `
 <style>
-${_PORT_CHANNEL_SELECTOR_BUNDLE.STYLES}
+${PORT_CHANNEL_SELECTOR_STYLES()}
 </style>
 <script>
-${_PORT_CHANNEL_SELECTOR_BUNDLE.SCRIPT}
+${PORT_CHANNEL_SELECTOR_SCRIPT()}
 </script>
 `;
 }

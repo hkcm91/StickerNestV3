@@ -10,7 +10,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 import {
   PORT_CHANNEL_SELECTOR_STYLES,
   PORT_CHANNEL_SELECTOR_SCRIPT,
@@ -441,7 +441,7 @@ export const MealPlannerWidgetHTML = `
       border-top: 1px solid var(--sn-border-primary, rgba(139, 92, 246, 0.2));
     }
 
-    ${PORT_CHANNEL_SELECTOR_STYLES}
+    ${PORT_CHANNEL_SELECTOR_STYLES()}
   </style>
 </head>
 <body>
@@ -505,7 +505,7 @@ export const MealPlannerWidgetHTML = `
   </div>
 
   <script>
-    ${PORT_CHANNEL_SELECTOR_SCRIPT}
+    ${PORT_CHANNEL_SELECTOR_SCRIPT()}
   </script>
 
   <script>

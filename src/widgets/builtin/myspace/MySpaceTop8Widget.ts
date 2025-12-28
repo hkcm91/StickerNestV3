@@ -17,7 +17,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const MySpaceTop8WidgetManifest: WidgetManifest = {
   id: 'stickernest.myspace-top8',

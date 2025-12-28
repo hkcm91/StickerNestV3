@@ -14,7 +14,7 @@ import { OCRScannerWidget, HaloOCRWidget } from './HaloOCRWidget';
 import { VoiceNotesWidget, HaloSpeechWidget } from './HaloSpeechWidget';
 import { DocumentEditorWidget, HaloDocumentWidget } from './HaloDocumentWidget';
 import { NoteHubWidget, HaloNoteHubWidget } from './HaloNoteHubWidget';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 /**
  * All pipeline widgets as a record for easy registration

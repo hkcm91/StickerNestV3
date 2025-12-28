@@ -10,7 +10,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 import {
   PORT_CHANNEL_SELECTOR_STYLES,
   PORT_CHANNEL_SELECTOR_SCRIPT,
@@ -437,7 +437,7 @@ export const ReceiptScannerWidgetHTML = `
       max-height: 100%;
     }
 
-    ${PORT_CHANNEL_SELECTOR_STYLES}
+    ${PORT_CHANNEL_SELECTOR_STYLES()}
   </style>
 </head>
 <body>
@@ -488,7 +488,7 @@ export const ReceiptScannerWidgetHTML = `
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <script>
-    ${PORT_CHANNEL_SELECTOR_SCRIPT}
+    ${PORT_CHANNEL_SELECTOR_SCRIPT()}
   </script>
 
   <script>

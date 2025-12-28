@@ -13,7 +13,7 @@
  *        +--onLogin--> [CustomerGate] (unlocks)
  */
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 // Re-export widget types
 export type { BuiltinWidget };

@@ -5,7 +5,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const CustomerSubscriptionWidgetManifest: WidgetManifest = {
   id: 'stickernest.customer-subscription',

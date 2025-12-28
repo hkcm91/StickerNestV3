@@ -11,7 +11,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 import {
   PORT_CHANNEL_SELECTOR_STYLES,
   PORT_CHANNEL_SELECTOR_SCRIPT,
@@ -549,7 +549,7 @@ export const RecipeManagerWidgetHTML = `
       margin-bottom: 12px;
     }
 
-    ${PORT_CHANNEL_SELECTOR_STYLES}
+    ${PORT_CHANNEL_SELECTOR_STYLES()}
   </style>
 </head>
 <body>
@@ -647,7 +647,7 @@ export const RecipeManagerWidgetHTML = `
   </div>
 
   <script>
-    ${PORT_CHANNEL_SELECTOR_SCRIPT}
+    ${PORT_CHANNEL_SELECTOR_SCRIPT()}
   </script>
 
   <script>

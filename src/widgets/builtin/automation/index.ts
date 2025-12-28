@@ -10,7 +10,7 @@
  * - System Widgets: Pipeline owner control panels (TemplateManager, AIConfigurator, PipelineController)
  */
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 // Automation Widget imports
 import { TemplateEngineWidget } from './TemplateEngineWidget';

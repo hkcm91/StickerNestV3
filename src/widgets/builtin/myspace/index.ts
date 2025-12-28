@@ -96,7 +96,7 @@ import { MySpaceNavWidget } from './MySpaceNavWidget';
 import { MySpaceMailWidget } from './MySpaceMailWidget';
 import { MySpaceEventsWidget } from './MySpaceEventsWidget';
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 /**
  * MySpace 2006 Theme Color Palette (for reference)

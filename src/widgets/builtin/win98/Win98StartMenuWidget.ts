@@ -6,7 +6,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const Win98StartMenuWidgetManifest: WidgetManifest = {
   id: 'stickernest.win98-start-menu',

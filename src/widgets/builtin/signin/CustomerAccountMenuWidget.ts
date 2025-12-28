@@ -5,7 +5,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const CustomerAccountMenuWidgetManifest: WidgetManifest = {
   id: 'stickernest.customer-account-menu',

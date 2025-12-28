@@ -13,7 +13,7 @@
  * All widgets support multi-channel port selection for flexible connections.
  */
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 // Widget imports
 import { ShoppingListWidget, ShoppingListWidgetManifest } from './ShoppingListWidget';

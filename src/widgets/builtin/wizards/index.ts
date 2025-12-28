@@ -5,7 +5,7 @@
  * front-ends that connect to automation pipelines.
  */
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 // Widget imports
 import { BusinessCardGeneratorWidget } from './BusinessCardGeneratorWidget';

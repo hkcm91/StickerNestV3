@@ -34,7 +34,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const LiveFeedWidgetManifest: WidgetManifest = {
   id: 'stickernest.live-feed',

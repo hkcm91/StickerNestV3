@@ -70,7 +70,9 @@
       "Bash(gh api:*)",
       "Bash(gh repo delete:*)",
       "Bash(gh repo view:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(find:*)",
+      "Bash(before initialization\" errors caused by minification reordering.\n\nUpdated all grocery widgets to call these as functions.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []

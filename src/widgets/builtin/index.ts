@@ -183,17 +183,9 @@ import { ModularToolbarWidget } from '../DashboardBuilder/widget';
 
 import type { WidgetManifest } from '../../types/manifest';
 
-/**
- * Built-in widget definition
- */
-export interface BuiltinWidget {
-  /** Widget manifest */
-  manifest: WidgetManifest;
-  /** Widget HTML content (inline) */
-  html?: string;
-  /** React component for the widget */
-  component?: React.ComponentType;
-}
+// Re-export BuiltinWidget type from shared types to avoid circular dependencies
+export type { BuiltinWidget } from './types';
+import type { BuiltinWidget } from './types';
 
 /**
  * All built-in widgets (as record)

@@ -35,7 +35,7 @@
  * @see SocialEventBridge - Events are routed through this
  */
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 // Widget imports
 export { Win98NotepadWidget, Win98NotepadWidgetManifest, Win98NotepadWidgetHTML } from './Win98NotepadWidget';

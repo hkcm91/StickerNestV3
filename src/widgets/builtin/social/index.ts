@@ -83,7 +83,7 @@ import { PresenceWidget } from './PresenceWidget';
 import { NotificationWidget } from './NotificationWidget';
 import { LiveChatWidget } from './LiveChatWidget';
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 /**
  * All social widgets as a record for easy registration

@@ -10,7 +10,7 @@
  */
 
 import type { WidgetManifest } from '../../../types/manifest';
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 export const MySpaceDetailsWidgetManifest: WidgetManifest = {
   id: 'stickernest.myspace-details',

@@ -19,7 +19,7 @@
  * and can be connected via pipelines for reactive updates.
  */
 
-import type { BuiltinWidget } from '../index';
+import type { BuiltinWidget } from '../types';
 
 // Re-export widget types
 export type { BuiltinWidget };
