@@ -454,6 +454,11 @@ export function createSurfaceAnchoredSticker(
 // Additional Factory Functions
 // ============================================================================
 
+/** Click behavior option - can be string or object with type/event/url */
+type ClickBehaviorOption =
+  | StickerClickBehavior
+  | { type: StickerClickBehavior; event?: string; url?: string };
+
 /** Options for creating a primitive sticker */
 export interface CreatePrimitiveStickerOptions {
   name: string;
@@ -465,8 +470,23 @@ export interface CreatePrimitiveStickerOptions {
     scale?: { x: number; y: number; z: number };
   };
   visibleIn?: { desktop: boolean; vr: boolean; ar: boolean };
-  clickBehavior?: SpatialSticker['clickBehavior'];
+  clickBehavior?: ClickBehaviorOption;
   canvasId?: string;
+}
+
+/** Parse click behavior option into behavior string and linked fields */
+function parseClickBehavior(opt?: ClickBehaviorOption): {
+  clickBehavior: StickerClickBehavior;
+  linkedEvent?: string;
+  linkedUrl?: string;
+} {
+  if (!opt) return { clickBehavior: 'none' };
+  if (typeof opt === 'string') return { clickBehavior: opt };
+  return {
+    clickBehavior: opt.type,
+    linkedEvent: opt.event,
+    linkedUrl: opt.url,
+  };
 }
 
 /** Create a primitive sticker with detailed options */
@@ -477,9 +497,11 @@ export function createPrimitiveSticker(options: CreatePrimitiveStickerOptions): 
     color = '#8b5cf6',
     transform,
     visibleIn = { desktop: true, vr: true, ar: true },
-    clickBehavior = { type: 'none' },
+    clickBehavior: clickBehaviorOpt,
     canvasId = 'default',
   } = options;
+
+  const { clickBehavior, linkedEvent, linkedUrl } = parseClickBehavior(clickBehaviorOpt);
 
   return createSpatialSticker({
     canvasId,
@@ -503,6 +525,8 @@ export function createPrimitiveSticker(options: CreatePrimitiveStickerOptions): 
     },
     visibleIn,
     clickBehavior,
+    linkedEvent,
+    linkedUrl,
   });
 }
 
@@ -517,7 +541,7 @@ export interface CreateImageStickerOptions {
   };
   visibleIn?: { desktop: boolean; vr: boolean; ar: boolean };
   billboard?: boolean;
-  clickBehavior?: SpatialSticker['clickBehavior'];
+  clickBehavior?: ClickBehaviorOption;
   canvasId?: string;
 }
 
@@ -529,9 +553,11 @@ export function createImageSticker(options: CreateImageStickerOptions): SpatialS
     transform,
     visibleIn = { desktop: true, vr: true, ar: true },
     billboard = false,
-    clickBehavior = { type: 'none' },
+    clickBehavior: clickBehaviorOpt,
     canvasId = 'default',
   } = options;
+
+  const { clickBehavior, linkedEvent, linkedUrl } = parseClickBehavior(clickBehaviorOpt);
 
   return createSpatialSticker({
     canvasId,
@@ -546,6 +572,8 @@ export function createImageSticker(options: CreateImageStickerOptions): SpatialS
     billboard3D: billboard,
     visibleIn,
     clickBehavior,
+    linkedEvent,
+    linkedUrl,
   });
 }
 
