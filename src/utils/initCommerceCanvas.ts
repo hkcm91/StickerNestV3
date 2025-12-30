@@ -477,7 +477,13 @@ function saveCanvas(): void {
 function updateCanvasIndex(): void {
   try {
     const indexStr = localStorage.getItem(CANVAS_INDEX_KEY);
-    const index: string[] = indexStr ? JSON.parse(indexStr) : [];
+    let index: string[] = [];
+    if (indexStr) {
+      const parsed = JSON.parse(indexStr);
+      if (Array.isArray(parsed)) {
+        index = parsed;
+      }
+    }
 
     if (!index.includes(COMMERCE_CANVAS_ID)) {
       index.unshift(COMMERCE_CANVAS_ID); // Add at beginning for easy access
@@ -494,9 +500,16 @@ function updateCanvasIndex(): void {
 function registerAsDemoCanvas(): void {
   try {
     const configStr = localStorage.getItem(DEMO_CONFIG_KEY);
-    const config = configStr
-      ? JSON.parse(configStr)
-      : { canvases: [], defaultCanvasId: undefined };
+    let config: { canvases: { canvasId: string; label: string; description: string }[]; defaultCanvasId?: string } = {
+      canvases: [],
+      defaultCanvasId: undefined,
+    };
+    if (configStr) {
+      const parsed = JSON.parse(configStr);
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.canvases)) {
+        config = parsed;
+      }
+    }
 
     // Check if already registered
     const alreadyRegistered = config.canvases.some(

@@ -47,7 +47,14 @@ function loadConfig(): DemoCanvasConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Validate config structure
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.canvases)) {
+        return {
+          canvases: parsed.canvases,
+          defaultCanvasId: parsed.defaultCanvasId,
+        };
+      }
     }
   } catch (e) {
     console.error('[useDemoCanvases] Failed to load config:', e);
@@ -77,7 +84,13 @@ export interface CanvasOption {
 export function getAllCanvasOptions(): CanvasOption[] {
   try {
     const indexStr = localStorage.getItem(CANVAS_INDEX_KEY);
-    const index: string[] = indexStr ? JSON.parse(indexStr) : [];
+    let index: string[] = [];
+    if (indexStr) {
+      const parsed = JSON.parse(indexStr);
+      if (Array.isArray(parsed)) {
+        index = parsed;
+      }
+    }
     const config = loadConfig();
     const demoIds = new Set(config.canvases.map(c => c.canvasId));
 

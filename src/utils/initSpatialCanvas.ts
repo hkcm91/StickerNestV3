@@ -6,8 +6,6 @@
  */
 
 import type { WidgetInstance } from '../types/domain';
-import { useSpatialStickerStore } from '../state/useSpatialStickerStore';
-import { createPrimitiveSticker, createImageSticker } from '../types/spatialEntity';
 
 // ==================
 // Constants
@@ -352,111 +350,128 @@ const SPATIAL_CANVAS_DATA = {
 };
 
 // ==================
-// Spatial Stickers
+// Spatial Stickers (Lazy loaded)
 // ==================
 
-function createDemoSpatialStickers(): void {
-  const store = useSpatialStickerStore.getState();
+let stickersInitialized = false;
 
-  // Clear existing stickers for this canvas
-  store.clearSpatialStickers(SPATIAL_CANVAS_ID);
+/**
+ * Create demo spatial stickers - called lazily when canvas is opened
+ * This function is exported so it can be called when needed
+ */
+export async function createDemoSpatialStickers(): Promise<void> {
+  if (stickersInitialized) return;
 
-  // Front Green Screen
-  const frontGreenScreen = createPrimitiveSticker({
-    name: 'Front Green Screen',
-    primitiveType: 'plane',
-    color: '#00FF00',
-    canvasId: SPATIAL_CANVAS_ID,
-    transform: {
-      position: { x: 0, y: 1.5, z: -3 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 4, y: 2.5, z: 1 },
-    },
-    visibleIn: { desktop: true, vr: true, ar: true },
-  });
-  store.addSpatialSticker(frontGreenScreen);
+  try {
+    // Dynamic import to avoid loading Zustand at module init time
+    const { useSpatialStickerStore } = await import('../state/useSpatialStickerStore');
+    const { createPrimitiveSticker } = await import('../types/spatialEntity');
 
-  // Left Blue Screen
-  const leftBlueScreen = createPrimitiveSticker({
-    name: 'Left Blue Screen',
-    primitiveType: 'plane',
-    color: '#0066FF',
-    canvasId: SPATIAL_CANVAS_ID,
-    transform: {
-      position: { x: -3, y: 1.5, z: 0 },
-      rotation: { x: 0, y: 90, z: 0 },
-      scale: { x: 3, y: 2.5, z: 1 },
-    },
-    visibleIn: { desktop: true, vr: true, ar: false },
-  });
-  store.addSpatialSticker(leftBlueScreen);
+    const store = useSpatialStickerStore.getState();
 
-  // Interactive Cube
-  const interactiveCube = createPrimitiveSticker({
-    name: 'Interactive Cube',
-    primitiveType: 'box',
-    color: '#8b5cf6',
-    canvasId: SPATIAL_CANVAS_ID,
-    transform: {
-      position: { x: -1, y: 0.5, z: -1.5 },
-      rotation: { x: 0, y: 45, z: 0 },
-      scale: { x: 0.5, y: 0.5, z: 0.5 },
-    },
-    visibleIn: { desktop: true, vr: true, ar: true },
-    clickBehavior: { type: 'emit-event', event: 'cube:clicked' },
-  });
-  store.addSpatialSticker(interactiveCube);
+    // Clear existing stickers for this canvas
+    store.clearSpatialStickers(SPATIAL_CANVAS_ID);
 
-  // Floating Sphere
-  const floatingSphere = createPrimitiveSticker({
-    name: 'Floating Sphere',
-    primitiveType: 'sphere',
-    color: '#f59e0b',
-    canvasId: SPATIAL_CANVAS_ID,
-    transform: {
-      position: { x: 1, y: 1.2, z: -1 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 0.3, y: 0.3, z: 0.3 },
-    },
-    visibleIn: { desktop: true, vr: true, ar: true },
-  });
-  store.addSpatialSticker(floatingSphere);
+    // Front Green Screen
+    const frontGreenScreen = createPrimitiveSticker({
+      name: 'Front Green Screen',
+      primitiveType: 'plane',
+      color: '#00FF00',
+      canvasId: SPATIAL_CANVAS_ID,
+      transform: {
+        position: { x: 0, y: 1.5, z: -3 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 4, y: 2.5, z: 1 },
+      },
+      visibleIn: { desktop: true, vr: true, ar: true },
+    });
+    store.addSpatialSticker(frontGreenScreen);
 
-  // Floor Marker Cylinder
-  const floorMarker = createPrimitiveSticker({
-    name: 'Floor Marker',
-    primitiveType: 'cylinder',
-    color: '#22c55e',
-    canvasId: SPATIAL_CANVAS_ID,
-    transform: {
-      position: { x: 0, y: 0.05, z: -1 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 0.5, y: 0.1, z: 0.5 },
-    },
-    visibleIn: { desktop: true, vr: true, ar: true },
-  });
-  store.addSpatialSticker(floorMarker);
+    // Left Blue Screen
+    const leftBlueScreen = createPrimitiveSticker({
+      name: 'Left Blue Screen',
+      primitiveType: 'plane',
+      color: '#0066FF',
+      canvasId: SPATIAL_CANVAS_ID,
+      transform: {
+        position: { x: -3, y: 1.5, z: 0 },
+        rotation: { x: 0, y: 90, z: 0 },
+        scale: { x: 3, y: 2.5, z: 1 },
+      },
+      visibleIn: { desktop: true, vr: true, ar: false },
+    });
+    store.addSpatialSticker(leftBlueScreen);
 
-  // Register a demo QR code
-  store.registerQRCode({
-    content: 'https://stickernest.com/spatial-demo',
-    label: 'StickerNest Demo QR',
-    sizeMeters: 0.15,
-    attachedStickerIds: [],
-    isActive: true,
-    createdAt: Date.now(),
-  });
+    // Interactive Cube
+    const interactiveCube = createPrimitiveSticker({
+      name: 'Interactive Cube',
+      primitiveType: 'box',
+      color: '#8b5cf6',
+      canvasId: SPATIAL_CANVAS_ID,
+      transform: {
+        position: { x: -1, y: 0.5, z: -1.5 },
+        rotation: { x: 0, y: 45, z: 0 },
+        scale: { x: 0.5, y: 0.5, z: 0.5 },
+      },
+      visibleIn: { desktop: true, vr: true, ar: true },
+      clickBehavior: { type: 'emit-event', event: 'cube:clicked' },
+    });
+    store.addSpatialSticker(interactiveCube);
 
-  // Update scene config for VR
-  store.updateSceneConfig({
-    vrEnvironment: 'studio',
-    enableShadows: true,
-    enableOcclusion: true,
-    showFloorGrid: true,
-    ambientIntensity: 0.6,
-  });
+    // Floating Sphere
+    const floatingSphere = createPrimitiveSticker({
+      name: 'Floating Sphere',
+      primitiveType: 'sphere',
+      color: '#f59e0b',
+      canvasId: SPATIAL_CANVAS_ID,
+      transform: {
+        position: { x: 1, y: 1.2, z: -1 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 0.3, y: 0.3, z: 0.3 },
+      },
+      visibleIn: { desktop: true, vr: true, ar: true },
+    });
+    store.addSpatialSticker(floatingSphere);
 
-  console.log('[initSpatialCanvas] Created demo spatial stickers');
+    // Floor Marker Cylinder
+    const floorMarker = createPrimitiveSticker({
+      name: 'Floor Marker',
+      primitiveType: 'cylinder',
+      color: '#22c55e',
+      canvasId: SPATIAL_CANVAS_ID,
+      transform: {
+        position: { x: 0, y: 0.05, z: -1 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 0.5, y: 0.1, z: 0.5 },
+      },
+      visibleIn: { desktop: true, vr: true, ar: true },
+    });
+    store.addSpatialSticker(floorMarker);
+
+    // Register a demo QR code
+    store.registerQRCode({
+      content: 'https://stickernest.com/spatial-demo',
+      label: 'StickerNest Demo QR',
+      sizeMeters: 0.15,
+      attachedStickerIds: [],
+      isActive: true,
+      createdAt: Date.now(),
+    });
+
+    // Update scene config for VR
+    store.updateSceneConfig({
+      vrEnvironment: 'studio',
+      enableShadows: true,
+      enableOcclusion: true,
+      showFloorGrid: true,
+      ambientIntensity: 0.6,
+    });
+
+    stickersInitialized = true;
+    console.log('[initSpatialCanvas] Created demo spatial stickers');
+  } catch (error) {
+    console.warn('[initSpatialCanvas] Could not create spatial stickers:', error);
+  }
 }
 
 // ==================
@@ -473,7 +488,10 @@ function updateCanvasIndex(): void {
   let index: string[] = [];
   try {
     if (indexStr) {
-      index = JSON.parse(indexStr);
+      const parsed = JSON.parse(indexStr);
+      if (Array.isArray(parsed)) {
+        index = parsed;
+      }
     }
   } catch {
     index = [];
@@ -490,7 +508,10 @@ function registerAsDemoCanvas(): void {
   let demos: string[] = [];
   try {
     if (demoStr) {
-      demos = JSON.parse(demoStr);
+      const parsed = JSON.parse(demoStr);
+      if (Array.isArray(parsed)) {
+        demos = parsed;
+      }
     }
   } catch {
     demos = [];
@@ -513,8 +534,14 @@ function spatialCanvasExists(): boolean {
 
 /**
  * Initialize the spatial/VR demo canvas if it doesn't exist
+ * Note: Spatial stickers are created lazily via createDemoSpatialStickers()
  */
 export function initSpatialCanvas(): void {
+  // Guard against SSR/non-browser environments
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
+
   const exists = spatialCanvasExists();
 
   if (!exists) {
@@ -522,17 +549,10 @@ export function initSpatialCanvas(): void {
     saveCanvas();
     updateCanvasIndex();
     registerAsDemoCanvas();
-    createDemoSpatialStickers();
     console.log('[initSpatialCanvas] Spatial canvas created and registered');
   } else {
     // Just ensure it's registered as a demo
     registerAsDemoCanvas();
-    // Ensure spatial stickers exist
-    const store = useSpatialStickerStore.getState();
-    const existingStickers = store.getSpatialStickersByCanvas(SPATIAL_CANVAS_ID);
-    if (existingStickers.length === 0) {
-      createDemoSpatialStickers();
-    }
     console.log('[initSpatialCanvas] Spatial canvas already exists, ensured registration');
   }
 }
@@ -540,12 +560,18 @@ export function initSpatialCanvas(): void {
 /**
  * Force reset the spatial canvas to default state
  */
-export function resetSpatialCanvas(): void {
+export async function resetSpatialCanvas(): Promise<void> {
+  // Guard against SSR/non-browser environments
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
+
   console.log('[initSpatialCanvas] Resetting spatial canvas to defaults...');
   saveCanvas();
   updateCanvasIndex();
   registerAsDemoCanvas();
-  createDemoSpatialStickers();
+  stickersInitialized = false; // Reset flag so stickers can be recreated
+  await createDemoSpatialStickers();
   console.log('[initSpatialCanvas] Spatial canvas reset complete');
 }
 
