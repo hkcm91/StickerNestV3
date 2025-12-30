@@ -450,38 +450,10 @@ export default defineConfig(({ command, mode }) => ({
         rollupOptions: {
             output: {
                 manualChunks(id: string) {
-                    // Vendor chunks - split node_modules by category
+                    // Keep all node_modules together as 'vendor' to avoid
+                    // React import ordering issues (useLayoutEffect undefined errors)
                     if (id.includes('node_modules')) {
-                        // React core
-                        if (id.includes('react-dom') || id.includes('/react/')) {
-                            return 'vendor-react';
-                        }
-                        // React router
-                        if (id.includes('react-router')) {
-                            return 'vendor-router';
-                        }
-                        // State management
-                        if (id.includes('zustand')) {
-                            return 'vendor-state';
-                        }
-                        // Supabase
-                        if (id.includes('@supabase')) {
-                            return 'vendor-supabase';
-                        }
-                        // Animation libs
-                        if (id.includes('lottie') || id.includes('framer-motion')) {
-                            return 'vendor-animation';
-                        }
-                        // Icons (lucide is large)
-                        if (id.includes('lucide')) {
-                            return 'vendor-icons';
-                        }
-                        // Utilities
-                        if (id.includes('zod') || id.includes('dompurify') || id.includes('jszip')) {
-                            return 'vendor-utils';
-                        }
-                        // All other node_modules
-                        return 'vendor-misc';
+                        return 'vendor';
                     }
 
                     // Split builtin widgets by category
