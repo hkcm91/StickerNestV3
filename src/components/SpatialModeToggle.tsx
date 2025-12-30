@@ -10,6 +10,22 @@ import { useSpatialModeStore, type SpatialMode } from '../state/useSpatialModeSt
 import { haptic } from '../utils/haptics';
 import { Monitor, Glasses, Smartphone } from 'lucide-react';
 
+// Import XR store functions to actually start sessions
+let xrStore: { enterVR: () => Promise<void>; enterAR: () => Promise<void>; getState: () => { session: XRSession | null } } | null = null;
+
+// Lazy load the xrStore to avoid import issues
+async function getXRStore() {
+  if (!xrStore) {
+    try {
+      const module = await import('./spatial/SpatialCanvas');
+      xrStore = module.xrStore;
+    } catch (e) {
+      console.warn('[SpatialModeToggle] Could not load xrStore:', e);
+    }
+  }
+  return xrStore;
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -135,7 +151,7 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
   }, [setCapabilities]);
 
   const handleModeChange = useCallback(
-    (mode: SpatialMode) => {
+    async (mode: SpatialMode) => {
       if (disabled) return;
       if (mode === activeMode) return;
 
@@ -144,7 +160,37 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       if (mode === 'ar' && !capabilities.arSupported) return;
 
       haptic('medium');
-      requestMode(mode);
+
+      // For VR/AR modes, actually start the WebXR session
+      if (mode === 'vr' || mode === 'ar') {
+        const store = await getXRStore();
+        if (store) {
+          try {
+            requestMode(mode); // Update state first
+            if (mode === 'vr') {
+              await store.enterVR();
+            } else {
+              await store.enterAR();
+            }
+          } catch (e) {
+            console.error(`[SpatialModeToggle] Failed to enter ${mode}:`, e);
+            // Reset to desktop on failure
+            requestMode('desktop');
+          }
+        } else {
+          console.warn('[SpatialModeToggle] XR store not available');
+        }
+      } else {
+        // Desktop mode - just update state, exit any active session
+        const store = await getXRStore();
+        if (store) {
+          const session = store.getState().session;
+          if (session) {
+            session.end();
+          }
+        }
+        requestMode(mode);
+      }
     },
     [activeMode, capabilities, requestMode, disabled]
   );

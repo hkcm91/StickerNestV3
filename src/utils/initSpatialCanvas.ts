@@ -505,21 +505,34 @@ function updateCanvasIndex(): void {
 
 function registerAsDemoCanvas(): void {
   const demoStr = localStorage.getItem(DEMO_CONFIG_KEY);
-  let demos: string[] = [];
+  let config: { canvases: { canvasId: string; label: string; description?: string }[]; defaultCanvasId?: string } = {
+    canvases: [],
+    defaultCanvasId: undefined,
+  };
   try {
     if (demoStr) {
       const parsed = JSON.parse(demoStr);
-      if (Array.isArray(parsed)) {
-        demos = parsed;
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.canvases)) {
+        config = parsed;
       }
     }
   } catch {
-    demos = [];
+    // Use default config
   }
 
-  if (!demos.includes(SPATIAL_CANVAS_ID)) {
-    demos.push(SPATIAL_CANVAS_ID);
-    localStorage.setItem(DEMO_CONFIG_KEY, JSON.stringify(demos));
+  // Check if already registered
+  const alreadyRegistered = config.canvases.some(
+    (c: { canvasId: string }) => c.canvasId === SPATIAL_CANVAS_ID
+  );
+
+  if (!alreadyRegistered) {
+    config.canvases.unshift({
+      canvasId: SPATIAL_CANVAS_ID,
+      label: 'Spatial VR/AR Demo',
+      description: 'Experience 3D stickers in VR and AR modes',
+    });
+
+    localStorage.setItem(DEMO_CONFIG_KEY, JSON.stringify(config));
   }
 }
 
