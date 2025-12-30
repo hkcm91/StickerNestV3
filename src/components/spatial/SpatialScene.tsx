@@ -20,7 +20,7 @@ import {
   useSpatialStickerStore,
   useDetectedQRCodes,
 } from '../../state/useSpatialStickerStore';
-import { useSelectedIds, useCanvasStore } from '../../state/useCanvasStore';
+import { useCanvasStore } from '../../state/useCanvasStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
 import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
@@ -219,14 +219,18 @@ export function SpatialScene() {
 
   // Canvas widgets from the main canvas store
   // These are the actual widgets that users have placed on their 2D canvas
-  // IMPORTANT: Don't use useWidgets() directly - it creates new arrays every render causing infinite loops!
-  // Access the raw Map and convert to array with useMemo for stable references (same pattern as spatialStickers)
+  // IMPORTANT: Don't use useWidgets() or useSelectedIds() directly - they create new arrays every render causing infinite loops!
+  // Access the raw Map/Set and convert to array with useMemo for stable references (same pattern as spatialStickers)
   const widgetsMap = useCanvasStore((state) => state.widgets);
   const canvasWidgets = useMemo(
     () => Array.from(widgetsMap.values()),
     [widgetsMap]
   );
-  const selectedWidgetIds = useSelectedIds();
+  const selectionSet = useCanvasStore((state) => state.selection.selectedIds);
+  const selectedWidgetIds = useMemo(
+    () => Array.from(selectionSet),
+    [selectionSet]
+  );
   const selectWidget = useCanvasStore((state) => state.selectWidget);
   const updateWidget = useCanvasStore((state) => state.updateWidget);
 
