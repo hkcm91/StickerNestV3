@@ -49,7 +49,8 @@ export type WidgetToParentMessageType =
   | 'ERROR'          // Error occurred
   | 'CAPABILITY_REQUEST' // Request capability access
   | 'OUTPUT'         // Pipeline output
-  | 'CANVAS_REQUEST'; // Request canvas operation
+  | 'CANVAS_REQUEST' // Request canvas operation
+  | 'CONTENT_SIZE';  // Report actual content dimensions
 
 /**
  * Message structure for parent-to-widget communication
@@ -813,6 +814,75 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
       postToParent('CANVAS_REQUEST', { action: 'close' });
     },
 
+    // Content size reporting - tells the host what size this widget's content actually needs
+    reportContentSize: function(width, height) {
+      postToParent('CONTENT_SIZE', { width: width, height: height });
+    },
+
+    // Auto-detect and report content size based on document content
+    autoReportContentSize: function() {
+      // Wait for next frame to ensure DOM is ready
+      requestAnimationFrame(function() {
+        var body = document.body;
+        var html = document.documentElement;
+
+        // Get the maximum content dimensions from scroll/offset
+        var contentWidth = Math.max(
+          body.scrollWidth || 0,
+          body.offsetWidth || 0,
+          html.scrollWidth || 0,
+          html.offsetWidth || 0
+        );
+        var contentHeight = Math.max(
+          body.scrollHeight || 0,
+          body.offsetHeight || 0,
+          html.scrollHeight || 0,
+          html.offsetHeight || 0
+        );
+
+        // Also check all direct children for their bounding rects
+        // This catches absolutely positioned elements that don't affect scroll size
+        var children = body.children;
+        for (var i = 0; i < children.length; i++) {
+          var child = children[i];
+          var rect = child.getBoundingClientRect();
+          // Include element position + size
+          var childRight = rect.left + rect.width;
+          var childBottom = rect.top + rect.height;
+          if (childRight > contentWidth) contentWidth = Math.ceil(childRight);
+          if (childBottom > contentHeight) contentHeight = Math.ceil(childBottom);
+        }
+
+        // Also check widget-root if it exists (for JS module widgets)
+        var widgetRoot = document.getElementById('widget-root');
+        if (widgetRoot) {
+          var rootChildren = widgetRoot.children;
+          for (var j = 0; j < rootChildren.length; j++) {
+            var rootChild = rootChildren[j];
+            var rootRect = rootChild.getBoundingClientRect();
+            var rootChildRight = rootRect.left + rootRect.width;
+            var rootChildBottom = rootRect.top + rootRect.height;
+            if (rootChildRight > contentWidth) contentWidth = Math.ceil(rootChildRight);
+            if (rootChildBottom > contentHeight) contentHeight = Math.ceil(rootChildBottom);
+          }
+        }
+
+        console.log('[WidgetAPI] autoReportContentSize measured:', {
+          contentWidth: contentWidth,
+          contentHeight: contentHeight,
+          bodyScroll: body.scrollWidth + 'x' + body.scrollHeight,
+          bodyOffset: body.offsetWidth + 'x' + body.offsetHeight,
+          htmlScroll: html.scrollWidth + 'x' + html.scrollHeight
+        });
+
+        // Only report if content is larger than 10px (avoid empty widgets)
+        if (contentWidth > 10 && contentHeight > 10) {
+          console.log('[WidgetAPI] Reporting content size:', contentWidth + 'x' + contentHeight);
+          postToParent('CONTENT_SIZE', { width: contentWidth, height: contentHeight });
+        }
+      });
+    },
+
     // Debug logging
     log: function(msg, data) {
       postToParent('DEBUG_LOG', { level: 'log', message: msg, data: data, timestamp: Date.now() });
@@ -959,6 +1029,19 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
 
     // Dispatch widget:init event for backwards compatibility
     dispatchEvent({ type: 'widget:init', scope: 'widget', payload: initContext });
+
+    // Auto-detect and report content size after a delay
+    // This allows widget content to fully render before measuring
+    // We do multiple measurements to catch dynamic content
+    setTimeout(function() {
+      window.WidgetAPI.autoReportContentSize();
+    }, 200);
+    setTimeout(function() {
+      window.WidgetAPI.autoReportContentSize();
+    }, 500);
+    setTimeout(function() {
+      window.WidgetAPI.autoReportContentSize();
+    }, 1000);
   }
 
   function handleStateUpdate(payload) {

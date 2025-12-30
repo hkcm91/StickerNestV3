@@ -19,8 +19,6 @@ import { lazyWithRetry, lazyWithRetryNamed } from '../utils/lazyWithRetry';
 const MainApp = lazyWithRetry(() => import('../App'));
 const SharedCanvasPage = lazyWithRetry(() => import('../pages/SharedCanvasPage'));
 const EmbedCanvasPage = lazyWithRetry(() => import('../pages/EmbedCanvasPage'));
-const EditorPage = lazyWithRetry(() => import('../pages/EditorPage'));
-const EditorPage2 = lazyWithRetry(() => import('../pages/EditorPage2'));
 const LoginPage = lazyWithRetry(() => import('../pages/LoginPage'));
 const SignupPage = lazyWithRetry(() => import('../pages/SignupPage'));
 const UserProfilePage = lazyWithRetry(() => import('../pages/UserProfilePage'));
@@ -201,20 +199,10 @@ const router = createBrowserRouter([
         path: 'create/:canvasId',
         element: <LandingPage />,
       },
-      // Canvas by ID (for authenticated users)
+      // Canvas by ID (for authenticated users) - Main canvas editing entry point
       {
         path: 'canvas/:canvasId',
         element: <MainApp />,
-      },
-      // Editor page with Canvas 2.0
-      {
-        path: 'editor/:canvasId',
-        element: <EditorPage2 />,
-      },
-      // Legacy editor (old architecture)
-      {
-        path: 'editor-legacy/:canvasId',
-        element: <EditorPage />,
       },
       // Shared canvas by slug (public access)
       {

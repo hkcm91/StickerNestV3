@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { WidgetInstance } from '../../types/domain';
+import type { EventBus } from '../../runtime/EventBus';
 
 export interface UseMainCanvasWidgetsOptions {
   canvasId: string;
@@ -12,6 +13,7 @@ export interface UseMainCanvasWidgetsOptions {
   autoSaveInterval?: number;
   onWidgetAdd?: (widget: WidgetInstance) => void;
   onWidgetRemove?: (widgetId: string) => void;
+  eventBus?: EventBus | null;
 }
 
 export function useMainCanvasWidgets(options: UseMainCanvasWidgetsOptions) {
@@ -21,6 +23,7 @@ export function useMainCanvasWidgets(options: UseMainCanvasWidgetsOptions) {
     autoSaveInterval = 30000,
     onWidgetAdd,
     onWidgetRemove,
+    eventBus,
   } = options;
 
   const [widgets, setWidgets] = useState<WidgetInstance[]>([]);
@@ -97,6 +100,28 @@ export function useMainCanvasWidgets(options: UseMainCanvasWidgetsOptions) {
 
   // Mark unsaved on widget change
   useEffect(() => setHasUnsavedChanges(true), [widgets]);
+
+  // Listen for content size changes from widgets
+  // When a widget reports its actual content size, update the widget's contentSize
+  // This enables proper scaling to fit content within the widget frame
+  useEffect(() => {
+    if (!eventBus) return;
+
+    const unsub = eventBus.on('widget:contentSizeChanged', (event) => {
+      const { widgetInstanceId, contentSize } = event.payload as {
+        widgetInstanceId: string;
+        contentSize: { width: number; height: number };
+      };
+
+      setWidgets(prev => prev.map(w =>
+        w.id === widgetInstanceId
+          ? { ...w, contentSize }
+          : w
+      ));
+    });
+
+    return unsub;
+  }, [eventBus]);
 
   // CRUD operations
   const addWidget = useCallback((data: Omit<WidgetInstance, 'id' | 'canvasId'>): string => {

@@ -41,7 +41,8 @@ type WidgetToParentMessageType =
   | 'OUTPUT'
   | 'CAPABILITY_REQUEST'
   | 'CANVAS_REQUEST'
-  | 'REQUEST';
+  | 'REQUEST'
+  | 'CONTENT_SIZE';
 
 export interface ParentToWidgetMessage {
   type: ParentToWidgetMessageType;
@@ -377,7 +378,7 @@ export class WidgetSandboxHost {
   private validateProtocol(data: any): void {
     const knownTypes = [
       // New protocol
-      'READY', 'EVENT', 'STATE_PATCH', 'DEBUG_LOG', 'ERROR', 'OUTPUT', 'CAPABILITY_REQUEST', 'CANVAS_REQUEST', 'REQUEST',
+      'READY', 'EVENT', 'STATE_PATCH', 'DEBUG_LOG', 'ERROR', 'OUTPUT', 'CAPABILITY_REQUEST', 'CANVAS_REQUEST', 'REQUEST', 'CONTENT_SIZE',
       // Legacy protocol
       'widget:emit', 'widget:ready', 'widget:event', 'widget:broadcast'
     ];
@@ -495,6 +496,9 @@ export class WidgetSandboxHost {
         break;
       case 'REQUEST':
         this.handleApiRequest(message.payload);
+        break;
+      case 'CONTENT_SIZE':
+        this.handleContentSize(message.payload);
         break;
     }
   }
@@ -1100,6 +1104,41 @@ export class WidgetSandboxHost {
   }
 
   /**
+   * Handle content size reported by widget
+   * Widgets auto-detect their content dimensions and report them
+   * This allows proper scaling to fit content within the widget frame
+   */
+  private handleContentSize(payload: { width: number; height: number }): void {
+    const { width, height } = payload;
+
+    // Validate dimensions
+    if (!width || !height || width <= 0 || height <= 0) {
+      return;
+    }
+
+    console.log(`[WidgetSandbox] 📐 Content size reported by ${this.manifest.name}: ${width}x${height}`);
+
+    // Update widget instance contentSize
+    this.widgetInstance.contentSize = { width, height };
+
+    // Emit event so the canvas can update the widget
+    this.eventBus.emit({
+      type: 'widget:contentSizeChanged',
+      scope: 'canvas',
+      payload: {
+        widgetInstanceId: this.widgetInstance.id,
+        contentSize: { width, height }
+      },
+      sourceWidgetId: this.widgetInstance.id,
+      timestamp: Date.now()
+    });
+
+    if (this.debugEnabled) {
+      this.debugLog('info', `Content size: ${width}x${height}`);
+    }
+  }
+
+  /**
    * Handle canvas requests from widget (move, resize, close, etc.)
    */
   private handleCanvasRequest(payload: any): void {
@@ -1492,7 +1531,7 @@ export class WidgetSandboxHost {
   ">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
+    html, body { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
@@ -1565,7 +1604,7 @@ export class WidgetSandboxHost {
   <base href="${baseUrl}/">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
+    html, body { width: 100%; height: 100%; }
     #widget-root { width: 100%; height: 100%; }
   </style>
 </head>

@@ -626,12 +626,13 @@ const WidgetFrameComponent: React.FC<WidgetFrameProps> = ({
         cursor: isEditMode ? (interactionMode === 'dragging' ? 'grabbing' : 'grab') : 'default',
         userSelect: 'none',
         touchAction: 'none',
-        outline: selected && isEditMode && !widgetIsDocked
+        // Use box-shadow instead of outline for selection
+        // (outline is NOT clipped by overflow:hidden, but box-shadow IS)
+        boxShadow: selected && isEditMode && !widgetIsDocked
           ? isMultiSelected
-            ? '2px solid #9acd32'
-            : '2px solid #4a9eff'
-          : 'none',
-        outlineOffset: 2,
+            ? '0 0 0 2px #9acd32, 0 0 0 6px rgba(154, 205, 50, 0.2)'
+            : '0 0 0 2px #4a9eff, 0 0 0 6px rgba(74, 158, 255, 0.2)'
+          : undefined,
         opacity: isDraggingToDock ? 0.5 : 1,
         display: 'block',
       }}

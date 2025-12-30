@@ -37,6 +37,7 @@ import { useStickerStore } from '../state/useStickerStore';
 import { useViewport } from '../hooks/useResponsive';
 import { MobileBottomSheet, MobileActionButton } from '../components/MobileNav';
 import { useDebugShortcuts, useShowShortcutsHint } from '../hooks/useDebugShortcuts';
+import { useCanvasKeyboardShortcuts } from '../hooks/useCanvasKeyboardShortcuts';
 import { debug } from '../utils/debug';
 import { SocialManager } from '../runtime/SocialManager';
 import { CursorOverlay, SelectionHighlight, CollaboratorAvatars, PresenceBadge } from '../components/collaboration';
@@ -191,6 +192,9 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
       });
     },
   });
+
+  // Canvas keyboard shortcuts (Ctrl+Z undo, Ctrl+Y redo, Delete, etc.)
+  useCanvasKeyboardShortcuts({ enabled: storeMode === 'edit' || storeMode === 'connect' });
 
   // Initialize canvas store and load canvas from URL
   useEffect(() => {
@@ -788,8 +792,8 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
           >
             {isMobile ? '🔗' : '🔗 Share'}
           </button>
-          {/* Invite button - only if user can invite */}
-          {(permissions.canInvite || permissions.isOwner) && !isMobile && (
+          {/* Invite button - available to all users */}
+          {!isMobile && (
             <button
               onClick={() => setShowInviteDialog(true)}
               className={`sn-touch-target ${styles.secondaryButton}`}
@@ -1222,7 +1226,7 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
         canvasId={activeCanvasId}
         isOpen={showInviteDialog}
         onClose={() => setShowInviteDialog(false)}
-        canInvite={permissions.canInvite || permissions.isOwner}
+        canInvite={true}
       />
 
       {/* Sticker Properties Panel */}

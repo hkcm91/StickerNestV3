@@ -22,6 +22,7 @@ import {
   ChevronUp,
   ChevronDown,
   Heart,
+  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import type { CanvasMode } from '../../canvas/MainCanvas';
@@ -46,6 +47,7 @@ export interface LandingControlsBarProps {
   onUndo: () => void;
   onRedo: () => void;
   onCreateTab: () => void;
+  onInvite?: () => void;
   currentTheme: { id: string; colors: { accent: { primary: string } }; description?: string } | null;
   onThemeChange: (themeId: string) => void;
   showAdvancedUI: boolean;
@@ -70,6 +72,7 @@ export const LandingControlsBar: React.FC<LandingControlsBarProps> = ({
   onUndo,
   onRedo,
   onCreateTab,
+  onInvite,
   currentTheme,
   onThemeChange,
   showAdvancedUI,
@@ -416,6 +419,18 @@ export const LandingControlsBar: React.FC<LandingControlsBarProps> = ({
         >
           <Plus size={16} />
         </button>
+
+        {/* Invite button */}
+        {onInvite && (
+          <button
+            onClick={onInvite}
+            style={styles.iconButton}
+            aria-label="Invite collaborators"
+            title="Invite"
+          >
+            <UserPlus size={16} />
+          </button>
+        )}
 
         {/* Mode toggle */}
         <div style={styles.modeToggle} className="sn-mode-toggle">

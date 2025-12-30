@@ -100,12 +100,13 @@ export function CanvasEntityWrapper({
       zIndex: entity.zIndex,
       opacity: entity.visible ? entity.opacity : 0.3,
       pointerEvents: entity.locked ? 'none' : 'auto',
-      outline: isSelected
-        ? '2px solid var(--sn-accent-primary)'
+      // Use box-shadow instead of outline for selection
+      // (outline is NOT clipped by overflow:hidden, but box-shadow IS)
+      boxShadow: isSelected
+        ? '0 0 0 2px var(--sn-accent-primary), 0 0 0 6px rgba(var(--sn-accent-primary-rgb), 0.2)'
         : isHovered
-          ? '1px solid var(--sn-accent-primary-50)'
+          ? '0 0 0 1px var(--sn-accent-primary-50)'
           : 'none',
-      outlineOffset: 2,
       cursor: entity.locked ? 'not-allowed' : 'move',
     };
   }, [entity, isSelected, isHovered]);

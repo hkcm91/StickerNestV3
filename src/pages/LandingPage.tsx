@@ -46,6 +46,7 @@ import {
 import type { CanvasVisibility, CanvasShareSettings } from '../types/domain';
 import { generateShareUrl } from '../router/AppRouter';
 import { WidgetDocker, useDockerState } from '../components/WidgetDocker';
+import { InviteDialog } from '../components/permissions';
 import { haptic } from '../utils/haptics';
 import { useCanvasManager } from '../services/canvasManager';
 import { useCanvasStore } from '../state/useCanvasStore';
@@ -151,6 +152,7 @@ const LandingPage: React.FC = () => {
 
   // Create tab dialog state
   const [isCreateTabDialogOpen, setIsCreateTabDialogOpen] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
 
   const hasParallaxBackground = currentTheme?.appBackground?.type === 'parallax';
   const accentColor = currentTheme?.colors?.accent?.primary || '#8b5cf6';
@@ -717,6 +719,7 @@ const LandingPage: React.FC = () => {
           onUndo={handleUndo}
           onRedo={handleRedo}
           onCreateTab={() => setIsCreateTabDialogOpen(true)}
+          onInvite={() => setShowInviteDialog(true)}
           currentTheme={currentTheme}
           onThemeChange={setTheme}
           showAdvancedUI={showAdvancedUI}
@@ -837,6 +840,7 @@ const LandingPage: React.FC = () => {
       </FullscreenPreview>
 
       <CreateTabDialog isOpen={isCreateTabDialogOpen} onClose={() => setIsCreateTabDialogOpen(false)} accentColor={accentColor} />
+      <InviteDialog canvasId={activeCanvasId} isOpen={showInviteDialog} onClose={() => setShowInviteDialog(false)} canInvite={true} />
 
       {tabs.map((tab) => (
         <TabContainerWrapper

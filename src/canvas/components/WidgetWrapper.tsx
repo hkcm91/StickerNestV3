@@ -66,6 +66,7 @@ export const WidgetWrapper = memo(function WidgetWrapper({
   const scaleX = contentSize.width > 0 ? widget.width / contentSize.width : 1;
   const scaleY = contentSize.height > 0 ? widget.height / contentSize.height : 1;
   const uniformScale = Math.min(scaleX, scaleY);
+  // Calculate centering offsets for letterboxing
   const scaledWidth = contentSize.width * uniformScale;
   const scaledHeight = contentSize.height * uniformScale;
   const offsetX = (widget.width - scaledWidth) / 2;
@@ -261,27 +262,20 @@ export const WidgetWrapper = memo(function WidgetWrapper({
   const showHoverState = isHovered && isEditMode && !isSelected && !widget.locked;
   const showSelectedState = isSelected && isEditMode;
 
-  // Styles - enhanced for VR controllers
-  const getOutlineStyle = (): string => {
-    if (showSelectedState) {
-      return hasVRController ? `3px solid ${accentColor}` : `2px solid ${accentColor}`;
-    }
-    if (showHoverState) {
-      return hasVRController ? `3px solid ${accentColor}88` : `2px solid ${accentColor}66`;
-    }
-    return 'none';
-  };
-
+  // Styles - use box-shadow instead of outline for selection (clips properly)
+  // Enhanced for VR controllers with thicker borders and glow effects
   const getBoxShadow = (): string | undefined => {
     if (showSelectedState) {
+      // Selection border + glow + drop shadow (VR gets thicker/glowier)
       return hasVRController
-        ? `0 0 0 6px ${accentColor}33, 0 0 20px ${accentColor}40, 0 4px 16px rgba(0,0,0,0.3)`
-        : `0 0 0 4px ${accentColor}22, 0 4px 12px rgba(0,0,0,0.2)`;
+        ? `0 0 0 3px ${accentColor}, 0 0 0 8px ${accentColor}33, 0 0 20px ${accentColor}40, 0 4px 16px rgba(0,0,0,0.3)`
+        : `0 0 0 2px ${accentColor}, 0 0 0 6px ${accentColor}22, 0 4px 12px rgba(0,0,0,0.2)`;
     }
     if (showHoverState) {
+      // Hover border + drop shadow
       return hasVRController
-        ? `0 0 0 4px ${accentColor}22, 0 0 12px ${accentColor}30, 0 4px 12px rgba(0,0,0,0.2)`
-        : `0 2px 8px rgba(0,0,0,0.15)`;
+        ? `0 0 0 3px ${accentColor}88, 0 0 0 6px ${accentColor}22, 0 0 12px ${accentColor}30, 0 4px 12px rgba(0,0,0,0.2)`
+        : `0 0 0 2px ${accentColor}66, 0 2px 8px rgba(0,0,0,0.15)`;
     }
     return undefined;
   };
@@ -304,12 +298,10 @@ export const WidgetWrapper = memo(function WidgetWrapper({
         ].filter(Boolean).join(' ') || undefined,
         zIndex: isSelected ? (widget.zIndex || 0) + 1000 : widget.zIndex || 0,
         opacity: widget.opacity ?? 1,
-        outline: getOutlineStyle(),
-        outlineOffset: 2,
         boxShadow: getBoxShadow(),
         borderRadius: 8,
         cursor: isDragging ? 'grabbing' : isResizing ? 'nwse-resize' : isEditMode && !widget.locked ? 'grab' : 'default',
-        transition: isDragging || isResizing ? 'none' : 'outline 0.15s ease, box-shadow 0.15s ease',
+        transition: isDragging || isResizing ? 'none' : 'box-shadow 0.15s ease',
         pointerEvents: 'auto',
         touchAction: 'none',
       }}

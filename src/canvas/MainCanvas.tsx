@@ -276,6 +276,7 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     autoSaveInterval,
     onWidgetAdd,
     onWidgetRemove,
+    eventBus,
   });
 
   // Sync widgets with hook state

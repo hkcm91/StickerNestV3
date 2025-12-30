@@ -67,7 +67,6 @@ const NAV_GROUPS: NavGroup[] = [
     {
         label: 'Create',
         items: [
-            { id: 'canvas', label: 'Canvas Editor', icon: 'edit', description: 'Design your canvas' },
             { id: 'library', label: 'Widget Library', icon: 'grid', description: 'Browse widgets' },
         ],
     },
@@ -81,7 +80,7 @@ const NAV_GROUPS: NavGroup[] = [
     {
         label: 'Browse',
         items: [
-            { id: 'gallery', label: 'My Canvases', icon: 'layout', description: 'Your canvas gallery', route: '/gallery' },
+            { id: 'gallery', label: 'My Canvases', icon: 'layout', description: 'Your canvas gallery', route: '/profile' },
             { id: 'explore', label: 'Discover', icon: 'globe', description: 'Discover canvases', route: '/explore' },
             { id: 'favorites' as AppTab, label: 'Saved', icon: 'bookmark', description: 'Saved canvases', route: '/favorites' },
         ],

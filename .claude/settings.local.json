@@ -76,7 +76,8 @@
       "Bash(xargs:*)",
       "Skill(exposing-apis-to-widgets)",
       "Bash(timeout 30 npm run build:*)",
-      "Bash(timeout 60 npm run build)"
+      "Bash(timeout 60 npm run build)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
