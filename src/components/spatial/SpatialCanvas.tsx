@@ -4,9 +4,14 @@
  * The WebGL/Three.js renderer for VR and AR modes.
  * Runs in parallel with the DOM renderer (CanvasRenderer).
  * When spatial mode is 'vr' or 'ar', this component handles all rendering.
+ *
+ * IMPORTANT: The Canvas and XR components must ALWAYS be mounted for XR sessions
+ * to work. The `active` prop controls visibility, NOT mounting. This is because
+ * @react-three/xr requires the <XR> component to be in the React tree before
+ * xrStore.enterVR() or xrStore.enterAR() can establish a WebXR session.
  */
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { XR, createXRStore, XROrigin } from '@react-three/xr';
 import { Environment, OrbitControls, Grid } from '@react-three/drei';
@@ -123,7 +128,11 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   const setActiveMode = useSpatialModeStore((s) => s.setActiveMode);
   const setSessionState = useSpatialModeStore((s) => s.setSessionState);
   const setCapabilities = useSpatialModeStore((s) => s.setCapabilities);
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
   const spatialMode = useActiveSpatialMode();
+
+  // Track if we've mounted the Canvas (for XR readiness)
+  const [canvasReady, setCanvasReady] = useState(false);
 
   // Check XR capabilities on mount
   useEffect(() => {
@@ -148,8 +157,20 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
     checkCapabilities();
   }, [setCapabilities]);
 
-  // Don't render if not active
-  if (!active) return null;
+  // Determine if the 3D canvas should be visible
+  // The Canvas/XR MUST always be mounted, but visibility can be controlled
+  // Canvas is visible when:
+  // 1. `active` prop is true (parent wants it visible), OR
+  // 2. An XR session is active or being requested (need to show VR/AR content)
+  const isXRActive = sessionState === 'active' || sessionState === 'requesting';
+  const shouldShowCanvas = active || isXRActive;
+
+  // IMPORTANT: We ALWAYS render the Canvas and XR components.
+  // This is required because @react-three/xr needs the <XR> component
+  // to be mounted in the React tree before xrStore.enterVR()/enterAR()
+  // can successfully request a WebXR session.
+  //
+  // The `shouldShowCanvas` flag controls VISIBILITY (via CSS), not MOUNTING.
 
   return (
     <div
@@ -160,8 +181,24 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
         left: 0,
         width: '100%',
         height: '100%',
+        // Control visibility via CSS - canvas is always mounted but may be hidden
+        // When hidden: positioned off-screen and pointer-events disabled
+        // This allows the XR infrastructure to remain active while not visible
+        ...(shouldShowCanvas
+          ? {}
+          : {
+              opacity: 0,
+              pointerEvents: 'none',
+              // Use a small size when hidden to minimize GPU overhead
+              width: '1px',
+              height: '1px',
+              overflow: 'hidden',
+            }),
         ...style,
       }}
+      data-spatial-canvas="true"
+      data-canvas-visible={shouldShowCanvas}
+      data-xr-ready={canvasReady}
     >
       <Canvas
         gl={{
@@ -175,10 +212,16 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           near: 0.1,
           far: 1000,
         }}
+        onCreated={() => {
+          // Mark canvas as ready for XR sessions
+          setCanvasReady(true);
+          console.log('[SpatialCanvas] Canvas created and ready for XR');
+        }}
       >
         <XR
           store={xrStore}
           onSessionStart={() => {
+            console.log('[SpatialCanvas] XR session started');
             setSessionState('active');
             // Detect mode from session type
             const session = xrStore.getState().session;
@@ -189,6 +232,7 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
             }
           }}
           onSessionEnd={() => {
+            console.log('[SpatialCanvas] XR session ended');
             setSessionState('none');
             setActiveMode('desktop');
           }}
@@ -229,8 +273,8 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
         </XR>
       </Canvas>
 
-      {/* XR Entry Buttons (DOM overlay) */}
-      <XREntryButtons showVR showAR />
+      {/* XR Entry Buttons (DOM overlay) - only show when canvas is visible */}
+      {shouldShowCanvas && <XREntryButtons showVR showAR />}
     </div>
   );
 }

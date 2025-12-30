@@ -6,7 +6,7 @@
  * Works on both desktop (with WebXR Emulator) and mobile (with ARCore/ARKit).
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   useSpatialModeStore,
   useActiveSpatialMode,
@@ -15,6 +15,44 @@ import {
   useSpatialError,
 } from '../../state/useSpatialModeStore';
 import { xrStore } from './SpatialCanvas';
+
+// ============================================================================
+// XR Entry Helpers
+// ============================================================================
+
+/**
+ * Attempt to enter XR mode with retry logic.
+ * Sometimes the first attempt fails if the XR context isn't fully ready.
+ */
+async function enterXRWithRetry(
+  mode: 'vr' | 'ar',
+  maxRetries = 2
+): Promise<void> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (mode === 'vr') {
+        await xrStore.enterVR();
+      } else {
+        await xrStore.enterAR();
+      }
+      console.log(`[XREntryButtons] Successfully entered ${mode.toUpperCase()} mode`);
+      return;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      console.warn(`[XREntryButtons] Attempt ${attempt + 1} to enter ${mode} failed:`, e);
+
+      if (attempt < maxRetries) {
+        // Wait before retrying, with exponential backoff
+        const delay = 200 * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to enter ${mode} after ${maxRetries + 1} attempts`);
+}
 
 // ============================================================================
 // Styles
@@ -158,32 +196,38 @@ export function XREntryButtons({
   }, [setCapabilities]);
 
   // Handle entering VR
-  const handleEnterVR = async () => {
+  const handleEnterVR = useCallback(async () => {
     if (isLoading || !capabilities.vrSupported) return;
 
     try {
       setSessionState('requesting');
       setError(null);
-      await xrStore.enterVR();
+      // Use retry logic in case XR context needs more time
+      await enterXRWithRetry('vr', 2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enter VR');
+      const message = err instanceof Error ? err.message : 'Failed to enter VR';
+      console.error('[XREntryButtons] VR entry failed:', message);
+      setError(message);
       setSessionState('error');
     }
-  };
+  }, [isLoading, capabilities.vrSupported, setSessionState, setError]);
 
   // Handle entering AR
-  const handleEnterAR = async () => {
+  const handleEnterAR = useCallback(async () => {
     if (isLoading || !capabilities.arSupported) return;
 
     try {
       setSessionState('requesting');
       setError(null);
-      await xrStore.enterAR();
+      // Use retry logic in case XR context needs more time
+      await enterXRWithRetry('ar', 2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enter AR');
+      const message = err instanceof Error ? err.message : 'Failed to enter AR';
+      console.error('[XREntryButtons] AR entry failed:', message);
+      setError(message);
       setSessionState('error');
     }
-  };
+  }, [isLoading, capabilities.arSupported, setSessionState, setError]);
 
   // Handle exiting XR
   const handleExit = () => {
