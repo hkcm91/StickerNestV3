@@ -51,6 +51,8 @@ import { useCanvasManager } from '../services/canvasManager';
 import { useCanvasStore } from '../state/useCanvasStore';
 import type { WidgetManifest } from '../types/manifest';
 import type { WidgetInstance, StickerInstance } from '../types/domain';
+import { SpatialCanvas } from '../components/spatial';
+import { useActiveSpatialMode } from '../state/useSpatialModeStore';
 
 // =============================================================================
 // Constants
@@ -67,6 +69,8 @@ const LandingPage: React.FC = () => {
   const { canvasId: urlCanvasId } = useParams<{ canvasId?: string }>();
   const { isMobile } = useViewport();
   const { user } = useAuth();
+  const spatialMode = useActiveSpatialMode();
+  const isDesktopMode = spatialMode === 'desktop';
 
   // Canvas manager
   const {
@@ -763,6 +767,9 @@ const LandingPage: React.FC = () => {
           </MainCanvas>
 
           {showNavHint && !isMobile && <NavigationHint mode={mode} accentColor={accentColor} onDismiss={() => setShowNavHint(false)} />}
+
+          {/* WebGL/XR Renderer for VR/AR modes */}
+          <SpatialCanvas active={!isDesktopMode} />
         </div>
 
         {isMobile && (
