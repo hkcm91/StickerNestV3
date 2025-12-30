@@ -44,6 +44,8 @@ import { useCollaboration } from '../hooks/useCollaboration';
 import { CollaborationService } from '../services/CollaborationService';
 import { CollaboratorManager, InviteDialog } from '../components/permissions';
 import { CanvasPermissionService, type PermissionCheckResult, type CollabRole } from '../services/CanvasPermissionService';
+import { SpatialCanvas } from '../components/spatial';
+import { useActiveSpatialMode } from '../state/useSpatialModeStore';
 import styles from './CanvasPage.module.css';
 
 // =============================================================================
@@ -96,6 +98,10 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
 
   // Responsive hooks
   const { isMobile } = useViewport();
+
+  // Spatial mode (VR/AR/Desktop)
+  const spatialMode = useActiveSpatialMode();
+  const isDesktopMode = spatialMode === 'desktop';
 
   // Determine active canvas ID
   const activeCanvasId = urlCanvasId || currentCanvasId || 'canvas-1';
@@ -917,14 +923,20 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
         className={styles.canvasArea}
         onMouseMove={handleCanvasMouseMove}
       >
-        <CanvasRenderer
-          runtime={runtime}
-          canvasRuntime={canvasRuntime}
-          mode={storeMode}
-          canvasWidth={currentCanvas?.width || 1920}
-          canvasHeight={currentCanvas?.height || 1080}
-          settings={canvasSettings}
-        />
+        {/* DOM Renderer - visible only in desktop mode */}
+        {isDesktopMode && (
+          <CanvasRenderer
+            runtime={runtime}
+            canvasRuntime={canvasRuntime}
+            mode={storeMode}
+            canvasWidth={currentCanvas?.width || 1920}
+            canvasHeight={currentCanvas?.height || 1080}
+            settings={canvasSettings}
+          />
+        )}
+
+        {/* WebGL/XR Renderer - visible in VR/AR modes */}
+        <SpatialCanvas active={!isDesktopMode} />
 
         {/* Collaboration Overlays - Remote cursors and selections */}
         {isCollabConnected && (
