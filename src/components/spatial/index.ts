@@ -10,3 +10,6 @@ export { SpatialScene } from './SpatialScene';
 export { ARHitTest, ARPlacedObject } from './ARHitTest';
 export { VRTeleport, TeleportBoundary } from './VRTeleport';
 export { XREntryButtons } from './XREntryButtons';
+
+// XR hand tracking and floating UI
+export * from './xr';

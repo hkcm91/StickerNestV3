@@ -13,6 +13,7 @@ import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
 import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
+import { XRToolbar, type XRToolType } from './xr';
 
 // ============================================================================
 // Placeholder Canvas Panel
@@ -190,6 +191,7 @@ function PlacedMarkerObject({ position }: { position: [number, number, number] }
 export function SpatialScene() {
   const spatialMode = useActiveSpatialMode();
   const [placedObjects, setPlacedObjects] = useState<PlacedMarker[]>([]);
+  const [activeTool, setActiveTool] = useState<XRToolType>('select');
 
   // Handle AR object placement
   const handleARPlace = useCallback(
@@ -209,8 +211,46 @@ export function SpatialScene() {
     console.log('Teleported to:', position);
   }, []);
 
+  // Handle XR toolbar actions
+  const handleToolChange = useCallback((tool: XRToolType) => {
+    setActiveTool(tool);
+    console.log('XR Tool changed:', tool);
+  }, []);
+
+  const handleAddWidget = useCallback(() => {
+    console.log('Add widget requested from XR toolbar');
+    // TODO: Open widget picker in 3D space
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    console.log('Undo requested from XR toolbar');
+    // TODO: Connect to undo system
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    console.log('Redo requested from XR toolbar');
+    // TODO: Connect to redo system
+  }, []);
+
+  const handleSettings = useCallback(() => {
+    console.log('Settings requested from XR toolbar');
+    // TODO: Open settings panel in 3D space
+  }, []);
+
   return (
     <group>
+      {/* XR Toolbar (spawns from palm gesture in VR mode) */}
+      {spatialMode === 'vr' && (
+        <XRToolbar
+          activeTool={activeTool}
+          onToolChange={handleToolChange}
+          onAddWidget={handleAddWidget}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onSettings={handleSettings}
+        />
+      )}
+
       {/* VR Teleportation (only in VR mode) */}
       <VRTeleport
         initialPosition={[0, 0, 0]}
