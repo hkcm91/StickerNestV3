@@ -43,6 +43,34 @@ export interface XRCapabilities {
   lastChecked: number;
 }
 
+/**
+ * XR reference space types for different experiences
+ */
+export type XRReferenceSpaceType =
+  | 'viewer'        // Head-locked UI, no movement tracking
+  | 'local'         // Seated experiences, limited tracking
+  | 'local-floor'   // Standing experiences, floor at y=0
+  | 'bounded-floor' // Room-scale with guardian boundaries (Meta Quest)
+  | 'unbounded';    // Large area tracking without boundaries
+
+/**
+ * Room-scale settings for VR/AR
+ */
+export interface RoomScaleSettings {
+  /** Active reference space type */
+  referenceSpace: XRReferenceSpaceType;
+  /** Whether room boundaries are visible */
+  showBoundaries: boolean;
+  /** Room scale factor (1.0 = real-world scale) */
+  scale: number;
+  /** Whether to use Meta Quest room setup data */
+  useQuestRoomSetup: boolean;
+  /** Whether mesh detection is enabled (for room mapping) */
+  meshDetectionEnabled: boolean;
+  /** Whether plane detection is enabled (for AR surfaces) */
+  planeDetectionEnabled: boolean;
+}
+
 export interface SpatialModeState {
   /** Active spatial rendering mode */
   activeMode: SpatialMode;
@@ -58,6 +86,8 @@ export interface SpatialModeState {
   reducedMotion: boolean;
   /** Whether to show depth cues in desktop mode */
   depthCuesEnabled: boolean;
+  /** Room-scale settings */
+  roomScale: RoomScaleSettings;
 }
 
 export interface SpatialModeActions {
@@ -81,6 +111,10 @@ export interface SpatialModeActions {
   setReducedMotion: (enabled: boolean) => void;
   /** Toggle depth cues in desktop mode */
   toggleDepthCues: () => void;
+  /** Update room-scale settings */
+  setRoomScaleSettings: (settings: Partial<RoomScaleSettings>) => void;
+  /** Set reference space type */
+  setReferenceSpace: (type: XRReferenceSpaceType) => void;
   /** Reset to default state */
   reset: () => void;
 }
@@ -96,6 +130,15 @@ const DEFAULT_CAPABILITIES: XRCapabilities = {
   lastChecked: 0,
 };
 
+const DEFAULT_ROOM_SCALE: RoomScaleSettings = {
+  referenceSpace: 'local-floor',
+  showBoundaries: true,
+  scale: 1.0,
+  useQuestRoomSetup: true,
+  meshDetectionEnabled: true,
+  planeDetectionEnabled: true,
+};
+
 const DEFAULT_STATE: SpatialModeState = {
   activeMode: 'desktop',
   targetMode: null,
@@ -104,6 +147,7 @@ const DEFAULT_STATE: SpatialModeState = {
   errorMessage: null,
   reducedMotion: false,
   depthCuesEnabled: true,
+  roomScale: DEFAULT_ROOM_SCALE,
 };
 
 // ============================================================================
@@ -219,6 +263,18 @@ export const useSpatialModeStore = create<SpatialModeStore>()(
         set((state) => ({ depthCuesEnabled: !state.depthCuesEnabled }));
       },
 
+      setRoomScaleSettings: (settings: Partial<RoomScaleSettings>) => {
+        set((state) => ({
+          roomScale: { ...state.roomScale, ...settings },
+        }));
+      },
+
+      setReferenceSpace: (type: XRReferenceSpaceType) => {
+        set((state) => ({
+          roomScale: { ...state.roomScale, referenceSpace: type },
+        }));
+      },
+
       reset: () => set(DEFAULT_STATE),
     }),
     {
@@ -314,6 +370,27 @@ export function useIsXRSessionActive(): boolean {
   return useSpatialModeStore((state) =>
     state.sessionState === 'requesting' || state.sessionState === 'active'
   );
+}
+
+/**
+ * Get room-scale settings
+ */
+export function useRoomScaleSettings(): RoomScaleSettings {
+  return useSpatialModeStore((state) => state.roomScale);
+}
+
+/**
+ * Get current reference space type
+ */
+export function useReferenceSpace(): XRReferenceSpaceType {
+  return useSpatialModeStore((state) => state.roomScale.referenceSpace);
+}
+
+/**
+ * Check if room boundaries should be shown
+ */
+export function useShowRoomBoundaries(): boolean {
+  return useSpatialModeStore((state) => state.roomScale.showBoundaries);
 }
 
 export default useSpatialModeStore;
