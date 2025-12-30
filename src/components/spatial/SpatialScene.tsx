@@ -6,10 +6,14 @@
  * Includes AR hit testing for mobile and VR teleportation for headsets.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Text } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
+import {
+  useSpatialStickerStore,
+  useDetectedQRCodes,
+} from '../../state/useSpatialStickerStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
 import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
@@ -20,6 +24,8 @@ import {
   OcclusionLayer,
   RoomSetupGuide,
 } from './xr';
+import { SpatialStickerManager } from './stickers';
+import { SpatialSticker } from '../../types/spatialEntity';
 
 // ============================================================================
 // Placeholder Canvas Panel
@@ -203,6 +209,31 @@ export function SpatialScene() {
   const [showRoomVisualization, setShowRoomVisualization] = useState(false);
   const [enableOcclusion, setEnableOcclusion] = useState(true);
 
+  // Spatial sticker state
+  const spatialStickers = useSpatialStickerStore((state) => state.getSpatialStickers());
+  const selectedStickerId = useSpatialStickerStore((state) => state.selectedSpatialStickerId);
+  const selectSticker = useSpatialStickerStore((state) => state.selectSpatialSticker);
+  const persistentAnchors = useSpatialStickerStore((state) => state.persistentAnchors);
+  const showDebugInfo = useSpatialStickerStore((state) => state.showDebugInfo);
+  const detectedQRCodes = useDetectedQRCodes();
+
+  // Convert Maps to the format expected by SpatialStickerManager
+  const detectedQRCodesMap = useMemo(() => {
+    const map = new Map<string, { position: [number, number, number]; rotation: [number, number, number, number] }>();
+    detectedQRCodes.forEach((code, content) => {
+      map.set(content, { position: code.position, rotation: code.rotation });
+    });
+    return map;
+  }, [detectedQRCodes]);
+
+  const persistentAnchorsMap = useMemo(() => {
+    const map = new Map<string, { position: [number, number, number]; rotation: [number, number, number, number] }>();
+    persistentAnchors.forEach((anchor, handle) => {
+      map.set(handle, { position: anchor.position, rotation: anchor.rotation });
+    });
+    return map;
+  }, [persistentAnchors]);
+
   // Handle AR object placement
   const handleARPlace = useCallback(
     (position: [number, number, number], rotation: [number, number, number, number]) => {
@@ -246,6 +277,36 @@ export function SpatialScene() {
     console.log('Settings requested from XR toolbar');
     // Toggle room visualization for now (will be full settings panel later)
     setShowRoomVisualization((prev) => !prev);
+  }, []);
+
+  // Handle spatial sticker click
+  const handleStickerClick = useCallback((sticker: SpatialSticker) => {
+    selectSticker(sticker.id);
+    console.log('Spatial sticker clicked:', sticker.name);
+  }, [selectSticker]);
+
+  // Handle widget launch from sticker
+  const handleLaunchWidget = useCallback((widgetDefId: string, sticker: SpatialSticker) => {
+    console.log('Launch widget:', widgetDefId, 'from sticker:', sticker.name);
+    // TODO: Connect to widget spawning system
+  }, []);
+
+  // Handle widget toggle from sticker
+  const handleToggleWidget = useCallback((widgetInstanceId: string, sticker: SpatialSticker) => {
+    console.log('Toggle widget:', widgetInstanceId, 'from sticker:', sticker.name);
+    // TODO: Connect to widget visibility system
+  }, []);
+
+  // Handle event emission from sticker
+  const handleEmitEvent = useCallback((event: string, sticker: SpatialSticker) => {
+    console.log('Emit event:', event, 'from sticker:', sticker.name);
+    // TODO: Connect to EventBus
+  }, []);
+
+  // Handle pipeline execution from sticker
+  const handleRunPipeline = useCallback((pipelineId: string, sticker: SpatialSticker) => {
+    console.log('Run pipeline:', pipelineId, 'from sticker:', sticker.name);
+    // TODO: Connect to pipeline execution system
   }, []);
 
   return (
@@ -309,6 +370,22 @@ export function SpatialScene() {
             <PlacedMarkerObject position={[0, 0, 0]} />
           </ARPlacedObject>
         ))}
+      </group>
+
+      {/* Spatial Stickers (both VR and AR) */}
+      <group renderOrder={2}>
+        <SpatialStickerManager
+          stickers={spatialStickers}
+          selectedStickerId={selectedStickerId ?? undefined}
+          detectedQRCodes={detectedQRCodesMap}
+          persistentAnchors={persistentAnchorsMap}
+          onStickerClick={handleStickerClick}
+          onLaunchWidget={handleLaunchWidget}
+          onToggleWidget={handleToggleWidget}
+          onEmitEvent={handleEmitEvent}
+          onRunPipeline={handleRunPipeline}
+          debug={showDebugInfo}
+        />
       </group>
 
       {/* Main canvas panel at comfortable viewing distance (VR only) */}
