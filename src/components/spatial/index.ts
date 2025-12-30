@@ -7,3 +7,6 @@
 
 export { SpatialCanvas, xrStore, enterVR, enterAR, exitXR } from './SpatialCanvas';
 export { SpatialScene } from './SpatialScene';
+export { ARHitTest, ARPlacedObject } from './ARHitTest';
+export { VRTeleport, TeleportBoundary } from './VRTeleport';
+export { XREntryButtons } from './XREntryButtons';

@@ -6,12 +6,13 @@
  * When spatial mode is 'vr' or 'ar', this component handles all rendering.
  */
 
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { XR, createXRStore, XROrigin } from '@react-three/xr';
 import { Environment, OrbitControls, Grid } from '@react-three/drei';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { SpatialScene } from './SpatialScene';
+import { XREntryButtons } from './XREntryButtons';
 
 // ============================================================================
 // XR Store Configuration
@@ -227,6 +228,9 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           )}
         </XR>
       </Canvas>
+
+      {/* XR Entry Buttons (DOM overlay) */}
+      <XREntryButtons showVR showAR />
     </div>
   );
 }

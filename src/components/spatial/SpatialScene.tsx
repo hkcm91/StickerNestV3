@@ -3,14 +3,16 @@
  *
  * The 3D scene content for VR/AR modes.
  * This component renders widgets, entities, and canvases in 3D space.
- * Currently a placeholder that will be expanded to mirror CanvasRenderer content.
+ * Includes AR hit testing for mobile and VR teleportation for headsets.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Text } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
+import { ARHitTest, ARPlacedObject } from './ARHitTest';
+import { VRTeleport } from './VRTeleport';
 
 // ============================================================================
 // Placeholder Canvas Panel
@@ -141,21 +143,108 @@ function InteractiveBox({ position, color = '#8b5cf6' }: InteractiveBoxProps) {
 }
 
 // ============================================================================
+// Placed Object (for AR)
+// ============================================================================
+
+interface PlacedMarker {
+  id: string;
+  position: [number, number, number];
+  rotation: [number, number, number, number];
+}
+
+function PlacedMarkerObject({ position }: { position: [number, number, number] }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <group position={position}>
+      {/* Base cylinder */}
+      <mesh
+        position={[0, 0.025, 0]}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <cylinderGeometry args={[0.08, 0.08, 0.05, 32]} />
+        <meshStandardMaterial
+          color={hovered ? '#a78bfa' : '#8b5cf6'}
+          metalness={0.3}
+          roughness={0.4}
+        />
+      </mesh>
+      {/* Floating indicator */}
+      <mesh position={[0, 0.15, 0]}>
+        <sphereGeometry args={[0.03, 16, 16]} />
+        <meshStandardMaterial
+          color="#22c55e"
+          emissive="#22c55e"
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// ============================================================================
 // Main SpatialScene Component
 // ============================================================================
 
 export function SpatialScene() {
   const spatialMode = useActiveSpatialMode();
+  const [placedObjects, setPlacedObjects] = useState<PlacedMarker[]>([]);
+
+  // Handle AR object placement
+  const handleARPlace = useCallback(
+    (position: [number, number, number], rotation: [number, number, number, number]) => {
+      const newObject: PlacedMarker = {
+        id: `placed-${Date.now()}`,
+        position,
+        rotation,
+      };
+      setPlacedObjects((prev) => [...prev, newObject]);
+    },
+    []
+  );
+
+  // Handle VR teleportation
+  const handleTeleport = useCallback((position: [number, number, number]) => {
+    console.log('Teleported to:', position);
+  }, []);
 
   return (
     <group>
-      {/* Main canvas panel at comfortable viewing distance */}
-      <CanvasPanel3D />
+      {/* VR Teleportation (only in VR mode) */}
+      <VRTeleport
+        initialPosition={[0, 0, 0]}
+        floorSize={[20, 20]}
+        enabled={spatialMode === 'vr'}
+        onTeleport={handleTeleport}
+      />
 
-      {/* Demo interactive objects */}
-      <InteractiveBox position={[-1.5, 1, -2]} color="#ef4444" />
-      <InteractiveBox position={[1.5, 1, -2]} color="#3b82f6" />
-      <InteractiveBox position={[0, 0.5, -1.5]} color="#f59e0b" />
+      {/* AR Hit Test Indicator (only in AR mode) */}
+      <ARHitTest
+        enabled={spatialMode === 'ar'}
+        onPlace={handleARPlace}
+        indicatorColor="#8b5cf6"
+        indicatorSize={0.12}
+      />
+
+      {/* AR Placed Objects */}
+      {placedObjects.map((obj) => (
+        <ARPlacedObject key={obj.id} position={obj.position} rotation={obj.rotation}>
+          <PlacedMarkerObject position={[0, 0, 0]} />
+        </ARPlacedObject>
+      ))}
+
+      {/* Main canvas panel at comfortable viewing distance (VR only) */}
+      {spatialMode === 'vr' && <CanvasPanel3D />}
+
+      {/* Demo interactive objects (VR only, AR uses placed objects) */}
+      {spatialMode === 'vr' && (
+        <>
+          <InteractiveBox position={[-1.5, 1, -2]} color="#ef4444" />
+          <InteractiveBox position={[1.5, 1, -2]} color="#3b82f6" />
+          <InteractiveBox position={[0, 0.5, -1.5]} color="#f59e0b" />
+        </>
+      )}
 
       {/* Floating info panel */}
       <group position={[2.5, 1.8, -2]} rotation={[0, -0.3, 0]}>
@@ -187,7 +276,9 @@ export function SpatialScene() {
           maxWidth={1}
           textAlign="center"
         >
-          Click boxes to interact
+          {spatialMode === 'ar'
+            ? `${placedObjects.length} objects placed`
+            : 'Click boxes to interact'}
         </Text>
       </group>
     </group>
