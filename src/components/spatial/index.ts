@@ -13,3 +13,18 @@ export { XREntryButtons } from './XREntryButtons';
 
 // XR hand tracking and floating UI
 export * from './xr';
+
+// IWSDK integration (Meta Immersive Web SDK)
+export * from './iwsdk';
+
+// Spatial stickers
+export * from './stickers';
+
+// Spatial anchors
+export * from './anchors';
+
+// QR code detection and anchoring
+export * from './qr';
+
+// Mobile AR support (Chrome Android priority, Safari fallback)
+export * from './mobile';
