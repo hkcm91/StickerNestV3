@@ -451,6 +451,105 @@ export function createSurfaceAnchoredSticker(
 }
 
 // ============================================================================
+// Additional Factory Functions
+// ============================================================================
+
+/** Options for creating a primitive sticker */
+export interface CreatePrimitiveStickerOptions {
+  name: string;
+  primitiveType: 'plane' | 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus';
+  color?: string;
+  transform?: {
+    position?: { x: number; y: number; z: number };
+    rotation?: { x: number; y: number; z: number };
+    scale?: { x: number; y: number; z: number };
+  };
+  visibleIn?: { desktop: boolean; vr: boolean; ar: boolean };
+  clickBehavior?: SpatialSticker['clickBehavior'];
+  canvasId?: string;
+}
+
+/** Create a primitive sticker with detailed options */
+export function createPrimitiveSticker(options: CreatePrimitiveStickerOptions): SpatialSticker {
+  const {
+    name,
+    primitiveType,
+    color = '#8b5cf6',
+    transform,
+    visibleIn = { desktop: true, vr: true, ar: true },
+    clickBehavior = { type: 'none' },
+    canvasId = 'default',
+  } = options;
+
+  return createSpatialSticker({
+    canvasId,
+    name,
+    mediaType: '3d-primitive',
+    mediaSrc: primitiveType,
+    transform3D: {
+      position: transform?.position ?? DEFAULT_SPATIAL_POSITION,
+      rotation: transform?.rotation ?? DEFAULT_SPATIAL_ROTATION,
+      scale: transform?.scale ?? DEFAULT_SPATIAL_SCALE,
+    },
+    primitive3DConfig: {
+      primitiveType: primitiveType as 'cube' | 'sphere' | 'cylinder',
+      dimensions: { width: 1, height: 1, depth: 1 },
+      material: {
+        color,
+        metalness: 0.1,
+        roughness: 0.5,
+        opacity: 1,
+      },
+    },
+    visibleIn,
+    clickBehavior,
+  });
+}
+
+/** Options for creating an image sticker */
+export interface CreateImageStickerOptions {
+  name: string;
+  src: string;
+  transform?: {
+    position?: { x: number; y: number; z: number };
+    rotation?: { x: number; y: number; z: number };
+    scale?: { x: number; y: number; z: number };
+  };
+  visibleIn?: { desktop: boolean; vr: boolean; ar: boolean };
+  billboard?: boolean;
+  clickBehavior?: SpatialSticker['clickBehavior'];
+  canvasId?: string;
+}
+
+/** Create an image sticker with detailed options */
+export function createImageSticker(options: CreateImageStickerOptions): SpatialSticker {
+  const {
+    name,
+    src,
+    transform,
+    visibleIn = { desktop: true, vr: true, ar: true },
+    billboard = false,
+    clickBehavior = { type: 'none' },
+    canvasId = 'default',
+  } = options;
+
+  return createSpatialSticker({
+    canvasId,
+    name,
+    mediaType: 'image',
+    mediaSrc: src,
+    transform3D: {
+      position: transform?.position ?? DEFAULT_SPATIAL_POSITION,
+      rotation: transform?.rotation ?? DEFAULT_SPATIAL_ROTATION,
+      scale: transform?.scale ?? DEFAULT_SPATIAL_SCALE,
+    },
+    billboard3D: billboard,
+    visibleIn,
+    clickBehavior,
+  });
+}
+
+// ============================================================================
 // Type Guards
 // ============================================================================
 
