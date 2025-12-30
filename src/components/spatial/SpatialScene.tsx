@@ -210,7 +210,13 @@ export function SpatialScene() {
   const [enableOcclusion, setEnableOcclusion] = useState(true);
 
   // Spatial sticker state
-  const spatialStickers = useSpatialStickerStore((state) => state.getSpatialStickers());
+  // IMPORTANT: Don't call functions inside Zustand selectors - it creates new references every render!
+  // Access the raw Map and convert to array with useMemo for stable references
+  const spatialStickersMap = useSpatialStickerStore((state) => state.spatialStickers);
+  const spatialStickers = useMemo(
+    () => Array.from(spatialStickersMap.values()),
+    [spatialStickersMap]
+  );
   const selectedStickerId = useSpatialStickerStore((state) => state.selectedSpatialStickerId);
   const selectSticker = useSpatialStickerStore((state) => state.selectSpatialSticker);
   const persistentAnchors = useSpatialStickerStore((state) => state.persistentAnchors);
