@@ -7,11 +7,13 @@ import { DevToolbar } from './components/dev'
 import AppRouter from './router/AppRouter'
 import { initCommerceCanvas } from './utils/initCommerceCanvas'
 import { initStorefrontCanvas } from './utils/initStorefrontCanvas'
+import { initSpatialCanvas } from './utils/initSpatialCanvas'
 import './index.css'
 
-// Initialize commerce demo canvases for testing storefront widgets
+// Initialize demo canvases
 initCommerceCanvas();    // Individual commerce widgets with pipelines
 initStorefrontCanvas();  // All-in-one StorefrontLayoutWidget
+initSpatialCanvas();     // VR/AR spatial platform demo
 
 // Version marker for deployment verification
 const BUILD_VERSION = 'c24b0b3-' + new Date().toISOString().split('T')[0];
