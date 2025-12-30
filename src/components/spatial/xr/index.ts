@@ -1,7 +1,7 @@
 /**
  * StickerNest - XR Components
  *
- * WebXR hand tracking, gesture detection, and floating UI components.
+ * WebXR hand tracking, gesture detection, floating UI, and room mapping.
  * Device-agnostic implementations for VR/AR headsets and controllers.
  */
 
@@ -16,3 +16,13 @@ export type { FloatingPanelProps } from './FloatingPanel';
 // Toolbars
 export { XRToolbar } from './XRToolbar';
 export type { XRToolbarProps, XRToolType } from './XRToolbar';
+
+// Room mapping
+export { RoomVisualizer } from './RoomVisualizer';
+export type { RoomVisualizerProps, PlaneType } from './RoomVisualizer';
+
+export { OcclusionLayer, OcclusionDebug, ARSceneWithOcclusion } from './OcclusionLayer';
+export type { OcclusionLayerProps, ARSceneWithOcclusionProps } from './OcclusionLayer';
+
+export { RoomSetupGuide, RoomSetupHint } from './RoomSetupGuide';
+export type { RoomSetupGuideProps, RoomSetupHintProps } from './RoomSetupGuide';

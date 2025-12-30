@@ -13,7 +13,13 @@ import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
 import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
-import { XRToolbar, type XRToolType } from './xr';
+import {
+  XRToolbar,
+  type XRToolType,
+  RoomVisualizer,
+  OcclusionLayer,
+  RoomSetupGuide,
+} from './xr';
 
 // ============================================================================
 // Placeholder Canvas Panel
@@ -193,6 +199,10 @@ export function SpatialScene() {
   const [placedObjects, setPlacedObjects] = useState<PlacedMarker[]>([]);
   const [activeTool, setActiveTool] = useState<XRToolType>('select');
 
+  // Room mapping settings
+  const [showRoomVisualization, setShowRoomVisualization] = useState(false);
+  const [enableOcclusion, setEnableOcclusion] = useState(true);
+
   // Handle AR object placement
   const handleARPlace = useCallback(
     (position: [number, number, number], rotation: [number, number, number, number]) => {
@@ -234,7 +244,8 @@ export function SpatialScene() {
 
   const handleSettings = useCallback(() => {
     console.log('Settings requested from XR toolbar');
-    // TODO: Open settings panel in 3D space
+    // Toggle room visualization for now (will be full settings panel later)
+    setShowRoomVisualization((prev) => !prev);
   }, []);
 
   return (
@@ -259,6 +270,30 @@ export function SpatialScene() {
         onTeleport={handleTeleport}
       />
 
+      {/* AR Room Mapping - Occlusion Layer (renders first for proper depth) */}
+      {spatialMode === 'ar' && enableOcclusion && (
+        <OcclusionLayer renderOrder={0} />
+      )}
+
+      {/* AR Room Visualization (debug/preview) */}
+      {spatialMode === 'ar' && showRoomVisualization && (
+        <RoomVisualizer
+          showPlanes={true}
+          showMesh={true}
+          showLabels={true}
+          showStats={true}
+          planeOpacity={0.3}
+          meshOpacity={0.1}
+        />
+      )}
+
+      {/* AR Room Setup Guide (shown when no room data available) */}
+      {spatialMode === 'ar' && (
+        <RoomSetupGuide
+          onDismiss={() => console.log('Room setup guide dismissed')}
+        />
+      )}
+
       {/* AR Hit Test Indicator (only in AR mode) */}
       <ARHitTest
         enabled={spatialMode === 'ar'}
@@ -267,12 +302,14 @@ export function SpatialScene() {
         indicatorSize={0.12}
       />
 
-      {/* AR Placed Objects */}
-      {placedObjects.map((obj) => (
-        <ARPlacedObject key={obj.id} position={obj.position} rotation={obj.rotation}>
-          <PlacedMarkerObject position={[0, 0, 0]} />
-        </ARPlacedObject>
-      ))}
+      {/* AR Placed Objects (render after occlusion for proper depth sorting) */}
+      <group renderOrder={1}>
+        {placedObjects.map((obj) => (
+          <ARPlacedObject key={obj.id} position={obj.position} rotation={obj.rotation}>
+            <PlacedMarkerObject position={[0, 0, 0]} />
+          </ARPlacedObject>
+        ))}
+      </group>
 
       {/* Main canvas panel at comfortable viewing distance (VR only) */}
       {spatialMode === 'vr' && <CanvasPanel3D />}
