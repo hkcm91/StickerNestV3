@@ -9,10 +9,15 @@
  * to work. The `active` prop controls visibility, NOT mounting. This is because
  * @react-three/xr requires the <XR> component to be in the React tree before
  * xrStore.enterVR() or xrStore.enterAR() can establish a WebXR session.
+ *
+ * However, to avoid interference with 2D modes:
+ * - Scene content only renders when active
+ * - Frame loop is paused when hidden (frameloop="demand")
+ * - No interactive elements when hidden
  */
 
 import React, { Suspense, useEffect, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { XR, createXRStore, XROrigin } from '@react-three/xr';
 import { Environment, OrbitControls, Grid } from '@react-three/drei';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
@@ -49,6 +54,27 @@ export const xrStore = createXRStore({
   hitTest: true,
   anchors: true,
 });
+
+// ============================================================================
+// Frame Loop Controller
+// ============================================================================
+
+/**
+ * Controls the render loop based on visibility.
+ * When hidden, we use "demand" mode to stop continuous rendering.
+ * When visible or in XR, we use "always" for smooth animation.
+ */
+function FrameLoopController({ shouldRender }: { shouldRender: boolean }) {
+  const { set } = useThree();
+
+  useEffect(() => {
+    // When hidden, pause the frame loop to save resources
+    // When visible, ensure continuous rendering
+    set({ frameloop: shouldRender ? 'always' : 'never' });
+  }, [shouldRender, set]);
+
+  return null;
+}
 
 // ============================================================================
 // Loading Fallback
@@ -209,12 +235,17 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           near: 0.1,
           far: 1000,
         }}
+        // Start with frame loop paused - FrameLoopController will enable when needed
+        frameloop="never"
         onCreated={() => {
           // Mark canvas as ready for XR sessions
           setCanvasReady(true);
           console.log('[SpatialCanvas] Canvas created and ready for XR');
         }}
       >
+        {/* Frame loop controller - pauses rendering when hidden */}
+        <FrameLoopController shouldRender={shouldShowCanvas} />
+
         <XR
           store={xrStore}
           onSessionStart={() => {
@@ -234,38 +265,45 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
             setActiveMode('desktop');
           }}
         >
-          {/* Lighting */}
-          <ambientLight intensity={0.4} />
-          <directionalLight
-            position={[5, 10, 5]}
-            intensity={0.8}
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-          />
+          {/* Only render scene content when the canvas should be visible */}
+          {/* This prevents interference with 2D modes and saves resources */}
+          {shouldShowCanvas && (
+            <>
+              {/* Lighting */}
+              <ambientLight intensity={0.4} />
+              <directionalLight
+                position={[5, 10, 5]}
+                intensity={0.8}
+                castShadow
+                shadow-mapSize={[2048, 2048]}
+              />
 
-          {/* User origin (feet position) */}
-          <XROrigin />
+              {/* User origin (feet position) */}
+              <XROrigin />
 
-          {/* Environment (VR only) */}
-          <VREnvironment />
+              {/* Environment (VR only) */}
+              <VREnvironment />
 
-          {/* Ground reference */}
-          <GroundPlane />
+              {/* Ground reference */}
+              <GroundPlane />
 
-          {/* Main scene content */}
-          <Suspense fallback={<LoadingFallback />}>
-            <SpatialScene />
-          </Suspense>
+              {/* Main scene content */}
+              <Suspense fallback={<LoadingFallback />}>
+                <SpatialScene />
+              </Suspense>
 
-          {/* Desktop controls (when not in XR) */}
-          {spatialMode === 'desktop' && (
-            <OrbitControls
-              enablePan
-              enableZoom
-              enableRotate
-              target={[0, 1.5, 0]}
-              maxPolarAngle={Math.PI * 0.85}
-            />
+              {/* Desktop controls - ONLY when canvas is visible AND in desktop spatial mode */}
+              {/* This prevents OrbitControls from capturing mouse events when hidden */}
+              {spatialMode === 'desktop' && (
+                <OrbitControls
+                  enablePan
+                  enableZoom
+                  enableRotate
+                  target={[0, 1.5, 0]}
+                  maxPolarAngle={Math.PI * 0.85}
+                />
+              )}
+            </>
           )}
         </XR>
       </Canvas>
