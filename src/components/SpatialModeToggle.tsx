@@ -26,6 +26,70 @@ async function getXRStore() {
   return xrStore;
 }
 
+/**
+ * Wait for the SpatialCanvas to be ready before attempting XR entry.
+ * The canvas must be mounted and have initialized the XR context.
+ */
+async function waitForCanvasReady(maxWaitMs = 3000): Promise<boolean> {
+  const startTime = Date.now();
+  const checkInterval = 100;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    // Check if the spatial canvas element exists and reports ready
+    const canvas = document.querySelector('[data-spatial-canvas="true"]');
+    if (canvas && canvas.getAttribute('data-xr-ready') === 'true') {
+      return true;
+    }
+
+    // Also check if there's a WebGL canvas inside the spatial container
+    if (canvas && canvas.querySelector('canvas')) {
+      // Small additional delay to ensure XR context is initialized
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, checkInterval));
+  }
+
+  console.warn('[SpatialModeToggle] Timed out waiting for canvas to be ready');
+  return false;
+}
+
+/**
+ * Attempt to enter XR mode with retry logic.
+ * Sometimes the first attempt fails if the XR context isn't fully ready.
+ */
+async function enterXRWithRetry(
+  store: { enterVR: () => Promise<void>; enterAR: () => Promise<void> },
+  mode: 'vr' | 'ar',
+  maxRetries = 2
+): Promise<void> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (mode === 'vr') {
+        await store.enterVR();
+      } else {
+        await store.enterAR();
+      }
+      console.log(`[SpatialModeToggle] Successfully entered ${mode.toUpperCase()} mode`);
+      return;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      console.warn(`[SpatialModeToggle] Attempt ${attempt + 1} to enter ${mode} failed:`, e);
+
+      if (attempt < maxRetries) {
+        // Wait before retrying, with exponential backoff
+        const delay = 200 * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to enter ${mode} after ${maxRetries + 1} attempts`);
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -163,15 +227,22 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
 
       // For VR/AR modes, actually start the WebXR session
       if (mode === 'vr' || mode === 'ar') {
+        // Update state to show we're requesting the mode
+        requestMode(mode);
+
+        // Wait for the SpatialCanvas to be ready
+        const canvasReady = await waitForCanvasReady(3000);
+        if (!canvasReady) {
+          console.error('[SpatialModeToggle] Canvas not ready, cannot enter XR');
+          requestMode('desktop');
+          return;
+        }
+
         const store = await getXRStore();
         if (store) {
           try {
-            requestMode(mode); // Update state first
-            if (mode === 'vr') {
-              await store.enterVR();
-            } else {
-              await store.enterAR();
-            }
+            // Use retry logic in case XR context needs more time
+            await enterXRWithRetry(store, mode, 2);
           } catch (e) {
             console.error(`[SpatialModeToggle] Failed to enter ${mode}:`, e);
             // Reset to desktop on failure
@@ -179,6 +250,7 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
           }
         } else {
           console.warn('[SpatialModeToggle] XR store not available');
+          requestMode('desktop');
         }
       } else {
         // Desktop mode - just update state, exit any active session
