@@ -1,6 +1,6 @@
 ---
 name: implementing-spatial-xr
-description: Implementing WebXR, VR, and AR features for StickerNest's spatial platform. Use when the user asks about VR mode, AR mode, WebXR integration, immersive sessions, XR controllers, hand tracking, hit testing, plane detection, teleportation, XR accessibility, or spatial rendering. Covers @react-three/xr, useSpatialModeStore, XR adapters, and intent-based input.
+description: Implementing WebXR, VR, and AR features for StickerNest's spatial platform. Use when the user asks about VR mode, AR mode, WebXR integration, immersive sessions, XR controllers, hand tracking, hit testing, plane detection, mesh detection, room mapping, spatial anchors, teleportation, XR accessibility, or spatial rendering. Covers @react-three/xr, useSpatialModeStore, XR adapters, room scanning, and intent-based input.
 ---
 
 # Implementing Spatial XR for StickerNest
@@ -332,6 +332,327 @@ const xrStore = createXRStore({
 
 ---
 
+## Room Mapping & Spatial Understanding
+
+StickerNest supports room mapping through WebXR's plane detection and mesh detection APIs. These work across devices that support them (Meta Quest 2/3/Pro, Vision Pro, etc.) while gracefully degrading on unsupported hardware.
+
+### Enabling Room Mapping Features
+
+```typescript
+const xrStore = createXRStore({
+  // Basic AR features
+  hitTest: true,
+
+  // Room mapping features
+  planeDetection: true,  // Detect walls, floors, tables
+  meshDetection: true,   // Full room mesh (Quest 3+)
+  anchors: true,         // Persistent positions
+
+  // Request optional features for compatibility
+  optionalFeatures: [
+    'plane-detection',
+    'mesh-detection',
+    'anchors',
+    'depth-sensing',
+  ],
+});
+```
+
+### Plane Detection with useXRPlanes
+
+Planes represent detected surfaces (walls, floors, tables, etc.):
+
+```tsx
+import { useXRPlanes, XRPlaneModel, XRSpace } from '@react-three/xr';
+
+// Plane types: 'wall' | 'floor' | 'ceiling' | 'table' | 'couch' | 'door' | 'window' | 'other'
+
+function DetectedPlanes() {
+  // Get all detected planes
+  const allPlanes = useXRPlanes();
+
+  // Or filter by type
+  const walls = useXRPlanes('wall');
+  const floors = useXRPlanes('floor');
+  const tables = useXRPlanes('table');
+
+  return (
+    <>
+      {/* Render wall planes with semi-transparent material */}
+      {walls.map((plane) => (
+        <XRSpace key={plane.planeSpace.toString()} space={plane.planeSpace}>
+          <XRPlaneModel plane={plane}>
+            <meshBasicMaterial
+              color="#8b5cf6"
+              transparent
+              opacity={0.3}
+              side={2} // DoubleSide
+            />
+          </XRPlaneModel>
+        </XRSpace>
+      ))}
+
+      {/* Render floor planes */}
+      {floors.map((plane) => (
+        <XRSpace key={plane.planeSpace.toString()} space={plane.planeSpace}>
+          <XRPlaneModel plane={plane}>
+            <meshBasicMaterial
+              color="#22c55e"
+              transparent
+              opacity={0.2}
+            />
+          </XRPlaneModel>
+        </XRSpace>
+      ))}
+    </>
+  );
+}
+```
+
+### Mesh Detection with useXRMeshes
+
+Full room meshes provide detailed 3D geometry of the environment (requires Quest 3/3S or similar):
+
+```tsx
+import { useXRMeshes, XRMeshModel, XRSpace } from '@react-three/xr';
+
+function RoomMesh() {
+  const meshes = useXRMeshes();
+
+  return (
+    <>
+      {meshes.map((mesh) => (
+        <XRSpace key={mesh.meshSpace.toString()} space={mesh.meshSpace}>
+          <XRMeshModel mesh={mesh}>
+            {/* Wireframe to visualize room structure */}
+            <meshBasicMaterial
+              color="#ffffff"
+              wireframe
+              transparent
+              opacity={0.1}
+            />
+          </XRMeshModel>
+        </XRSpace>
+      ))}
+    </>
+  );
+}
+```
+
+### Using Plane Geometry for Custom Rendering
+
+```tsx
+import { useXRPlaneGeometry } from '@react-three/xr';
+
+function CustomPlaneRenderer({ plane }) {
+  // Get the plane's geometry directly
+  const geometry = useXRPlaneGeometry(plane);
+
+  if (!geometry) return null;
+
+  return (
+    <mesh geometry={geometry}>
+      <meshStandardMaterial
+        color="#8b5cf6"
+        transparent
+        opacity={0.5}
+      />
+    </mesh>
+  );
+}
+```
+
+### Persistent Anchors (Save Positions Across Sessions)
+
+Anchors let you save world positions that persist when users return:
+
+```tsx
+import { useXRAnchor, requestXRAnchor, useXR } from '@react-three/xr';
+
+function PersistentWidget({ savedAnchorId, position }) {
+  const { session } = useXR();
+  const [anchorId, setAnchorId] = useState(savedAnchorId);
+
+  // Restore anchor from saved ID
+  const anchor = useXRAnchor(anchorId);
+
+  // Create new anchor at position
+  const createAnchor = async () => {
+    if (!session) return;
+
+    const newAnchor = await requestXRAnchor(session, {
+      space: 'local-floor',
+      position: position,
+    });
+
+    if (newAnchor) {
+      // Request persistent handle (Meta Quest specific)
+      const handle = await newAnchor.requestPersistentHandle?.();
+      if (handle) {
+        // Save this handle to restore later
+        localStorage.setItem('widgetAnchor', handle);
+        setAnchorId(handle);
+      }
+    }
+  };
+
+  // Render at anchor position
+  if (anchor) {
+    return (
+      <XRSpace space={anchor.anchorSpace}>
+        <mesh>
+          <boxGeometry args={[0.2, 0.2, 0.2]} />
+          <meshStandardMaterial color="#8b5cf6" />
+        </mesh>
+      </XRSpace>
+    );
+  }
+
+  return null;
+}
+```
+
+### Meta Quest Room Setup Integration
+
+On Meta Quest, users must set up their room boundaries for plane detection to work. Guide users through this:
+
+```tsx
+function RoomSetupGuide() {
+  const planes = useXRPlanes();
+  const hasRoomSetup = planes.length > 0;
+
+  if (!hasRoomSetup) {
+    return (
+      <group position={[0, 1.5, -1]}>
+        <Text fontSize={0.08} color="white" anchorX="center">
+          Room setup required for full experience
+        </Text>
+        <Text fontSize={0.06} color="#9ca3af" position={[0, -0.15, 0]} anchorX="center">
+          Go to Settings → Guardian → Room Setup
+        </Text>
+      </group>
+    );
+  }
+
+  return null;
+}
+```
+
+### Device Capability Detection
+
+Check what features are available before using them:
+
+```tsx
+function useRoomMappingCapabilities() {
+  const [capabilities, setCapabilities] = useState({
+    planeDetection: false,
+    meshDetection: false,
+    anchors: false,
+    depthSensing: false,
+  });
+
+  useEffect(() => {
+    async function check() {
+      if (!navigator.xr) return;
+
+      // Check AR support with features
+      const supported = await navigator.xr.isSessionSupported('immersive-ar');
+      if (!supported) return;
+
+      // These are optional features - check if device reports them
+      // Note: Full feature detection often requires starting a session
+      setCapabilities({
+        planeDetection: true,  // Most AR devices
+        meshDetection: true,   // Quest 3/3S, Vision Pro
+        anchors: true,         // Most AR devices
+        depthSensing: true,    // Quest 3/3S with Depth API
+      });
+    }
+
+    check();
+  }, []);
+
+  return capabilities;
+}
+```
+
+### Occlusion with Room Mesh
+
+Make virtual objects appear behind real-world surfaces:
+
+```tsx
+function OcclusionMesh() {
+  const meshes = useXRMeshes();
+
+  return (
+    <>
+      {meshes.map((mesh) => (
+        <XRSpace key={mesh.meshSpace.toString()} space={mesh.meshSpace}>
+          <XRMeshModel mesh={mesh}>
+            {/* Occlusion material - writes to depth but not color */}
+            <meshBasicMaterial
+              colorWrite={false}
+              depthWrite={true}
+            />
+          </XRMeshModel>
+        </XRSpace>
+      ))}
+    </>
+  );
+}
+
+function ARSceneWithOcclusion({ children }) {
+  return (
+    <group>
+      {/* Render occlusion mesh first */}
+      <OcclusionMesh />
+
+      {/* Virtual content will be occluded by real surfaces */}
+      {children}
+    </group>
+  );
+}
+```
+
+### Placing Objects on Detected Surfaces
+
+Combine hit testing with plane detection for accurate placement:
+
+```tsx
+function SurfacePlacement({ onPlace }) {
+  const tables = useXRPlanes('table');
+  const floors = useXRPlanes('floor');
+  const [hoveredPlane, setHoveredPlane] = useState(null);
+
+  // Render interactive placement targets on detected surfaces
+  return (
+    <>
+      {[...tables, ...floors].map((plane) => (
+        <XRSpace key={plane.planeSpace.toString()} space={plane.planeSpace}>
+          <XRPlaneModel
+            plane={plane}
+            onPointerEnter={() => setHoveredPlane(plane)}
+            onPointerLeave={() => setHoveredPlane(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlace(e.point, plane.orientation);
+            }}
+          >
+            <meshBasicMaterial
+              color={hoveredPlane === plane ? '#8b5cf6' : '#ffffff'}
+              transparent
+              opacity={hoveredPlane === plane ? 0.5 : 0.1}
+            />
+          </XRPlaneModel>
+        </XRSpace>
+      ))}
+    </>
+  );
+}
+```
+
+---
+
 ## Accessibility Requirements
 
 ### Motion Sickness Prevention
@@ -577,14 +898,58 @@ const flatCanvas: SpatialTransform = {
 
 ---
 
+## Device Compatibility Reference
+
+| Feature | Quest 2 | Quest 3/3S | Quest Pro | Vision Pro | Android AR |
+|---------|---------|------------|-----------|------------|------------|
+| Passthrough | ✅ (B&W) | ✅ (Color) | ✅ (Color) | ✅ | ✅ |
+| Plane Detection | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Mesh Detection | ❌ | ✅ | ❌ | ✅ | ❌ |
+| Depth API | ❌ | ✅ | ❌ | ✅ | Varies |
+| Hand Tracking | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Persistent Anchors | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Controller Input | ✅ | ✅ | ✅ | ❌ | ❌ |
+
+---
+
+## Troubleshooting Room Mapping
+
+### Issue: No planes detected
+**Cause**: User hasn't completed room setup on Meta Quest
+**Fix**:
+- Guide user to Settings → Guardian → Room Setup
+- Check that `planeDetection: true` is in createXRStore config
+- Verify session is `immersive-ar` mode
+
+### Issue: Mesh detection returns empty array
+**Cause**: Device doesn't support mesh detection or feature not enabled
+**Fix**:
+- Mesh detection requires Quest 3/3S or Vision Pro
+- Ensure `meshDetection: true` in config
+- Fall back to plane detection on unsupported devices
+
+### Issue: Anchors don't persist across sessions
+**Cause**: Using regular anchors instead of persistent anchors
+**Fix**:
+- Call `anchor.requestPersistentHandle()` after creating anchor
+- Save the returned handle string to localStorage
+- Use `session.restorePersistentAnchor(handle)` to restore
+
+### Issue: Virtual objects float through real surfaces
+**Cause**: Occlusion not implemented
+**Fix**:
+- Add OcclusionMesh component that renders room mesh with `colorWrite: false`
+- Ensure occlusion mesh renders before virtual content
+- Use correct depth testing settings
+
+---
+
 ## Explicit Non-Goals (v1)
 
 Per StickerNest architecture, do NOT implement:
-- Object recognition
-- Room scanning
-- Physics simulation
-- Occlusion mapping
-- Multiplayer synchronization
-- Native-only features
+- Object recognition (identifying specific objects like "chair" vs "table")
+- Physics simulation (objects bouncing off real surfaces)
+- Multiplayer synchronization (shared AR spaces)
+- Native-only features (always prefer WebXR standard APIs)
 
 These are future possibilities, not foundations.
