@@ -157,6 +157,9 @@ export interface TouchCapabilities {
   hasCoarsePointer: boolean;
   hasFinePointer: boolean;
   isHybrid: boolean;
+  hasVRController: boolean;
+  isMetaQuest: boolean;
+  hasXRSupport: boolean;
 }
 
 export function useTouchDevice(): TouchCapabilities {
@@ -187,6 +190,9 @@ function detectTouchCapabilities(): TouchCapabilities {
       hasCoarsePointer: false,
       hasFinePointer: true,
       isHybrid: false,
+      hasVRController: false,
+      isMetaQuest: false,
+      hasXRSupport: false,
     };
   }
 
@@ -196,12 +202,29 @@ function detectTouchCapabilities(): TouchCapabilities {
   const hasMouse = window.matchMedia('(hover: hover)').matches;
   const isHybrid = hasTouch && hasMouse;
 
+  // VR/XR Detection
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isMetaQuest = userAgent.includes('quest') || userAgent.includes('oculus');
+  const hasXRSupport = 'xr' in navigator;
+
+  // VR controllers detected via Meta Quest browser or XR gamepad API
+  // Meta Quest browser reports as having touch + XR support
+  const hasVRController = isMetaQuest || (
+    hasXRSupport &&
+    hasCoarsePointer &&
+    // Quest browser has specific viewport characteristics
+    (window.innerWidth >= 1800 || userAgent.includes('vr'))
+  );
+
   return {
     hasTouch,
     hasMouse,
     hasCoarsePointer,
     hasFinePointer,
     isHybrid,
+    hasVRController,
+    isMetaQuest,
+    hasXRSupport,
   };
 }
 
