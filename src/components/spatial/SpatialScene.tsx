@@ -4,6 +4,12 @@
  * The 3D scene content for VR/AR modes.
  * This component renders widgets, entities, and canvases in 3D space.
  * Includes AR hit testing for mobile and VR teleportation for headsets.
+ *
+ * Key features:
+ * - Renders 2D canvas widgets as 3D panels
+ * - Spatial stickers for anchored content
+ * - VR teleportation and AR hit testing
+ * - Room visualization and occlusion for AR
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -14,6 +20,7 @@ import {
   useSpatialStickerStore,
   useDetectedQRCodes,
 } from '../../state/useSpatialStickerStore';
+import { useWidgets, useSelectedIds, useCanvasStore } from '../../state/useCanvasStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
 import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
@@ -25,6 +32,7 @@ import {
   RoomSetupGuide,
 } from './xr';
 import { SpatialStickerManager } from './stickers';
+import { SpatialWidgetContainer } from './SpatialWidgetContainer';
 import { SpatialSticker } from '../../types/spatialEntity';
 
 // ============================================================================
@@ -209,6 +217,16 @@ export function SpatialScene() {
   const [showRoomVisualization, setShowRoomVisualization] = useState(false);
   const [enableOcclusion, setEnableOcclusion] = useState(true);
 
+  // Canvas widgets from the main canvas store
+  // These are the actual widgets that users have placed on their 2D canvas
+  const canvasWidgets = useWidgets();
+  const selectedWidgetIds = useSelectedIds();
+  const selectWidget = useCanvasStore((state) => state.selectWidget);
+  const updateWidget = useCanvasStore((state) => state.updateWidget);
+
+  // Primary selected widget (for single selection operations)
+  const primarySelectedWidgetId = selectedWidgetIds.length > 0 ? selectedWidgetIds[0] : undefined;
+
   // Spatial sticker state
   // IMPORTANT: Don't call functions inside Zustand selectors - it creates new references every render!
   // Access the raw Map and convert to array with useMemo for stable references
@@ -315,6 +333,30 @@ export function SpatialScene() {
     // TODO: Connect to pipeline execution system
   }, []);
 
+  // Handle widget selection in 3D space
+  const handleWidgetSelect = useCallback((widgetId: string) => {
+    selectWidget(widgetId, false); // false = not additive (single select)
+    console.log('Widget selected in 3D:', widgetId);
+  }, [selectWidget]);
+
+  // Handle widget transform changes from 3D manipulation
+  const handleWidgetTransformChange = useCallback((
+    widgetId: string,
+    transform: {
+      position?: [number, number, number];
+      rotation?: [number, number, number];
+      scale?: number;
+    }
+  ) => {
+    // Convert 3D position back to 2D canvas coordinates if needed
+    // For now, log the transform - full sync will come in Phase 6+
+    console.log('Widget transform changed in 3D:', widgetId, transform);
+
+    // If we have position, we could convert it back to 2D
+    // This would require the inverse of toSpatialPosition
+    // For MVP, we track 3D-specific positions separately
+  }, [updateWidget]);
+
   return (
     <group>
       {/* XR Toolbar (spawns from palm gesture in VR mode) */}
@@ -396,6 +438,17 @@ export function SpatialScene() {
 
       {/* Main canvas panel at comfortable viewing distance (VR only) */}
       {spatialMode === 'vr' && <CanvasPanel3D />}
+
+      {/* Canvas widgets rendered in 3D space */}
+      {/* These are the actual widgets from the user's canvas, converted to 3D panels */}
+      <SpatialWidgetContainer
+        widgets={canvasWidgets}
+        selectedWidgetId={primarySelectedWidgetId}
+        onWidgetSelect={handleWidgetSelect}
+        onWidgetTransformChange={handleWidgetTransformChange}
+        interactive={activeTool === 'select' || activeTool === 'move'}
+        debug={showDebugInfo}
+      />
 
       {/* Demo interactive objects (VR only, AR uses placed objects) */}
       {spatialMode === 'vr' && (
