@@ -76,14 +76,19 @@ export const TouchHandle = memo(function TouchHandle({
   onDragEnd,
   disabled = false,
 }: TouchHandleProps) {
-  const { hasTouch } = useTouchDevice();
+  const { hasTouch, hasVRController } = useTouchDevice();
   const handleRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Touch-friendly sizing: 44px hit area on touch, 16px on desktop
-  const hitArea = hasTouch ? 44 : 16;
-  // Visual size: corners are slightly larger
-  const visualSize = isCorner(position) ? (hasTouch ? 14 : 10) : (hasTouch ? 12 : 8);
+  // VR controllers need largest hit areas (64px) for accurate pointing
+  // Touch devices get 44px (WCAG AAA compliant)
+  // Desktop mouse gets 16px for precision
+  const hitArea = hasVRController ? 64 : hasTouch ? 44 : 16;
+  // Visual size: larger for VR to be visible at distance, corners slightly larger
+  const visualSize = hasVRController
+    ? (isCorner(position) ? 18 : 14)
+    : isCorner(position) ? (hasTouch ? 14 : 10) : (hasTouch ? 12 : 8);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (disabled) return;
@@ -110,7 +115,26 @@ export const TouchHandle = memo(function TouchHandle({
     handleRef.current?.releasePointerCapture(e.pointerId);
   }, [isDragging, onDragEnd]);
 
+  const handlePointerEnter = useCallback(() => {
+    if (!disabled) {
+      setIsHovered(true);
+      // Provide haptic feedback on hover for VR controllers
+      if (hasVRController) {
+        haptic('select');
+      }
+    }
+  }, [disabled, hasVRController]);
+
+  const handlePointerLeave = useCallback(() => {
+    setIsHovered(false);
+  }, []);
+
   const positionStyle = getPositionStyle(position, hitArea);
+
+  // VR mode gets enhanced visual feedback
+  const isActive = isDragging || isHovered;
+  const vrScale = hasVRController ? 1.3 : 1.2;
+  const hoverScale = hasVRController ? 1.15 : 1;
 
   return (
     <div
@@ -132,20 +156,28 @@ export const TouchHandle = memo(function TouchHandle({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
     >
-      {/* Visual handle - clean, minimal design */}
+      {/* Visual handle - enhanced for VR with larger size and glow */}
       <div
         style={{
           width: visualSize,
           height: visualSize,
-          backgroundColor: '#fff',
-          border: `2px solid ${accentColor}`,
-          borderRadius: isCorner(position) ? 2 : visualSize / 2,
+          backgroundColor: isHovered && hasVRController ? accentColor : '#fff',
+          border: `${hasVRController ? 3 : 2}px solid ${accentColor}`,
+          borderRadius: isCorner(position) ? (hasVRController ? 4 : 2) : visualSize / 2,
           boxShadow: isDragging
-            ? `0 0 0 2px ${accentColor}40, 0 2px 8px rgba(0,0,0,0.3)`
+            ? `0 0 0 ${hasVRController ? 4 : 2}px ${accentColor}40, 0 2px 8px rgba(0,0,0,0.3)`
+            : isHovered && hasVRController
+            ? `0 0 0 3px ${accentColor}30, 0 0 12px ${accentColor}50`
             : '0 1px 3px rgba(0,0,0,0.2)',
-          transform: isDragging ? 'scale(1.2)' : 'scale(1)',
-          transition: isDragging ? 'none' : 'transform 0.1s ease, box-shadow 0.1s ease',
+          transform: isDragging
+            ? `scale(${vrScale})`
+            : isHovered
+            ? `scale(${hoverScale})`
+            : 'scale(1)',
+          transition: isDragging ? 'none' : 'transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease',
         }}
       />
     </div>

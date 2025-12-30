@@ -30,9 +30,11 @@ import {
   Pencil,
   Eye,
   GripVertical,
+  Glasses,
 } from 'lucide-react';
 import { useToolStore, useActiveTool, useShapeSubmenuOpen, useObject3DSubmenuOpen } from '../state/useToolStore';
 import { useCanvasStore } from '../state/useCanvasStore';
+import { useSpatialModeStore, useActiveSpatialMode, useIsVRMode } from '../state/useSpatialModeStore';
 import type { VectorShapeType, Object3DPrimitiveType } from '../types/entities';
 import type { LucideIcon } from 'lucide-react';
 
@@ -286,6 +288,11 @@ export const CreativeToolbar: React.FC = () => {
   const mode = useCanvasStore((s) => s.mode);
   const setMode = useCanvasStore((s) => s.setMode);
 
+  // Spatial mode (VR/AR/Desktop)
+  const spatialMode = useActiveSpatialMode();
+  const isVRMode = useIsVRMode();
+  const toggleVR = useSpatialModeStore((s) => s.toggleVR);
+
   // Shape submenu items
   const shapeItems: Array<{ icon: LucideIcon; label: string; value: VectorShapeType }> = [
     { icon: Square, label: 'Rectangle', value: 'rectangle' },
@@ -453,6 +460,14 @@ export const CreativeToolbar: React.FC = () => {
         tooltip={isEditMode ? 'Edit Mode (E) - Click for View' : 'View Mode - Click for Edit'}
         active={isEditMode}
         onClick={handleToggleMode}
+      />
+
+      {/* VR Mode Toggle */}
+      <ToolButton
+        icon={Glasses}
+        tooltip={isVRMode ? 'Exit VR Mode' : 'Enter VR Mode'}
+        active={isVRMode}
+        onClick={toggleVR}
       />
 
       <Divider />
