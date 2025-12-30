@@ -944,6 +944,175 @@ const flatCanvas: SpatialTransform = {
 
 ---
 
+## Spatial Sticker System
+
+StickerNest extends the 2D sticker/widget system into 3D VR/AR space. Spatial stickers work in both 2D canvas mode and 3D immersive modes.
+
+### Core Types (src/types/spatialEntity.ts)
+
+```typescript
+import { SpatialSticker, createSpatialSticker, createQRAnchoredSticker } from '../types/spatialEntity';
+
+// SpatialSticker properties
+interface SpatialSticker {
+  // 2D Properties (canvas mode)
+  position2D: { x: number; y: number };
+  size2D: { width: number; height: number };
+  rotation2D: number;
+
+  // 3D Properties (VR/AR mode)
+  transform3D: SpatialTransform;
+  anchor: SpatialAnchor;  // QR code, surface, persistent
+  billboard3D: boolean;
+
+  // Media (works in both modes)
+  mediaType: SpatialMediaType;  // 'image' | '3d-model' | '3d-primitive' | etc.
+  model3DConfig?: Model3DConfig;
+  primitive3DConfig?: Primitive3DConfig;
+
+  // Interaction (same in both modes)
+  clickBehavior: 'launch-widget' | 'toggle-widget' | 'open-url' | 'emit-event' | 'run-pipeline' | 'none';
+  linkedWidgetDefId?: string;
+}
+```
+
+### Anchor Types
+
+Spatial stickers can be anchored to real-world objects or locations:
+
+```typescript
+// QR Code Anchor - attach to physical QR codes
+const qrSticker = createQRAnchoredSticker('canvas-1', 'Calendar', 'https://myqr.com/calendar');
+
+// Surface Anchor - attach to detected room surfaces
+const wallSticker = createSurfaceAnchoredSticker('canvas-1', 'Poster', 'wall');
+const tableSticker = createSurfaceAnchoredSticker('canvas-1', 'Display', 'table');
+
+// Persistent Anchor - save position across sessions
+const sticker = createSpatialSticker({
+  canvasId: 'canvas-1',
+  name: 'Widget Launcher',
+  anchor: {
+    type: 'persistent',
+    anchorHandle: savedHandle,
+    createdAt: Date.now(),
+  },
+});
+```
+
+### Rendering Spatial Stickers
+
+```tsx
+import { SpatialStickerManager } from './components/spatial/stickers';
+import { useSpatialStickerStore } from './state/useSpatialStickerStore';
+
+function SpatialScene() {
+  const stickers = useSpatialStickerStore((s) => s.getSpatialStickers());
+  const detectedQRCodes = useSpatialStickerStore((s) => s.detectedQRCodes);
+
+  return (
+    <SpatialStickerManager
+      stickers={stickers}
+      detectedQRCodes={detectedQRCodesMap}
+      onLaunchWidget={(widgetDefId, sticker) => {
+        // Launch the linked widget
+      }}
+      onStickerClick={(sticker) => {
+        // Handle sticker selection
+      }}
+    />
+  );
+}
+```
+
+### QR Code Detection
+
+```tsx
+import { useQRCodeDetection } from './components/spatial/qr';
+
+function ARScene() {
+  const { detectedCodes, simulateDetection } = useQRCodeDetection({
+    enabled: true,
+    debug: true,
+  });
+
+  // For testing without actual QR codes
+  useEffect(() => {
+    simulateDetection('https://example.com/calendar', [1, 1.5, -1]);
+  }, []);
+
+  return <SpatialScene />;
+}
+```
+
+### Surface Placement
+
+```tsx
+import { SurfacePlacement, useSpatialAnchors } from './components/spatial/anchors';
+
+function PlacementMode() {
+  const { snapToSurface } = useSpatialAnchors({ enabled: true });
+
+  const handlePlacement = (surfaceType, position, normal) => {
+    // Create sticker at this position
+    useSpatialStickerStore.getState().createSurfaceSticker(
+      canvasId,
+      'New Sticker',
+      surfaceType
+    );
+  };
+
+  return (
+    <SurfacePlacement
+      active={isPlacing}
+      surfaceTypes={['floor', 'wall', 'table']}
+      onPlacement={handlePlacement}
+    />
+  );
+}
+```
+
+### State Management (useSpatialStickerStore)
+
+```typescript
+import { useSpatialStickerStore } from './state/useSpatialStickerStore';
+
+// CRUD operations
+const addSticker = useSpatialStickerStore((s) => s.addSpatialSticker);
+const updateSticker = useSpatialStickerStore((s) => s.updateSpatialSticker);
+const stickers = useSpatialStickerStore((s) => s.getSpatialStickersByCanvas('canvas-1'));
+
+// Factory functions
+const store = useSpatialStickerStore.getState();
+store.createImageSticker('canvas-1', 'Photo', '/images/photo.png');
+store.createModelSticker('canvas-1', 'Trophy', '/models/trophy.glb');
+store.createPrimitiveSticker('canvas-1', 'Marker', 'sphere');
+store.createQRLinkedSticker('canvas-1', 'Calendar Link', 'https://qr.example.com/cal');
+
+// QR code registration
+store.registerQRCode({
+  id: 'qr-1',
+  userId: 'user-1',
+  content: 'https://qr.example.com/calendar',
+  label: 'Calendar QR',
+  sizeMeters: 0.1,
+  attachedStickerIds: [],
+  createdAt: Date.now(),
+});
+```
+
+### Reference Files
+
+- **Spatial Sticker Type**: `src/types/spatialEntity.ts`
+- **3D Sticker Renderer**: `src/components/spatial/stickers/SpatialSticker3D.tsx`
+- **Anchor System**: `src/components/spatial/stickers/AnchoredSticker.tsx`
+- **Sticker Manager**: `src/components/spatial/stickers/SpatialStickerManager.tsx`
+- **State Store**: `src/state/useSpatialStickerStore.ts`
+- **QR Detection**: `src/components/spatial/qr/useQRCodeDetection.ts`
+- **Surface Placement**: `src/components/spatial/anchors/SurfacePlacement.tsx`
+
+---
+
 ## Explicit Non-Goals (v1)
 
 Per StickerNest architecture, do NOT implement:
