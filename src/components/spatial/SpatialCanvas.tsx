@@ -165,12 +165,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   const isXRActive = sessionState === 'active' || sessionState === 'requesting';
   const shouldShowCanvas = active || isXRActive;
 
-  // IMPORTANT: We ALWAYS render the Canvas and XR components.
-  // This is required because @react-three/xr needs the <XR> component
-  // to be mounted in the React tree before xrStore.enterVR()/enterAR()
-  // can successfully request a WebXR session.
+  // IMPORTANT: We ALWAYS render the Canvas and XR components at FULL SIZE.
+  // This is required because:
+  // 1. @react-three/xr needs the <XR> component to be mounted in the React tree
+  //    before xrStore.enterVR()/enterAR() can successfully request a WebXR session.
+  // 2. Three.js/WebGL needs a reasonably sized canvas to initialize properly.
+  //    A 1x1px canvas won't work!
   //
-  // The `shouldShowCanvas` flag controls VISIBILITY (via CSS), not MOUNTING.
+  // The `shouldShowCanvas` flag controls VISIBILITY (via z-index/opacity), not SIZE.
 
   return (
     <div
@@ -181,19 +183,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
         left: 0,
         width: '100%',
         height: '100%',
-        // Control visibility via CSS - canvas is always mounted but may be hidden
-        // When hidden: positioned off-screen and pointer-events disabled
-        // This allows the XR infrastructure to remain active while not visible
-        ...(shouldShowCanvas
-          ? {}
-          : {
-              opacity: 0,
-              pointerEvents: 'none',
-              // Use a small size when hidden to minimize GPU overhead
-              width: '1px',
-              height: '1px',
-              overflow: 'hidden',
-            }),
+        // CRITICAL: Canvas must always be full size for WebGL to work properly!
+        // We control visibility via z-index and opacity, NOT by shrinking.
+        // When hidden: behind other content (z-index: -1), invisible (opacity: 0)
+        // When visible: on top (z-index: 10), fully visible (opacity: 1)
+        zIndex: shouldShowCanvas ? 10 : -1,
+        opacity: shouldShowCanvas ? 1 : 0,
+        pointerEvents: shouldShowCanvas ? 'auto' : 'none',
+        transition: 'opacity 0.3s ease-in-out',
         ...style,
       }}
       data-spatial-canvas="true"
