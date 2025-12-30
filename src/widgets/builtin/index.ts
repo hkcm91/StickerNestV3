@@ -85,6 +85,10 @@ import { WebcamWidget } from './WebcamWidget';
 import { WebcamFrameWidget } from './WebcamFrameWidget';
 import { JitsiMeetWidget } from './JitsiMeetWidget';
 
+// Spatial/VR/AR Widgets
+import { GreenScreenPlaneWidget } from './GreenScreenPlaneWidget';
+import { PanoramicOverlayWidget } from './PanoramicOverlayWidget';
+
 // Collaboration Widgets
 import { ViewSwitcherWidget } from './ViewSwitcherWidget';
 import { CollaboratorListWidget } from './CollaboratorListWidget';
@@ -274,6 +278,10 @@ export const BUILTIN_WIDGETS: Record<string, BuiltinWidget> = {
   'stickernest.webcam-frame': WebcamFrameWidget,
   'stickernest.jitsi-meet': JitsiMeetWidget,
 
+  // Spatial/VR/AR Widgets
+  'stickernest.green-screen-plane': GreenScreenPlaneWidget,
+  'stickernest.panoramic-overlay': PanoramicOverlayWidget,
+
   // Collaboration Widgets
   'stickernest.view-switcher': ViewSwitcherWidget,
   'stickernest.collaborator-list': CollaboratorListWidget,
@@ -422,6 +430,9 @@ export {
   WebcamWidget,
   WebcamFrameWidget,
   JitsiMeetWidget,
+  // Spatial/VR/AR Widgets
+  GreenScreenPlaneWidget,
+  PanoramicOverlayWidget,
   // Collaboration Widgets
   ViewSwitcherWidget,
   CollaboratorListWidget,

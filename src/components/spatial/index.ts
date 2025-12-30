@@ -28,3 +28,12 @@ export * from './qr';
 
 // Mobile AR support (Chrome Android priority, Safari fallback)
 export * from './mobile';
+
+// Demo scene with green screens and panoramic backgrounds
+export {
+  SpatialDemoScene,
+  GreenScreenPlane3D,
+  PanoramicSkybox3D,
+  FloatingWidgetPanel3D,
+  useSpatialDemoSetup,
+} from './SpatialDemo';
