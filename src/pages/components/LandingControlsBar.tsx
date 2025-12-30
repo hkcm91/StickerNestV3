@@ -30,6 +30,7 @@ import { CanvasSettingsDropdown } from '../../components/CanvasSettingsDropdown'
 import { useCanvasEntityStore } from '../../state/useCanvasEntityStore';
 import { haptic } from '../../utils/haptics';
 import { ViewportModeToggle } from '../../components/ViewportModeToggle';
+import { SpatialModeToggle } from '../../components/SpatialModeToggle';
 
 export interface LandingControlsBarProps {
   activeAccentColor: string;
@@ -311,6 +312,14 @@ export const LandingControlsBar: React.FC<LandingControlsBarProps> = ({
         {/* Viewport Mode Toggle (Mobile vs Web) */}
         {showAdvancedUI && (
           <ViewportModeToggle
+            accentColor={activeAccentColor}
+            compact={isMobile}
+          />
+        )}
+
+        {/* Spatial Mode Toggle (2D/VR/AR) */}
+        {showAdvancedUI && (
+          <SpatialModeToggle
             accentColor={activeAccentColor}
             compact={isMobile}
           />
