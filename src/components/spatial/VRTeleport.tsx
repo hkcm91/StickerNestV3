@@ -3,12 +3,18 @@
  *
  * Enables locomotion in VR via teleportation.
  * Point at the floor and press trigger to teleport.
- * Uses teleport pointer from @react-three/xr.
+ *
+ * Supports two modes:
+ * - Standard: Uses @react-three/xr TeleportTarget
+ * - IWSDK: Uses Meta's Immersive Web SDK Locomotor for physics-based movement
  */
 
-import React, { useState, useCallback } from 'react';
-import { XROrigin, TeleportTarget } from '@react-three/xr';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { XROrigin, TeleportTarget, useXR } from '@react-three/xr';
+import { useFrame } from '@react-three/fiber';
+import { Vector3, Line, BufferGeometry, LineBasicMaterial } from 'three';
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
+import { useLocomotor } from './iwsdk';
 
 // ============================================================================
 // Types
@@ -25,6 +31,12 @@ interface VRTeleportProps {
   enabled?: boolean;
   /** Callback when user teleports */
   onTeleport?: (position: [number, number, number]) => void;
+  /** Use IWSDK locomotor for physics-based movement (recommended for Quest) */
+  useIWSDK?: boolean;
+  /** Enable sliding movement (IWSDK mode only) */
+  enableSlide?: boolean;
+  /** Enable jumping (IWSDK mode only) */
+  enableJump?: boolean;
 }
 
 // ============================================================================
@@ -70,33 +82,64 @@ export function VRTeleport({
   floorColor = '#1f2937',
   enabled = true,
   onTeleport,
+  useIWSDK = true,
+  enableSlide = false,
+  enableJump = true,
 }: VRTeleportProps) {
   const spatialMode = useActiveSpatialMode();
+  const { isPresenting } = useXR();
   const [userPosition, setUserPosition] = useState<[number, number, number]>(initialPosition);
 
   // Only active in VR mode
   const isVRMode = spatialMode === 'vr';
 
+  // IWSDK Locomotor (physics-based movement)
+  const locomotor = useLocomotor({
+    enabled: useIWSDK && isVRMode && isPresenting,
+    initialPosition,
+    onPositionChange: useCallback((pos: Vector3, isGrounded: boolean) => {
+      const newPos: [number, number, number] = [pos.x, pos.y, pos.z];
+      setUserPosition(newPos);
+      onTeleport?.(newPos);
+    }, [onTeleport]),
+    debug: false,
+  });
+
+  // Standard teleport handler (non-IWSDK)
   const handleTeleport = useCallback(
     (point: { x: number; y: number; z: number }) => {
       if (!enabled) return;
 
-      const newPosition: [number, number, number] = [point.x, 0, point.z];
-      setUserPosition(newPosition);
-      onTeleport?.(newPosition);
+      if (useIWSDK && locomotor.isReady) {
+        // Use IWSDK locomotor
+        locomotor.teleport(new Vector3(point.x, point.y, point.z));
+      } else {
+        // Standard teleport
+        const newPosition: [number, number, number] = [point.x, 0, point.z];
+        setUserPosition(newPosition);
+        onTeleport?.(newPosition);
+      }
     },
-    [enabled, onTeleport]
+    [enabled, useIWSDK, locomotor, onTeleport]
   );
+
+  // Sync position from IWSDK
+  const currentPosition = useMemo((): [number, number, number] => {
+    if (useIWSDK && locomotor.isReady) {
+      return [locomotor.position.x, locomotor.position.y, locomotor.position.z];
+    }
+    return userPosition;
+  }, [useIWSDK, locomotor.isReady, locomotor.position, userPosition]);
 
   // Don't render teleport floor if not in VR mode
   if (!isVRMode) {
-    return <XROrigin position={userPosition} />;
+    return <XROrigin position={currentPosition} />;
   }
 
   return (
     <>
       {/* User position (feet) */}
-      <XROrigin position={userPosition} />
+      <XROrigin position={currentPosition} />
 
       {/* Teleportable floor */}
       <TeleportFloor
@@ -104,6 +147,18 @@ export function VRTeleport({
         color={floorColor}
         onTeleport={handleTeleport}
       />
+
+      {/* IWSDK status indicator (dev only) */}
+      {useIWSDK && locomotor.isReady && (
+        <mesh position={[currentPosition[0], 0.01, currentPosition[2]]}>
+          <ringGeometry args={[0.2, 0.25, 32]} />
+          <meshBasicMaterial
+            color={locomotor.isGrounded ? '#22c55e' : '#f59e0b'}
+            transparent
+            opacity={0.5}
+          />
+        </mesh>
+      )}
     </>
   );
 }

@@ -41,6 +41,12 @@ export interface SpatialSticker3DProps {
   selected?: boolean;
   /** Enable debug visualization */
   debug?: boolean;
+  /** Whether sticker is grabbable (for VR manipulation) */
+  grabbable?: boolean;
+  /** Whether sticker is currently being grabbed */
+  isGrabbed?: boolean;
+  /** Callback when sticker transform changes (from grab) */
+  onTransformChange?: (sticker: SpatialSticker, transform: SpatialTransform) => void;
 }
 
 // ============================================================================

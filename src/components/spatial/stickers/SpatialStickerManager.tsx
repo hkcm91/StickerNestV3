@@ -4,12 +4,15 @@
  * Manages and renders a collection of SpatialStickers in 3D space.
  * Handles anchor resolution, visibility filtering, and interaction routing.
  * Integrates with the widget system for sticker click behaviors.
+ * Supports IWSDK grab interactions for VR manipulation.
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { SpatialSticker } from '../../../types/spatialEntity';
+import React, { useCallback, useMemo, useEffect, useRef } from 'react';
+import { Object3D, Vector3, Quaternion } from 'three';
+import { SpatialSticker, SpatialTransform } from '../../../types/spatialEntity';
 import { useActiveSpatialMode } from '../../../state/useSpatialModeStore';
 import { AnchoredSticker } from './AnchoredSticker';
+import { useGrabInteraction } from '../iwsdk';
 
 // ============================================================================
 // Types
@@ -38,6 +41,10 @@ export interface SpatialStickerManagerProps {
   onRunPipeline?: (pipelineId: string, sticker: SpatialSticker) => void;
   /** Enable debug mode for all stickers */
   debug?: boolean;
+  /** Enable IWSDK grab interactions (VR only) */
+  enableGrab?: boolean;
+  /** Callback when sticker transform changes (from grab manipulation) */
+  onStickerTransformChange?: (sticker: SpatialSticker, transform: SpatialTransform) => void;
 }
 
 // ============================================================================
@@ -56,8 +63,48 @@ export function SpatialStickerManager({
   onEmitEvent,
   onRunPipeline,
   debug = false,
+  enableGrab = true,
+  onStickerTransformChange,
 }: SpatialStickerManagerProps) {
   const spatialMode = useActiveSpatialMode();
+  const stickerRefs = useRef<Map<string, Object3D>>(new Map());
+
+  // IWSDK Grab Interactions
+  const grabInteraction = useGrabInteraction({
+    enabled: enableGrab && spatialMode === 'vr',
+    distanceGrab: true,
+    maxGrabDistance: 3,
+    twoHandManipulation: true,
+    hapticIntensity: 0.5,
+    onGrab: useCallback((object: Object3D, hand: 'left' | 'right') => {
+      // Find which sticker was grabbed
+      const stickerId = object.userData.stickerId;
+      if (stickerId) {
+        const sticker = stickers.find((s) => s.id === stickerId);
+        if (sticker) {
+          onStickerClick?.(sticker);
+        }
+      }
+    }, [stickers, onStickerClick]),
+    onManipulate: useCallback((object: Object3D, transform: { position: Vector3; rotation: Quaternion; scale: Vector3 }) => {
+      const stickerId = object.userData.stickerId;
+      if (stickerId && onStickerTransformChange) {
+        const sticker = stickers.find((s) => s.id === stickerId);
+        if (sticker) {
+          const newTransform: SpatialTransform = {
+            position: { x: transform.position.x, y: transform.position.y, z: transform.position.z },
+            rotation: {
+              // Convert quaternion to euler (simplified)
+              x: 0, y: 0, z: 0,
+            },
+            scale: { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
+          };
+          onStickerTransformChange(sticker, newTransform);
+        }
+      }
+    }, [stickers, onStickerTransformChange]),
+    debug,
+  });
 
   // Filter stickers based on current mode visibility
   const visibleStickers = useMemo(() => {
@@ -74,6 +121,27 @@ export function SpatialStickerManager({
     });
   }, [stickers, spatialMode]);
 
+  // Register grabbable stickers
+  useEffect(() => {
+    if (!enableGrab || spatialMode !== 'vr') return;
+
+    visibleStickers.forEach((sticker) => {
+      if (sticker.interactable) {
+        const ref = stickerRefs.current.get(sticker.id);
+        if (ref) {
+          ref.userData.stickerId = sticker.id;
+          grabInteraction.makeGrabbable(ref);
+        }
+      }
+    });
+
+    return () => {
+      stickerRefs.current.forEach((ref) => {
+        grabInteraction.makeNotGrabbable(ref);
+      });
+    };
+  }, [enableGrab, spatialMode, visibleStickers, grabInteraction]);
+
   // Group stickers by layer for proper render ordering
   const stickersByLayer = useMemo(() => {
     const layers = new Map<string | undefined, SpatialSticker[]>();
@@ -88,6 +156,16 @@ export function SpatialStickerManager({
 
     return layers;
   }, [visibleStickers]);
+
+  // Check if sticker is being grabbed
+  const isGrabbed = useCallback((stickerId: string): boolean => {
+    const leftGrab = grabInteraction.leftGrab;
+    const rightGrab = grabInteraction.rightGrab;
+    return (
+      (leftGrab?.object.userData.stickerId === stickerId) ||
+      (rightGrab?.object.userData.stickerId === stickerId)
+    );
+  }, [grabInteraction.leftGrab, grabInteraction.rightGrab]);
 
   // Default URL handler
   const handleOpenUrl = useCallback(
@@ -121,15 +199,17 @@ export function SpatialStickerManager({
               onEmitEvent={onEmitEvent}
               onRunPipeline={onRunPipeline}
               debug={debug}
+              grabbable={enableGrab && sticker.interactable}
+              isGrabbed={isGrabbed(sticker.id)}
             />
           ))}
         </group>
       ))}
 
-      {/* Debug info overlay */}
-      {debug && (
+      {/* Grab state indicator */}
+      {debug && grabInteraction.state !== 'idle' && (
         <group position={[0, 2.5, -2]}>
-          {/* Could add HTML debug panel here */}
+          {/* Could add grab state visualization here */}
         </group>
       )}
     </group>
