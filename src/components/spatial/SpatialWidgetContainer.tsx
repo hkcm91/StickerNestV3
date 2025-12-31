@@ -238,15 +238,43 @@ function SpatialWidget({
   // Cursor feedback
   useCursor(hovered && interactive);
 
-  // Convert 2D position to 3D
+  // Convert 2D position to 3D - arrange in arc around user for VR
   const position3D = useMemo((): [number, number, number] => {
-    const basePos = toSpatialPosition(widget.position, DEFAULT_WIDGET_Z + zOffset);
+    // For VR, we want widgets in a comfortable viewing arc around the user
+    // Instead of directly mapping canvas coordinates, arrange them sensibly
+
+    // Get base position from 2D coordinates
+    const rawX = widget.position.x / PIXELS_PER_METER;
+    const rawY = widget.position.y / PIXELS_PER_METER;
+
+    // Clamp position to reasonable bounds for VR viewing
+    // Maximum spread: 3 meters left/right, 1.5 meters up/down from eye level
+    const maxSpreadX = 3; // meters
+    const maxSpreadY = 1.5; // meters
+
+    // Normalize large canvas coordinates to fit in viewing arc
+    // Canvas is typically 1920x1080, so divide by that to get 0-1 range
+    const normalizedX = Math.min(1, rawX / 19.2); // 1920 pixels / 100 = 19.2 meters raw
+    const normalizedY = Math.min(1, rawY / 10.8); // 1080 pixels / 100 = 10.8 meters raw
+
+    // Map to arc: spread widgets across -maxSpread to +maxSpread
+    const arcX = (normalizedX - 0.5) * 2 * maxSpreadX;
+    // Y: keep near eye level (1.6m), adjusted by normalized position
+    const arcY = DEFAULT_EYE_HEIGHT - (normalizedY - 0.5) * maxSpreadY;
+
+    // Z: place at comfortable viewing distance, with slight curve
+    // Widgets further to the side are slightly further away
+    const baseZ = DEFAULT_WIDGET_Z + zOffset;
+    const curveAmount = 0.5; // how much the arc curves back
+    const curvedZ = baseZ - (Math.abs(arcX) / maxSpreadX) * curveAmount;
+
     // Center the widget (2D origin is top-left, 3D is center)
     const size3D = toSpatialSize({ width: widget.width, height: widget.height });
+
     return [
-      basePos[0] + size3D.width / 2,
-      basePos[1] - size3D.height / 2,
-      basePos[2],
+      arcX + size3D.width / 2,
+      arcY - size3D.height / 2,
+      curvedZ,
     ];
   }, [widget.position, widget.width, widget.height, zOffset]);
 
