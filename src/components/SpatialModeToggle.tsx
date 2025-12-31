@@ -227,42 +227,39 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       // For VR/AR modes, try to start a real WebXR session
       // If that fails, fall back to "preview mode" (3D view without XR session)
       if (mode === 'vr' || mode === 'ar') {
-        // Update state to show we're requesting the mode
-        requestMode(mode);
-
-        // Detect mobile devices - use preview mode by default on phones
-        // Real WebXR sessions on mobile are meant for cardboard headsets
-        // but most users just want to see the 3D view on their screen
+        // IMPORTANT: Detect mobile BEFORE calling requestMode()
+        // requestMode() sets sessionState to 'requesting' which can trigger
+        // WebXR initialization elsewhere in the app
         //
-        // IMPORTANT: User agent detection alone is NOT reliable because:
-        // - Chrome "desktop view mode" spoofs desktop user agent on mobile
-        // - Some tablets report as mobile
-        // We use multiple signals to detect mobile:
-        // 1. User agent (traditional check)
-        // 2. Touch support (most reliable for actual mobile devices)
-        // 3. Screen size (phones have small screens)
-        const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // For VR mode on touch devices without VR hardware, ALWAYS use preview mode
+        // Real WebXR VR requires a headset (Quest, Vive, etc.)
+        // Phones/tablets should use preview mode to see the 3D scene in browser
         const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const isSmallScreen = window.innerWidth <= 1024 && window.innerHeight <= 1366;
-        const isTabletUserAgent = /iPad|Android/i.test(navigator.userAgent) && !/Mobile/i.test(navigator.userAgent);
+        const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Consider it a mobile phone if:
-        // - Has touch support AND small screen (catches "desktop view mode")
-        // - OR user agent says mobile (but not tablet)
-        const isMobilePhone = (hasTouchSupport && isSmallScreen) || (userAgentMobile && !isTabletUserAgent);
-
-        // For VR mode on phones, always use preview mode
-        // Real WebXR VR is meant for headsets, not phones
-        if (isMobilePhone && mode === 'vr') {
-          console.log('[SpatialModeToggle] Mobile phone detected (touch + small screen), using VR preview mode', {
-            userAgentMobile,
+        // For VR mode: Use preview if device has touch (phone/tablet) unless it's a VR headset
+        // VR headsets don't have touch screens, so this safely catches all phones/tablets
+        if (mode === 'vr' && hasTouchSupport) {
+          console.log('[SpatialModeToggle] Touch device detected, using VR preview mode (no WebXR)', {
             hasTouchSupport,
-            isSmallScreen,
+            maxTouchPoints: navigator.maxTouchPoints,
+            userAgentMobile,
             screenSize: `${window.innerWidth}x${window.innerHeight}`,
           });
+          // Go directly to preview mode - don't call requestMode() first
           useSpatialModeStore.getState().enterPreviewMode('vr');
           return;
         }
+
+        // Also use preview mode if user agent indicates mobile (backup check)
+        if (mode === 'vr' && userAgentMobile) {
+          console.log('[SpatialModeToggle] Mobile user agent detected, using VR preview mode');
+          useSpatialModeStore.getState().enterPreviewMode('vr');
+          return;
+        }
+
+        // Now it's safe to call requestMode - we're on a device that might have real VR
+        requestMode(mode);
 
         // If XR isn't supported at all, go directly to preview mode
         if (!capabilities.vrSupported && mode === 'vr') {

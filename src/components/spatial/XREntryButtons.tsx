@@ -197,7 +197,28 @@ export function XREntryButtons({
 
   // Handle entering VR
   const handleEnterVR = useCallback(async () => {
-    if (isLoading || !capabilities.vrSupported) return;
+    if (isLoading) return;
+
+    // On touch devices (phones/tablets), use preview mode instead of WebXR
+    // Real WebXR VR requires a headset - phones should use preview mode
+    const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (hasTouchSupport || userAgentMobile) {
+      console.log('[XREntryButtons] Touch device detected, using VR preview mode', {
+        hasTouchSupport,
+        maxTouchPoints: navigator.maxTouchPoints,
+        userAgentMobile,
+      });
+      useSpatialModeStore.getState().enterPreviewMode('vr');
+      return;
+    }
+
+    if (!capabilities.vrSupported) {
+      console.log('[XREntryButtons] VR not supported, using preview mode');
+      useSpatialModeStore.getState().enterPreviewMode('vr');
+      return;
+    }
 
     try {
       setSessionState('requesting');
@@ -207,8 +228,8 @@ export function XREntryButtons({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to enter VR';
       console.error('[XREntryButtons] VR entry failed:', message);
-      setError(message);
-      setSessionState('error');
+      // Fall back to preview mode instead of error
+      useSpatialModeStore.getState().enterPreviewMode('vr');
     }
   }, [isLoading, capabilities.vrSupported, setSessionState, setError]);
 
