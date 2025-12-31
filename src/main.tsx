@@ -22,6 +22,18 @@ if (typeof window !== 'undefined') {
   (window as any).__STICKERNEST_BUILD_VERSION__ = BUILD_VERSION;
 }
 
+// Expose stores for testing/debugging (only in dev mode)
+if (import.meta.env.DEV) {
+  import('./state/useCanvasStore').then(module => {
+    (window as any).__STICKERNEST_STORES__ = (window as any).__STICKERNEST_STORES__ || {};
+    (window as any).__STICKERNEST_STORES__.canvas = module.useCanvasStore;
+  });
+  import('./state/useSpatialModeStore').then(module => {
+    (window as any).__STICKERNEST_STORES__ = (window as any).__STICKERNEST_STORES__ || {};
+    (window as any).__STICKERNEST_STORES__.spatialMode = module.useSpatialModeStore;
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <ErrorBoundary>
