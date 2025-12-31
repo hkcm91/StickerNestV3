@@ -12,10 +12,10 @@
  * - Room visualization and occlusion for AR
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Text } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
-import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
+import { useActiveSpatialMode, useSpatialModeStore } from '../../state/useSpatialModeStore';
 import {
   useSpatialStickerStore,
   useDetectedQRCodes,
@@ -26,6 +26,7 @@ import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
 import {
   XRToolbar,
+  XRWidgetLibrary,
   type XRToolType,
   RoomVisualizer,
   OcclusionLayer,
@@ -56,6 +57,13 @@ function CanvasPanel3D({
 }: CanvasPanel3DProps) {
   const [hovered, setHovered] = useState(false);
   const spatialMode = useActiveSpatialMode();
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
+  const targetMode = useSpatialModeStore((s) => s.targetMode);
+
+  // Effective mode for display
+  const effectiveMode = sessionState === 'requesting' && targetMode
+    ? targetMode
+    : spatialMode;
 
   return (
     <group position={position}>
@@ -101,7 +109,7 @@ function CanvasPanel3D({
         anchorX="center"
         anchorY="middle"
       >
-        {spatialMode === 'vr' ? '🥽 VR Mode' : spatialMode === 'ar' ? '📱 AR Mode' : '🖥️ Preview'}
+        {effectiveMode === 'vr' ? '🥽 VR Mode' : effectiveMode === 'ar' ? '📱 AR Mode' : '🖥️ Preview'}
       </Text>
 
       {/* Instructions */}
@@ -114,9 +122,9 @@ function CanvasPanel3D({
         maxWidth={3}
         textAlign="center"
       >
-        {spatialMode === 'vr'
+        {effectiveMode === 'vr'
           ? 'Point and click to interact • Use thumbstick to teleport'
-          : spatialMode === 'ar'
+          : effectiveMode === 'ar'
           ? 'Point at surfaces to place content'
           : 'Use mouse to orbit • Click VR button to enter immersive mode'}
       </Text>
@@ -210,12 +218,36 @@ function PlacedMarkerObject({ position }: { position: [number, number, number] }
 
 export function SpatialScene() {
   const spatialMode = useActiveSpatialMode();
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
+  const targetMode = useSpatialModeStore((s) => s.targetMode);
   const [placedObjects, setPlacedObjects] = useState<PlacedMarker[]>([]);
   const [activeTool, setActiveTool] = useState<XRToolType>('select');
 
   // Room mapping settings
   const [showRoomVisualization, setShowRoomVisualization] = useState(false);
   const [enableOcclusion, setEnableOcclusion] = useState(true);
+
+  // Widget library visibility
+  const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
+
+  // Effective mode considers transitioning states
+  // When sessionState is 'requesting', use targetMode to determine what to render
+  const effectiveMode = useMemo(() => {
+    if (sessionState === 'requesting' && targetMode) {
+      return targetMode;
+    }
+    return spatialMode;
+  }, [spatialMode, sessionState, targetMode]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[SpatialScene] Mode state:', {
+      spatialMode,
+      sessionState,
+      targetMode,
+      effectiveMode,
+    });
+  }, [spatialMode, sessionState, targetMode, effectiveMode]);
 
   // Canvas widgets from the main canvas store
   // These are the actual widgets that users have placed on their 2D canvas
@@ -231,11 +263,28 @@ export function SpatialScene() {
     () => Array.from(selectionSet),
     [selectionSet]
   );
-  const selectWidget = useCanvasStore((state) => state.selectWidget);
+  const selectWidget = useCanvasStore((state) => state.select);
   const updateWidget = useCanvasStore((state) => state.updateWidget);
 
   // Primary selected widget (for single selection operations)
   const primarySelectedWidgetId = selectedWidgetIds.length > 0 ? selectedWidgetIds[0] : undefined;
+
+  // Debug: Log widget data
+  useEffect(() => {
+    console.log('[SpatialScene] Canvas widgets:', {
+      widgetsMapSize: widgetsMap.size,
+      canvasWidgetsCount: canvasWidgets.length,
+      effectiveMode,
+      shouldRenderWidgets: effectiveMode !== 'desktop',
+      widgets: canvasWidgets.map(w => ({
+        id: w.id,
+        name: w.name,
+        widgetDefId: w.widgetDefId,
+        visible: w.visible,
+        position: w.position,
+      })),
+    });
+  }, [widgetsMap, canvasWidgets, effectiveMode]);
 
   // Spatial sticker state
   // IMPORTANT: Don't call functions inside Zustand selectors - it creates new references every render!
@@ -294,7 +343,7 @@ export function SpatialScene() {
 
   const handleAddWidget = useCallback(() => {
     console.log('Add widget requested from XR toolbar');
-    // TODO: Open widget picker in 3D space
+    setShowWidgetLibrary((prev) => !prev);
   }, []);
 
   const handleUndo = useCallback(() => {
@@ -370,7 +419,7 @@ export function SpatialScene() {
   return (
     <group>
       {/* XR Toolbar (spawns from palm gesture in VR mode) */}
-      {spatialMode === 'vr' && (
+      {effectiveMode === 'vr' && (
         <XRToolbar
           activeTool={activeTool}
           onToolChange={handleToolChange}
@@ -381,21 +430,28 @@ export function SpatialScene() {
         />
       )}
 
+      {/* XR Widget Library (all 3D modes - VR, AR, and desktop preview) */}
+      <XRWidgetLibrary
+        visible={showWidgetLibrary}
+        onClose={() => setShowWidgetLibrary(false)}
+        position={[0.9, 1.5, -1.2]}
+      />
+
       {/* VR Teleportation (only in VR mode) */}
       <VRTeleport
         initialPosition={[0, 0, 0]}
         floorSize={[20, 20]}
-        enabled={spatialMode === 'vr'}
+        enabled={effectiveMode === 'vr'}
         onTeleport={handleTeleport}
       />
 
       {/* AR Room Mapping - Occlusion Layer (renders first for proper depth) */}
-      {spatialMode === 'ar' && enableOcclusion && (
+      {effectiveMode === 'ar' && enableOcclusion && (
         <OcclusionLayer renderOrder={0} />
       )}
 
       {/* AR Room Visualization (debug/preview) */}
-      {spatialMode === 'ar' && showRoomVisualization && (
+      {effectiveMode === 'ar' && showRoomVisualization && (
         <RoomVisualizer
           showPlanes={true}
           showMesh={true}
@@ -407,7 +463,7 @@ export function SpatialScene() {
       )}
 
       {/* AR Room Setup Guide (shown when no room data available) */}
-      {spatialMode === 'ar' && (
+      {effectiveMode === 'ar' && (
         <RoomSetupGuide
           onDismiss={() => console.log('Room setup guide dismissed')}
         />
@@ -415,7 +471,7 @@ export function SpatialScene() {
 
       {/* AR Hit Test Indicator (only in AR mode) */}
       <ARHitTest
-        enabled={spatialMode === 'ar'}
+        enabled={effectiveMode === 'ar'}
         onPlace={handleARPlace}
         indicatorColor="#8b5cf6"
         indicatorSize={0.12}
@@ -447,10 +503,47 @@ export function SpatialScene() {
       </group>
 
       {/* Main canvas panel at comfortable viewing distance (VR only) */}
-      {spatialMode === 'vr' && <CanvasPanel3D />}
+      {effectiveMode === 'vr' && <CanvasPanel3D />}
+
+      {/* Debug: Widget count indicator */}
+      {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
+        <group position={[-2.5, 1.8, -2]} rotation={[0, 0.3, 0]}>
+          <mesh>
+            <planeGeometry args={[1.2, 0.6]} />
+            <meshStandardMaterial color="#1e1b4b" transparent opacity={0.95} />
+          </mesh>
+          <Text
+            position={[0, 0.15, 0.01]}
+            fontSize={0.08}
+            color="white"
+            anchorX="center"
+          >
+            Canvas Widgets
+          </Text>
+          <Text
+            position={[0, -0.05, 0.01]}
+            fontSize={0.15}
+            color={canvasWidgets.length > 0 ? '#22c55e' : '#ef4444'}
+            anchorX="center"
+          >
+            {canvasWidgets.length}
+          </Text>
+          <Text
+            position={[0, -0.22, 0.01]}
+            fontSize={0.05}
+            color="#9ca3af"
+            anchorX="center"
+          >
+            {canvasWidgets.length > 0
+              ? canvasWidgets.map(w => w.name || w.widgetDefId).join(', ').slice(0, 30)
+              : 'No widgets on canvas'}
+          </Text>
+        </group>
+      )}
 
       {/* Canvas widgets rendered in 3D space */}
       {/* These are the actual widgets from the user's canvas, converted to 3D panels */}
+      {/* Pass effectiveMode so widgets render during transition */}
       <SpatialWidgetContainer
         widgets={canvasWidgets}
         selectedWidgetId={primarySelectedWidgetId}
@@ -458,10 +551,11 @@ export function SpatialScene() {
         onWidgetTransformChange={handleWidgetTransformChange}
         interactive={activeTool === 'select' || activeTool === 'move'}
         debug={showDebugInfo}
+        forceRender={effectiveMode !== 'desktop'}
       />
 
       {/* Demo interactive objects (VR only, AR uses placed objects) */}
-      {spatialMode === 'vr' && (
+      {effectiveMode === 'vr' && (
         <>
           <InteractiveBox position={[-1.5, 1, -2]} color="#ef4444" />
           <InteractiveBox position={[1.5, 1, -2]} color="#3b82f6" />
@@ -489,7 +583,7 @@ export function SpatialScene() {
           color="#8b5cf6"
           anchorX="center"
         >
-          {spatialMode.toUpperCase()}
+          {effectiveMode.toUpperCase()}
         </Text>
         <Text
           position={[0, -0.2, 0.01]}
@@ -499,9 +593,34 @@ export function SpatialScene() {
           maxWidth={1}
           textAlign="center"
         >
-          {spatialMode === 'ar'
+          {effectiveMode === 'ar'
             ? `${placedObjects.length} objects placed`
             : 'Click boxes to interact'}
+        </Text>
+      </group>
+
+      {/* Add Widget Button (clickable in 3D preview) */}
+      <group
+        position={[-2.5, 1.2, -2]}
+        rotation={[0, 0.3, 0]}
+        onClick={handleAddWidget}
+      >
+        <mesh>
+          <planeGeometry args={[0.5, 0.15]} />
+          <meshStandardMaterial
+            color={showWidgetLibrary ? '#6366f1' : '#8b5cf6'}
+            transparent
+            opacity={0.95}
+          />
+        </mesh>
+        <Text
+          position={[0, 0, 0.01]}
+          fontSize={0.06}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {showWidgetLibrary ? '✕ Close Library' : '+ Add Widget'}
         </Text>
       </group>
     </group>

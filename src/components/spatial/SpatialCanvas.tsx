@@ -16,62 +16,14 @@
  * - No interactive elements when hidden
  */
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { XR, createXRStore, XROrigin } from '@react-three/xr';
-import { Environment, OrbitControls, Grid } from '@react-three/drei';
+import { XR, XROrigin } from '@react-three/xr';
+import { OrbitControls, Grid } from '@react-three/drei';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { SpatialScene } from './SpatialScene';
-import { XREntryButtons } from './XREntryButtons';
-
-// ============================================================================
-// XR Store Configuration
-// ============================================================================
-
-/**
- * XR store is created outside the component to persist across renders.
- * This manages WebXR session state, controllers, and hands.
- *
- * IMPORTANT: Reference space configuration determines how the scene is positioned:
- * - 'local-floor': Standing experiences, floor at y=0, limited tracking (default)
- * - 'bounded-floor': Room-scale with guardian boundaries (Meta Quest)
- * - 'unbounded': Large area tracking without boundaries
- *
- * Without proper reference space, the scene will be HEAD-LOCKED (moves with headset).
- */
-export const xrStore = createXRStore({
-  // CRITICAL: Reference space determines world-space vs head-locked rendering
-  // 'local-floor' places the origin at floor level and tracks position in world space
-  // This is what allows you to look around and have the scene stay stationary
-  referenceSpace: 'local-floor',
-
-  // Controller configuration
-  controller: {
-    left: true,
-    right: true,
-    teleportPointer: true,
-  },
-  // Hand tracking
-  hand: {
-    left: true,
-    right: true,
-    teleportPointer: true,
-  },
-  // Performance settings
-  frameRate: 'high',
-  foveation: 1,
-  // Features
-  handTracking: true,
-  // AR/VR features for room-scale and spatial anchoring
-  hitTest: true,
-  anchors: true,
-  // Plane detection for AR surface awareness
-  planeDetection: true,
-  // Mesh detection for room mapping (Meta Quest)
-  meshDetection: true,
-  // Depth sensing for occlusion
-  depthSensing: true,
-});
+import { xrStore } from './xrStore';
+import * as THREE from 'three';
 
 // ============================================================================
 // Frame Loop Controller
@@ -88,7 +40,9 @@ function FrameLoopController({ shouldRender }: { shouldRender: boolean }) {
   useEffect(() => {
     // When hidden, pause the frame loop to save resources
     // When visible, ensure continuous rendering
-    set({ frameloop: shouldRender ? 'always' : 'never' });
+    const frameloop = shouldRender ? 'always' : 'never';
+    console.log('[FrameLoopController] Setting frameloop to:', frameloop, 'shouldRender:', shouldRender);
+    set({ frameloop });
   }, [shouldRender, set]);
 
   return null;
@@ -108,20 +62,193 @@ function LoadingFallback() {
 }
 
 // ============================================================================
-// VR Environment
+// 360 Grid Environment (Customizable VR Room)
 // ============================================================================
 
-interface VREnvironmentProps {
-  preset?: 'sunset' | 'dawn' | 'night' | 'warehouse' | 'forest' | 'apartment' | 'studio' | 'city' | 'park' | 'lobby';
+export interface GridEnvironment360Props {
+  /** Radius of the environment sphere */
+  radius?: number;
+  /** Primary grid color */
+  gridColor?: string;
+  /** Secondary/accent grid color */
+  gridColorAccent?: string;
+  /** Background color */
+  backgroundColor?: string;
+  /** Major grid line spacing in meters */
+  majorGridSpacing?: number;
+  /** Minor grid line spacing in meters */
+  minorGridSpacing?: number;
+  /** Line width for grid */
+  lineWidth?: number;
+  /** Enable glow effect on grid lines */
+  glow?: boolean;
+  /** Opacity of grid lines (0-1) */
+  gridOpacity?: number;
 }
 
-function VREnvironment({ preset = 'sunset' }: VREnvironmentProps) {
+/**
+ * Creates a shader material for the 360 grid environment.
+ * Renders a spherical grid pattern that can be customized.
+ */
+function useGridSphereMaterial(props: GridEnvironment360Props) {
+  const {
+    gridColor = '#4f46e5', // Indigo
+    gridColorAccent = '#8b5cf6', // Violet
+    backgroundColor = '#0a0a0f',
+    majorGridSpacing = 2.0,
+    minorGridSpacing = 0.5,
+    gridOpacity = 0.6,
+    glow = true,
+  } = props;
+
+  return useMemo(() => {
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uGridColor: { value: new THREE.Color(gridColor) },
+        uGridColorAccent: { value: new THREE.Color(gridColorAccent) },
+        uBackgroundColor: { value: new THREE.Color(backgroundColor) },
+        uMajorSpacing: { value: majorGridSpacing },
+        uMinorSpacing: { value: minorGridSpacing },
+        uGridOpacity: { value: gridOpacity },
+        uGlow: { value: glow ? 1.0 : 0.0 },
+        uTime: { value: 0 },
+      },
+      vertexShader: `
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        varying vec2 vUv;
+
+        void main() {
+          vPosition = position;
+          vNormal = normal;
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uGridColor;
+        uniform vec3 uGridColorAccent;
+        uniform vec3 uBackgroundColor;
+        uniform float uMajorSpacing;
+        uniform float uMinorSpacing;
+        uniform float uGridOpacity;
+        uniform float uGlow;
+        uniform float uTime;
+
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        varying vec2 vUv;
+
+        float grid(vec2 coord, float spacing, float thickness) {
+          vec2 grid = abs(fract(coord / spacing - 0.5) - 0.5) / fwidth(coord / spacing);
+          float line = min(grid.x, grid.y);
+          return 1.0 - min(line, 1.0);
+        }
+
+        void main() {
+          // Convert sphere position to spherical coordinates for consistent grid
+          vec3 pos = normalize(vPosition);
+          float theta = atan(pos.z, pos.x); // Longitude
+          float phi = acos(pos.y); // Latitude
+
+          // Map to UV-like coordinates
+          vec2 sphereUV = vec2(theta / 3.14159, phi / 3.14159) * 10.0;
+
+          // Also use world position for horizontal/vertical lines
+          vec2 worldCoord = vec2(
+            length(vec2(vPosition.x, vPosition.z)), // Distance from Y axis
+            vPosition.y
+          );
+
+          // Calculate grid lines
+          float majorLine = grid(worldCoord, uMajorSpacing, 0.02);
+          float minorLine = grid(worldCoord, uMinorSpacing, 0.01) * 0.4;
+
+          // Spherical grid overlay
+          float sphereGrid = grid(sphereUV, 1.0, 0.02) * 0.3;
+
+          // Combine grids
+          float totalGrid = max(majorLine, max(minorLine, sphereGrid));
+
+          // Add glow effect
+          float glowAmount = uGlow * totalGrid * 0.5;
+
+          // Mix colors
+          vec3 gridMix = mix(uGridColor, uGridColorAccent, majorLine);
+          vec3 finalColor = mix(uBackgroundColor, gridMix, totalGrid * uGridOpacity);
+
+          // Add subtle glow
+          finalColor += gridMix * glowAmount * 0.3;
+
+          // Fade at poles to avoid singularity
+          float poleFade = smoothstep(0.0, 0.3, abs(pos.y - 1.0)) *
+                          smoothstep(0.0, 0.3, abs(pos.y + 1.0));
+          finalColor = mix(uBackgroundColor, finalColor, poleFade);
+
+          gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `,
+      side: THREE.BackSide, // Render inside of sphere
+    });
+
+    return material;
+  }, [gridColor, gridColorAccent, backgroundColor, majorGridSpacing, minorGridSpacing, gridOpacity, glow]);
+}
+
+/**
+ * 360 Grid Environment for VR mode and 3D preview.
+ * Creates an immersive grid-sphere environment like a holodeck.
+ */
+function GridEnvironment360(props: GridEnvironment360Props & { forceShow?: boolean }) {
+  const { radius = 50, forceShow = false } = props;
   const spatialMode = useActiveSpatialMode();
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
+  const targetMode = useSpatialModeStore((s) => s.targetMode);
 
-  // Only show environment in VR mode, not AR (AR uses real world)
-  if (spatialMode !== 'vr') return null;
+  const material = useGridSphereMaterial(props);
 
-  return <Environment preset={preset} background />;
+  // Show environment when:
+  // 1. forceShow is true (3D preview mode on desktop)
+  // 2. In VR mode
+  // 3. Transitioning to VR (not AR)
+  // 4. XR session active and not in AR
+  const isVROrTransitioning = spatialMode === 'vr' ||
+    (sessionState === 'requesting' && targetMode !== 'ar') ||
+    (sessionState === 'active' && spatialMode !== 'ar');
+
+  const shouldShow = forceShow || isVROrTransitioning;
+
+  // Never show in AR mode (real world passthrough)
+  if (spatialMode === 'ar') return null;
+  if (!shouldShow) return null;
+
+  console.log('[GridEnvironment360] Rendering environment:', { spatialMode, sessionState, targetMode, forceShow, shouldShow });
+
+  return (
+    <group name="grid-environment-360">
+      {/* Main environment sphere */}
+      <mesh material={material}>
+        <sphereGeometry args={[radius, 64, 64]} />
+      </mesh>
+
+      {/* Horizon glow ring */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <ringGeometry args={[radius * 0.8, radius, 64]} />
+        <meshBasicMaterial
+          color="#4f46e5"
+          transparent
+          opacity={0.1}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Center reference marker */}
+      <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.3, 0.35, 32]} />
+        <meshBasicMaterial color="#8b5cf6" transparent opacity={0.5} />
+      </mesh>
+    </group>
+  );
 }
 
 // ============================================================================
@@ -130,9 +257,14 @@ function VREnvironment({ preset = 'sunset' }: VREnvironmentProps) {
 
 function GroundPlane() {
   const spatialMode = useActiveSpatialMode();
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
+  const targetMode = useSpatialModeStore((s) => s.targetMode);
 
-  // In AR mode, the real floor is the ground
-  if (spatialMode === 'ar') return null;
+  // In AR mode (or transitioning to AR), the real floor is the ground
+  const isARMode = spatialMode === 'ar' ||
+    (sessionState === 'requesting' && targetMode === 'ar');
+
+  if (isARMode) return null;
 
   return (
     <>
@@ -178,6 +310,16 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   // Track if we've mounted the Canvas (for XR readiness)
   const [canvasReady, setCanvasReady] = useState(false);
 
+  // Reset any stuck session state on mount (e.g., from browser close during XR request)
+  // This prevents the SpatialCanvas from blocking interaction on app restart
+  useEffect(() => {
+    if (sessionState === 'requesting' || sessionState === 'ending') {
+      console.log('[SpatialCanvas] Resetting stuck session state:', sessionState);
+      setSessionState('none');
+      setActiveMode('desktop');
+    }
+  }, []); // Only run once on mount
+
   // Check XR capabilities on mount
   useEffect(() => {
     async function checkCapabilities() {
@@ -205,9 +347,22 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   // The Canvas/XR MUST always be mounted, but visibility can be controlled
   // Canvas is visible when:
   // 1. `active` prop is true (parent wants it visible), OR
-  // 2. An XR session is active or being requested (need to show VR/AR content)
-  const isXRActive = sessionState === 'active' || sessionState === 'requesting';
+  // 2. An XR session is ACTUALLY active (NOT 'requesting' - that would block 2D interaction)
+  // IMPORTANT: Don't show canvas during 'requesting' state - it blocks pointer events on 2D canvas!
+  const isXRActive = sessionState === 'active';
   const shouldShowCanvas = active || isXRActive;
+
+  // Debug logging for state transitions
+  useEffect(() => {
+    console.log('[SpatialCanvas] State:', {
+      active,
+      spatialMode,
+      sessionState,
+      isXRActive,
+      shouldShowCanvas,
+      canvasReady,
+    });
+  }, [active, spatialMode, sessionState, isXRActive, shouldShowCanvas, canvasReady]);
 
   // IMPORTANT: We ALWAYS render the Canvas and XR components at FULL SIZE.
   // This is required because:
@@ -299,8 +454,8 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               {/* User origin (feet position) */}
               <XROrigin />
 
-              {/* Environment (VR only) */}
-              <VREnvironment />
+              {/* 360 Grid Environment (VR and 3D preview - customizable) */}
+              <GridEnvironment360 forceShow={active} />
 
               {/* Ground reference */}
               <GroundPlane />
@@ -325,39 +480,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           )}
         </XR>
       </Canvas>
-
-      {/* XR Entry Buttons (DOM overlay) - only show when canvas is visible */}
-      {shouldShowCanvas && <XREntryButtons showVR showAR />}
     </div>
   );
 }
 
 // ============================================================================
-// XR Entry Functions (exported for use in UI)
+// Re-exports from xrStore for backwards compatibility
 // ============================================================================
 
-/**
- * Enter VR mode - call this from a button click handler
- */
-export function enterVR() {
-  xrStore.enterVR();
-}
-
-/**
- * Enter AR mode - call this from a button click handler
- */
-export function enterAR() {
-  xrStore.enterAR();
-}
-
-/**
- * Exit XR session
- */
-export function exitXR() {
-  const session = xrStore.getState().session;
-  if (session) {
-    session.end();
-  }
-}
+export { xrStore, enterVR, enterAR, exitXR } from './xrStore';
 
 export default SpatialCanvas;

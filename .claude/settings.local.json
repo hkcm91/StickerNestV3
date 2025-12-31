@@ -77,7 +77,9 @@
       "Skill(exposing-apis-to-widgets)",
       "Bash(timeout 30 npm run build:*)",
       "Bash(timeout 60 npm run build)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git stash drop:*)",
+      "Skill(implementing-spatial-xr)"
     ],
     "deny": [],
     "ask": []

@@ -14,7 +14,7 @@ import {
   useXRSessionState,
   useSpatialError,
 } from '../../state/useSpatialModeStore';
-import { xrStore } from './SpatialCanvas';
+import { xrStore } from './xrStore';
 
 // ============================================================================
 // XR Entry Helpers

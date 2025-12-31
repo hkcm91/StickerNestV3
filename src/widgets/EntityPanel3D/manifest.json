@@ -1,0 +1,55 @@
+{
+  "id": "stickernest.entity-panel-3d",
+  "name": "3D Entity Panel",
+  "version": "1.0.0",
+  "kind": "3d",
+  "entry": "index.tsx",
+  "description": "VR/AR panel for adding 3D entities, models, images, and primitives to the spatial scene. Search Poly Haven for free CC0 models or upload your own GLTF/GLB/OBJ files.",
+  "author": "StickerNest",
+  "tags": ["3d", "vr", "ar", "spatial", "models", "primitives", "upload", "poly-haven", "entity-panel"],
+  "inputs": {
+    "setTab": {
+      "type": "string",
+      "description": "Set active tab: search, upload, images, primitives"
+    },
+    "searchQuery": {
+      "type": "string",
+      "description": "Set search query for Poly Haven models"
+    },
+    "addModel": {
+      "type": "object",
+      "description": "Add a 3D model to the scene { url, name }"
+    }
+  },
+  "outputs": {
+    "entity:added": {
+      "type": "object",
+      "description": "Emitted when an entity is added to the scene { type, id, name, ... }"
+    },
+    "model:selected": {
+      "type": "object",
+      "description": "Emitted when a model is selected for preview"
+    },
+    "tab:changed": {
+      "type": "object",
+      "description": "Emitted when active tab changes"
+    }
+  },
+  "capabilities": {
+    "draggable": true,
+    "resizable": true,
+    "rotatable": false,
+    "supports3d": true
+  },
+  "io": {
+    "inputs": ["tab.set", "search.query", "model.add"],
+    "outputs": ["entity.added", "model.selected", "tab.changed"]
+  },
+  "size": {
+    "width": 400,
+    "height": 500,
+    "minWidth": 320,
+    "minHeight": 400,
+    "scaleMode": "scale"
+  }
+}

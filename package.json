@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
+        "dev:xr": "set XR_DEV=true && vite",
         "copy:test-widgets": "node scripts/copy-test-widgets.js",
         "build": "npm run copy:test-widgets && vite build",
         "build:typecheck": "npm run copy:test-widgets && tsc && vite build",
@@ -47,6 +48,7 @@
         "@types/three": "^0.182.0",
         "@typescript-eslint/eslint-plugin": "^6.14.0",
         "@typescript-eslint/parser": "^6.14.0",
+        "@vitejs/plugin-basic-ssl": "^2.1.0",
         "@vitejs/plugin-react": "^4.2.1",
         "@vitest/ui": "^4.0.14",
         "dotenv": "^17.2.3",

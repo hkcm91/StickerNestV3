@@ -47,6 +47,7 @@ import { CollaboratorManager, InviteDialog } from '../components/permissions';
 import { CanvasPermissionService, type PermissionCheckResult, type CollabRole } from '../services/CanvasPermissionService';
 import { SpatialCanvas } from '../components/spatial';
 import { useActiveSpatialMode } from '../state/useSpatialModeStore';
+import { useWidgetSync } from '../hooks/useWidgetSync';
 import styles from './CanvasPage.module.css';
 
 // =============================================================================
@@ -103,6 +104,18 @@ export const CanvasPage: React.FC<CanvasPageProps> = ({
   // Spatial mode (VR/AR/Desktop)
   const spatialMode = useActiveSpatialMode();
   const isDesktopMode = spatialMode === 'desktop';
+
+  // IMPORTANT: Keep widgets synced to Zustand store at page level
+  // This ensures SpatialScene can access widgets even when CanvasRenderer is unmounted
+  const { widgets: syncedWidgets, refresh: refreshWidgets } = useWidgetSync({ runtime });
+
+  // Refresh widget sync when entering VR/AR mode
+  useEffect(() => {
+    if (!isDesktopMode) {
+      console.log('[CanvasPage] Entering spatial mode, refreshing widgets...');
+      refreshWidgets();
+    }
+  }, [isDesktopMode, refreshWidgets]);
 
   // Determine active canvas ID
   const activeCanvasId = urlCanvasId || currentCanvasId || 'canvas-1';

@@ -17,6 +17,10 @@ export type { FloatingPanelProps } from './FloatingPanel';
 export { XRToolbar } from './XRToolbar';
 export type { XRToolbarProps, XRToolType } from './XRToolbar';
 
+// Widget Library
+export { XRWidgetLibrary } from './XRWidgetLibrary';
+export type { XRWidgetLibraryProps } from './XRWidgetLibrary';
+
 // Room mapping
 export { RoomVisualizer } from './RoomVisualizer';
 export type { RoomVisualizerProps, PlaneType } from './RoomVisualizer';

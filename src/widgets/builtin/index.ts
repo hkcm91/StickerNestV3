@@ -184,6 +184,8 @@ import imageGenManifest from '../ImageGenPipeline/manifest.json';
 import { PreviewExportWidget } from '../PreviewExport';
 import previewManifest from '../PreviewExport/manifest.json';
 import { ModularToolbarWidget } from '../DashboardBuilder/widget';
+import { EntityPanel3DWidget } from '../EntityPanel3D';
+import entityPanel3DManifest from '../EntityPanel3D/manifest.json';
 
 import type { WidgetManifest } from '../../types/manifest';
 
@@ -281,6 +283,10 @@ export const BUILTIN_WIDGETS: Record<string, BuiltinWidget> = {
   // Spatial/VR/AR Widgets
   'stickernest.green-screen-plane': GreenScreenPlaneWidget,
   'stickernest.panoramic-overlay': PanoramicOverlayWidget,
+  'stickernest.entity-panel-3d': {
+    manifest: entityPanel3DManifest as unknown as WidgetManifest,
+    component: EntityPanel3DWidget
+  },
 
   // Collaboration Widgets
   'stickernest.view-switcher': ViewSwitcherWidget,
@@ -433,6 +439,7 @@ export {
   // Spatial/VR/AR Widgets
   GreenScreenPlaneWidget,
   PanoramicOverlayWidget,
+  EntityPanel3DWidget,
   // Collaboration Widgets
   ViewSwitcherWidget,
   CollaboratorListWidget,

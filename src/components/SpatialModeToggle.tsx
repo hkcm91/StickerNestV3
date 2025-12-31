@@ -234,6 +234,7 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         const canvasReady = await waitForCanvasReady(3000);
         if (!canvasReady) {
           console.error('[SpatialModeToggle] Canvas not ready, cannot enter XR');
+          useSpatialModeStore.getState().setSessionState('none');
           requestMode('desktop');
           return;
         }
@@ -242,14 +243,23 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         if (store) {
           try {
             // Use retry logic in case XR context needs more time
-            await enterXRWithRetry(store, mode, 2);
+            // Add timeout to prevent infinite requesting state
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('XR entry timed out')), 10000);
+            });
+            await Promise.race([
+              enterXRWithRetry(store, mode, 2),
+              timeoutPromise,
+            ]);
           } catch (e) {
             console.error(`[SpatialModeToggle] Failed to enter ${mode}:`, e);
             // Reset to desktop on failure
+            useSpatialModeStore.getState().setSessionState('none');
             requestMode('desktop');
           }
         } else {
           console.warn('[SpatialModeToggle] XR store not available');
+          useSpatialModeStore.getState().setSessionState('none');
           requestMode('desktop');
         }
       } else {
@@ -258,9 +268,15 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         if (store) {
           const session = store.getState().session;
           if (session) {
-            session.end();
+            try {
+              session.end();
+            } catch (e) {
+              console.warn('[SpatialModeToggle] Error ending session:', e);
+            }
           }
         }
+        // Force reset session state to ensure we exit properly
+        useSpatialModeStore.getState().setSessionState('none');
         requestMode(mode);
       }
     },

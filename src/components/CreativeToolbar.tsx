@@ -22,10 +22,10 @@ import {
   RectangleHorizontal,
   Pentagon,
   Octagon,
-  Cylinder,
-  Cone,
-  Torus,
-  Plane,
+  Disc,
+  Pyramid,
+  LifeBuoy,
+  Layers,
   ArrowRight,
   Pencil,
   Eye,
@@ -34,7 +34,8 @@ import {
 } from 'lucide-react';
 import { useToolStore, useActiveTool, useShapeSubmenuOpen, useObject3DSubmenuOpen } from '../state/useToolStore';
 import { useCanvasStore } from '../state/useCanvasStore';
-import { useSpatialModeStore, useActiveSpatialMode, useIsVRMode } from '../state/useSpatialModeStore';
+import { useSpatialModeStore, useActiveSpatialMode, useIsVRMode, useXRCapabilities } from '../state/useSpatialModeStore';
+import { xrStore } from './spatial/xrStore';
 import type { VectorShapeType, Object3DPrimitiveType } from '../types/entities';
 import type { LucideIcon } from 'lucide-react';
 
@@ -91,10 +92,10 @@ const shapeLabels: Record<VectorShapeType, string> = {
 const object3dIcons: Record<Object3DPrimitiveType, LucideIcon> = {
   cube: Box,
   sphere: Circle,
-  cylinder: Cylinder,
-  cone: Cone,
-  torus: Torus,
-  plane: Plane,
+  cylinder: Disc,
+  cone: Pyramid,
+  torus: LifeBuoy,
+  plane: Layers,
   custom: Box,
 };
 
@@ -291,7 +292,36 @@ export const CreativeToolbar: React.FC = () => {
   // Spatial mode (VR/AR/Desktop)
   const spatialMode = useActiveSpatialMode();
   const isVRMode = useIsVRMode();
-  const toggleVR = useSpatialModeStore((s) => s.toggleVR);
+  const capabilities = useXRCapabilities();
+  const setSessionState = useSpatialModeStore((s) => s.setSessionState);
+  const setActiveMode = useSpatialModeStore((s) => s.setActiveMode);
+
+  // Handle VR toggle - actually enters/exits the XR session
+  const handleVRToggle = useCallback(async () => {
+    if (isVRMode) {
+      // Exit VR
+      const session = xrStore.getState().session;
+      if (session) {
+        session.end();
+      }
+      setSessionState('none');
+      setActiveMode('desktop');
+    } else {
+      // Enter VR
+      if (!capabilities.vrSupported) {
+        console.warn('[CreativeToolbar] VR not supported on this device');
+        return;
+      }
+      try {
+        setSessionState('requesting');
+        await xrStore.enterVR();
+      } catch (err) {
+        console.error('[CreativeToolbar] Failed to enter VR:', err);
+        setSessionState('none');
+        setActiveMode('desktop');
+      }
+    }
+  }, [isVRMode, capabilities.vrSupported, setSessionState, setActiveMode]);
 
   // Shape submenu items
   const shapeItems: Array<{ icon: LucideIcon; label: string; value: VectorShapeType }> = [
@@ -313,10 +343,10 @@ export const CreativeToolbar: React.FC = () => {
   const object3dItems: Array<{ icon: LucideIcon; label: string; value: Object3DPrimitiveType }> = [
     { icon: Box, label: 'Cube', value: 'cube' },
     { icon: Circle, label: 'Sphere', value: 'sphere' },
-    { icon: Cylinder, label: 'Cylinder', value: 'cylinder' },
-    { icon: Cone, label: 'Cone', value: 'cone' },
-    { icon: Torus, label: 'Torus', value: 'torus' },
-    { icon: Plane, label: 'Plane', value: 'plane' },
+    { icon: Disc, label: 'Cylinder', value: 'cylinder' },
+    { icon: Pyramid, label: 'Cone', value: 'cone' },
+    { icon: LifeBuoy, label: 'Torus', value: 'torus' },
+    { icon: Layers, label: 'Plane', value: 'plane' },
   ];
 
   const handleSelectTool = useCallback(() => {
@@ -465,9 +495,9 @@ export const CreativeToolbar: React.FC = () => {
       {/* VR Mode Toggle */}
       <ToolButton
         icon={Glasses}
-        tooltip={isVRMode ? 'Exit VR Mode' : 'Enter VR Mode'}
+        tooltip={isVRMode ? 'Exit VR Mode' : (capabilities.vrSupported ? 'Enter VR Mode' : 'VR not supported')}
         active={isVRMode}
-        onClick={toggleVR}
+        onClick={handleVRToggle}
       />
 
       <Divider />

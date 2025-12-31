@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 import path from 'path'
 import type { Plugin } from 'vite'
 
@@ -378,6 +379,8 @@ export default defineConfig(({ command, mode }) => ({
         react(),
         // Only use apiMiddleware in dev mode (not during build)
         ...(command === 'serve' ? [apiMiddleware()] : []),
+        // HTTPS for WebXR development with Meta Quest Link (only when XR_DEV=true)
+        ...(command === 'serve' && process.env.XR_DEV === 'true' ? [basicSsl()] : []),
     ],
     // Strip console.log/debug in production to prevent data exposure
     esbuild: {
