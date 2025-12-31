@@ -111,13 +111,13 @@ export function useWidgetSync({ runtime }: UseWidgetSyncOptions): UseWidgetSyncR
           }
         });
 
-        // Remove stale widgets from store
-        storeIds.forEach(id => {
-          if (!runtimeIds.has(id)) {
-            store.removeWidget(id);
-            hasChanges = true;
-          }
-        });
+        // NOTE: We intentionally do NOT remove widgets from the store here.
+        // Widgets in the store but not in the runtime may be:
+        // 1. Loaded from localStorage/persistence before runtime sync
+        // 2. Temporarily missing during mode transitions (desktop <-> VR/AR)
+        // Widget removal should only happen via explicit events (widget:removed)
+        // This ensures widgets persist across rendering mode changes.
+        // See: CanvasPage comment "Keep widgets synced to Zustand store at page level"
 
         lastSyncTimeRef.current = Date.now();
 
@@ -158,8 +158,18 @@ export function useWidgetSync({ runtime }: UseWidgetSyncOptions): UseWidgetSyncR
       syncFromRuntime();
     };
 
-    const handleWidgetRemoved = () => {
+    const handleWidgetRemoved = (event?: { payload?: { widgetInstanceId?: string } }) => {
       console.log('[useWidgetSync] Widget removed event');
+      // If we have the widget ID, remove it explicitly from the store
+      const widgetId = event?.payload?.widgetInstanceId;
+      if (widgetId) {
+        const store = useCanvasStore.getState();
+        if (store.widgets.has(widgetId)) {
+          store.removeWidget(widgetId);
+          console.log(`[useWidgetSync] Explicitly removed widget ${widgetId} from store`);
+        }
+      }
+      // Also sync to update any other state
       syncFromRuntime();
     };
 
