@@ -234,26 +234,27 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         // For VR mode on touch devices without VR hardware, ALWAYS use preview mode
         // Real WebXR VR requires a headset (Quest, Vive, etc.)
         // Phones/tablets should use preview mode to see the 3D scene in browser
+        //
+        // For AR mode on touch devices, TRY WebXR AR first for camera passthrough
+        // Many phones support WebXR AR (ARCore/ARKit) - only fallback to preview if it fails
         const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // For VR/AR mode: Use preview if device has touch (phone/tablet) unless it's a VR headset
-        // VR headsets don't have touch screens, so this safely catches all phones/tablets
-        // AR on mobile phones needs real AR session for camera access, but we can use preview
-        // mode as a fallback for devices that don't support WebXR AR
-        if (hasTouchSupport || userAgentMobile) {
-          console.log(`[SpatialModeToggle] Touch device detected, using ${mode.toUpperCase()} preview mode (no WebXR)`, {
+        // VR on touch devices: Use preview mode (no VR headset available)
+        // AR on touch devices: Let it try WebXR AR for camera passthrough
+        if (mode === 'vr' && (hasTouchSupport || userAgentMobile)) {
+          console.log('[SpatialModeToggle] Touch device detected, using VR preview mode (no WebXR)', {
             hasTouchSupport,
             maxTouchPoints: navigator.maxTouchPoints,
             userAgentMobile,
             screenSize: `${window.innerWidth}x${window.innerHeight}`,
           });
           // Go directly to preview mode - don't call requestMode() first
-          useSpatialModeStore.getState().enterPreviewMode(mode);
+          useSpatialModeStore.getState().enterPreviewMode('vr');
           return;
         }
 
-        // Now it's safe to call requestMode - we're on a device that might have real VR
+        // Now it's safe to call requestMode - we're on a device that might have real VR/AR
         requestMode(mode);
 
         // If XR isn't supported at all, go directly to preview mode
@@ -265,9 +266,8 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         }
 
         if (!capabilities.arSupported && mode === 'ar') {
-          console.log('[SpatialModeToggle] AR not supported, cannot enter AR mode');
-          useSpatialModeStore.getState().setSessionState('none');
-          requestMode('desktop');
+          console.log('[SpatialModeToggle] AR not supported, entering AR preview mode');
+          useSpatialModeStore.getState().enterPreviewMode('ar');
           return;
         }
 

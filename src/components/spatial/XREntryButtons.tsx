@@ -234,24 +234,12 @@ export function XREntryButtons({
   }, [isLoading, capabilities.vrSupported, setSessionState, setError]);
 
   // Handle entering AR
+  // AR should TRY WebXR first for camera passthrough, even on mobile
+  // Many phones support WebXR AR (ARCore/ARKit) - only fallback to preview if it fails
   const handleEnterAR = useCallback(async () => {
     if (isLoading) return;
 
-    // On touch devices (phones/tablets), use preview mode instead of WebXR
-    // Real WebXR AR requires device support which many phones lack
-    const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (hasTouchSupport || userAgentMobile) {
-      console.log('[XREntryButtons] Touch device detected, using AR preview mode', {
-        hasTouchSupport,
-        maxTouchPoints: navigator.maxTouchPoints,
-        userAgentMobile,
-      });
-      useSpatialModeStore.getState().enterPreviewMode('ar');
-      return;
-    }
-
+    // If AR isn't supported, use preview mode
     if (!capabilities.arSupported) {
       console.log('[XREntryButtons] AR not supported, using preview mode');
       useSpatialModeStore.getState().enterPreviewMode('ar');
