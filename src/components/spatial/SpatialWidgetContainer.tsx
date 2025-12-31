@@ -555,15 +555,28 @@ export function SpatialWidgetContainer({
     [onWidgetTransformChange]
   );
 
-  // Debug logging
-  console.log('[SpatialWidgetContainer] State:', {
-    spatialMode,
-    forceRender,
-    shouldRender: spatialMode !== 'desktop' || forceRender,
-    totalWidgets: widgets.length,
-    visibleWidgets: visibleWidgets.length,
-    widgetNames: widgets.map(w => w.name || w.widgetDefId),
-  });
+  // Debug logging - detailed widget position info
+  useEffect(() => {
+    console.log('[SpatialWidgetContainer] Rendering state:', {
+      spatialMode,
+      forceRender,
+      shouldRender: spatialMode !== 'desktop' || forceRender,
+      totalWidgets: widgets.length,
+      visibleWidgets: visibleWidgets.length,
+    });
+
+    // Log each widget's 2D and calculated 3D positions
+    visibleWidgets.forEach((w, i) => {
+      const pos3D = toSpatialPosition(w.position, DEFAULT_WIDGET_Z);
+      const size3D = toSpatialSize({ width: w.width, height: w.height });
+      console.log(`[Widget ${i}] "${w.name || w.widgetDefId}":`, {
+        '2D pos': w.position,
+        '2D size': { width: w.width, height: w.height },
+        '3D pos': pos3D,
+        '3D size': size3D,
+      });
+    });
+  }, [spatialMode, forceRender, widgets.length, visibleWidgets]);
 
   // Only render in VR/AR modes (or when forceRender is true for transitions)
   if (spatialMode === 'desktop' && !forceRender) {
@@ -591,30 +604,6 @@ export function SpatialWidgetContainer({
           debug={debug}
         />
       ))}
-
-      {/* Info panel showing widget count */}
-      <group position={[-3, DEFAULT_EYE_HEIGHT, baseZ]}>
-        <mesh>
-          <planeGeometry args={[0.8, 0.3]} />
-          <meshStandardMaterial color="#111827" transparent opacity={0.9} />
-        </mesh>
-        <Text
-          position={[0, 0.05, 0.01]}
-          fontSize={0.06}
-          color="white"
-          anchorX="center"
-        >
-          Widgets
-        </Text>
-        <Text
-          position={[0, -0.05, 0.01]}
-          fontSize={0.08}
-          color="#8b5cf6"
-          anchorX="center"
-        >
-          {visibleWidgets.length}
-        </Text>
-      </group>
     </group>
   );
 }
