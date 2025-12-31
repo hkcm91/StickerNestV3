@@ -566,6 +566,37 @@ function SpatialWidget({
                     html = mockAPI + html;
                   }
 
+                  // For simple text widgets, render directly instead of iframe (better mobile support)
+                  if (widget.widgetDefId === 'stickernest.basic-text') {
+                    const state = normalizedState as any;
+                    return (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: state.textAlign === 'left' ? 'flex-start' :
+                                         state.textAlign === 'right' ? 'flex-end' : 'center',
+                          padding: state.padding || 8,
+                          color: state.color || '#ffffff',
+                          fontSize: state.fontSize || 16,
+                          fontFamily: state.fontFamily || 'system-ui, sans-serif',
+                          fontWeight: state.fontWeight || 'normal',
+                          textAlign: state.textAlign || 'center',
+                          backgroundColor: state.backgroundColor || 'transparent',
+                          borderRadius: state.borderRadius || 0,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {state.content || state.text || 'Text'}
+                      </div>
+                    );
+                  }
+
+                  // For complex widgets, use iframe with permissive sandbox for mobile
                   return (
                     <iframe
                       srcDoc={html}
@@ -574,8 +605,9 @@ function SpatialWidget({
                         height: '100%',
                         border: 'none',
                         borderRadius: 8,
+                        backgroundColor: 'transparent',
                       }}
-                      sandbox="allow-scripts"
+                      sandbox="allow-scripts allow-same-origin"
                       title={widget.name || widget.widgetDefId}
                     />
                   );
