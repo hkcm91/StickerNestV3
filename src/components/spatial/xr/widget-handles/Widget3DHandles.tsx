@@ -351,22 +351,23 @@ export function Widget3DHandles({
         />
       ))}
 
-      {/* Edge handles */}
-      {edgePositions.map(({ type, position, rotation }) => (
-        <EdgeHandle
-          key={type}
-          position={position}
-          rotation={rotation}
-          type={type}
-          color={handleColor}
-          accentColor={accentColor}
-          enableHaptics={enableHaptics}
-          onDragStart={handleResizeDragStart}
-          onDrag={handleResizeDrag}
-          onDragEnd={handleResizeDragEnd}
-          onHover={handleHover}
-        />
-      ))}
+      {/* Edge handles - hidden when aspect ratio is locked */}
+      {!lockAspectRatio &&
+        edgePositions.map(({ type, position, rotation }) => (
+          <EdgeHandle
+            key={type}
+            position={position}
+            rotation={rotation}
+            type={type}
+            color={handleColor}
+            accentColor={accentColor}
+            enableHaptics={enableHaptics}
+            onDragStart={handleResizeDragStart}
+            onDrag={handleResizeDrag}
+            onDragEnd={handleResizeDragEnd}
+            onHover={handleHover}
+          />
+        ))}
 
       {/* Rotation handle */}
       <RotationHandle
@@ -408,17 +409,48 @@ export function Widget3DHandles({
         accentColor={accentColor}
       />
 
-      {/* Aspect ratio lock indicator */}
-      {lockAspectRatio && state.activeHandle?.startsWith('corner') && (
-        <Text
-          position={[0, height / 2 + 0.03, zOffset]}
-          fontSize={0.02}
-          color={accentColor}
-          anchorX="center"
-          anchorY="middle"
-        >
-          Locked
-        </Text>
+      {/* Aspect ratio lock indicator - always visible when locked */}
+      {lockAspectRatio && (
+        <>
+          {/* Lock icon at top */}
+          <Text
+            position={[0, height / 2 + 0.025, zOffset]}
+            fontSize={0.016}
+            color={accentColor}
+            anchorX="center"
+            anchorY="middle"
+          >
+            🔗
+          </Text>
+
+          {/* "Locked" text when actively resizing */}
+          {state.activeHandle?.startsWith('corner') && (
+            <Text
+              position={[0, height / 2 + 0.05, zOffset]}
+              fontSize={0.014}
+              color="#ffffff"
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={0.001}
+              outlineColor="#000000"
+            >
+              Aspect Locked
+            </Text>
+          )}
+
+          {/* Hint for double-tap to unlock */}
+          {state.isHovering && !state.activeHandle && (
+            <Text
+              position={[0, -height / 2 - 0.025, zOffset]}
+              fontSize={0.01}
+              color={accentColor}
+              anchorX="center"
+              anchorY="middle"
+            >
+              Double-tap corner to unlock
+            </Text>
+          )}
+        </>
       )}
     </group>
   );
