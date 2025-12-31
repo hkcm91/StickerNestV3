@@ -22,8 +22,20 @@ export { VRToolHub } from './VRToolHub';
 export type { VRToolHubProps, VRToolType as VRToolHubToolType } from './VRToolHub';
 
 // Widget 3D Handles (resize, rotate, move)
-export { Widget3DHandles } from './Widget3DHandles';
-export type { Widget3DHandlesProps, HandleType, TwoHandedState } from './Widget3DHandles';
+export { Widget3DHandles } from './widget-handles';
+export type {
+  Widget3DHandlesProps,
+  HandleType,
+  TwoHandedState,
+  ManipulationState,
+  HapticCapabilities,
+} from './widget-handles';
+
+// Widget 3D Handles - Hooks (for custom implementations)
+export { useXRHaptics, useTwoHandedGesture } from './widget-handles';
+
+// Widget 3D Handles - Constants
+export { HANDLE_CONSTANTS, HAPTIC_PRESETS } from './widget-handles';
 
 // Widget Library
 export { XRWidgetLibrary } from './XRWidgetLibrary';
