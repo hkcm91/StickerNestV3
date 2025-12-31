@@ -88,6 +88,7 @@ import { JitsiMeetWidget } from './JitsiMeetWidget';
 // Spatial/VR/AR Widgets
 import { GreenScreenPlaneWidget } from './GreenScreenPlaneWidget';
 import { PanoramicOverlayWidget } from './PanoramicOverlayWidget';
+import { SpatialMediaControllerWidget } from './spatial/SpatialMediaControllerWidget';
 
 // Collaboration Widgets
 import { ViewSwitcherWidget } from './ViewSwitcherWidget';
@@ -283,6 +284,7 @@ export const BUILTIN_WIDGETS: Record<string, BuiltinWidget> = {
   // Spatial/VR/AR Widgets
   'stickernest.green-screen-plane': GreenScreenPlaneWidget,
   'stickernest.panoramic-overlay': PanoramicOverlayWidget,
+  'stickernest.spatial-media-controller': SpatialMediaControllerWidget,
   'stickernest.entity-panel-3d': {
     manifest: entityPanel3DManifest as unknown as WidgetManifest,
     component: EntityPanel3DWidget
@@ -439,6 +441,7 @@ export {
   // Spatial/VR/AR Widgets
   GreenScreenPlaneWidget,
   PanoramicOverlayWidget,
+  SpatialMediaControllerWidget,
   EntityPanel3DWidget,
   // Collaboration Widgets
   ViewSwitcherWidget,
@@ -497,7 +500,7 @@ export {
   Win98MediaPlayerWidget,
 };
 
-// Re-export automation, wizard, signin, halo, grocery, myspace, and win98 modules
+// Re-export automation, wizard, signin, halo, grocery, myspace, win98, and spatial modules
 export * from './automation';
 export * from './wizards';
 export * from './signin';
@@ -505,3 +508,4 @@ export * from './halo';
 export * from './grocery';
 export * from './myspace';
 export * from './win98';
+export * from './spatial';
