@@ -307,9 +307,24 @@ export const CreativeToolbar: React.FC = () => {
       setSessionState('none');
       setActiveMode('desktop');
     } else {
-      // Enter VR
+      // Enter VR - but use preview mode on touch devices (phones/tablets)
+      // Real WebXR VR requires a headset, not a phone
+      const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (hasTouchSupport || userAgentMobile) {
+        console.log('[CreativeToolbar] Touch device detected, using VR preview mode', {
+          hasTouchSupport,
+          maxTouchPoints: navigator.maxTouchPoints,
+          userAgentMobile,
+        });
+        useSpatialModeStore.getState().enterPreviewMode('vr');
+        return;
+      }
+
       if (!capabilities.vrSupported) {
-        console.warn('[CreativeToolbar] VR not supported on this device');
+        console.warn('[CreativeToolbar] VR not supported on this device, using preview mode');
+        useSpatialModeStore.getState().enterPreviewMode('vr');
         return;
       }
       try {
@@ -317,8 +332,8 @@ export const CreativeToolbar: React.FC = () => {
         await xrStore.enterVR();
       } catch (err) {
         console.error('[CreativeToolbar] Failed to enter VR:', err);
-        setSessionState('none');
-        setActiveMode('desktop');
+        // Fall back to preview mode instead of returning to desktop
+        useSpatialModeStore.getState().enterPreviewMode('vr');
       }
     }
   }, [isVRMode, capabilities.vrSupported, setSessionState, setActiveMode]);
