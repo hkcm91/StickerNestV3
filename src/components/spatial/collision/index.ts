@@ -8,6 +8,7 @@
  * - XR Surface Bridge: Bridges WebXR planes/meshes to collision store
  * - Collision Raycast: BVH-accelerated raycasting against surfaces
  * - Snap Points: Pre-computed positions where widgets can attach
+ * - Visual Feedback: Snap indicators, surface highlights, placement previews
  *
  * Usage:
  * ```tsx
@@ -16,6 +17,8 @@
  *   useXRSurfaceBridge,
  *   useCollisionRaycast,
  *   useSnapToSurface,
+ *   ActiveSnapFeedback,
+ *   CollisionDebugView,
  * } from './components/spatial/collision';
  *
  * function ARScene() {
@@ -28,7 +31,14 @@
  *   // Get nearest surface
  *   const getNearestSurface = useCollisionStore((s) => s.getNearestSurface);
  *
- *   return <group>...</group>;
+ *   return (
+ *     <group>
+ *       {/* Visual snap feedback during drag */}
+ *       <ActiveSnapFeedback />
+ *       {/* Debug visualization (enable via store) */}
+ *       <CollisionDebugView />
+ *     </group>
+ *   );
  * }
  * ```
  */
@@ -102,3 +112,22 @@ export {
   projectPointOntoPlane,
   type SnapPointGenerationOptions,
 } from '../../../utils/snapPointGeneration';
+
+// Visual Feedback Components
+export {
+  SnapPointIndicator,
+  SurfaceHighlight,
+  SnapPreview,
+  SnapGuideLine,
+  ActiveSnapFeedback,
+  CollisionDebugView,
+  SURFACE_COLORS,
+  SNAP_ACTIVE_COLOR,
+  SNAP_PREVIEW_COLOR,
+  type SnapPointIndicatorProps,
+  type SurfaceHighlightProps,
+  type SnapPreviewProps,
+  type SnapGuideLineProps,
+  type ActiveSnapFeedbackProps,
+  type CollisionDebugViewProps,
+} from './SnapIndicators';
