@@ -16,8 +16,8 @@
  * - No interactive elements when hidden
  */
 
-import React, { Suspense, useEffect, useState, useMemo, Component, ErrorInfo, ReactNode } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import React, { Suspense, useEffect, useState, useMemo, useRef, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { XR, XROrigin, useXR } from '@react-three/xr';
 import { OrbitControls, Grid, Text } from '@react-three/drei';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
@@ -157,6 +157,138 @@ function XRSessionStateTracker() {
       // If sessionState is 'none' and activeMode is 'desktop', do nothing
     }
   }, [session, activeMode, sessionState, setActiveMode, setSessionState]);
+
+  return null;
+}
+
+// ============================================================================
+// Device Orientation Controls (for Mobile VR Preview)
+// ============================================================================
+
+/**
+ * Device orientation controls for mobile VR/AR preview mode.
+ * Uses the phone's gyroscope to allow users to look around by moving their device.
+ * Only active when in VR/AR mode WITHOUT an actual XR session (preview mode).
+ */
+function DeviceOrientationControls({ enabled = true }: { enabled?: boolean }) {
+  const { camera } = useThree();
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isSupported, setIsSupported] = useState(true);
+
+  // Store the initial camera quaternion and device orientation
+  const initialQuaternion = useRef(new THREE.Quaternion());
+  const deviceQuaternion = useRef(new THREE.Quaternion());
+  const screenOrientation = useRef(0);
+
+  // Helper quaternions for orientation calculation
+  const zee = useRef(new THREE.Vector3(0, 0, 1));
+  const euler = useRef(new THREE.Euler());
+  const q0 = useRef(new THREE.Quaternion());
+  const q1 = useRef(new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))); // - PI/2 around X axis
+
+  // Track if we've initialized
+  const initialized = useRef(false);
+
+  // Request permission for device orientation (required on iOS 13+)
+  const requestPermission = useCallback(async () => {
+    // Check if DeviceOrientationEvent exists and has requestPermission
+    const DOE = window.DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<'granted' | 'denied'>;
+    };
+
+    if (typeof DOE?.requestPermission === 'function') {
+      try {
+        const permission = await DOE.requestPermission();
+        setHasPermission(permission === 'granted');
+        console.log('[DeviceOrientationControls] Permission:', permission);
+      } catch (err) {
+        console.warn('[DeviceOrientationControls] Permission request failed:', err);
+        setHasPermission(false);
+      }
+    } else {
+      // No permission needed (Android, older iOS)
+      setHasPermission(true);
+    }
+  }, []);
+
+  // Check support and request permission on mount
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Check if device orientation is supported
+    if (!('DeviceOrientationEvent' in window)) {
+      console.log('[DeviceOrientationControls] DeviceOrientationEvent not supported');
+      setIsSupported(false);
+      return;
+    }
+
+    // Store initial camera orientation
+    initialQuaternion.current.copy(camera.quaternion);
+
+    // Request permission
+    requestPermission();
+  }, [enabled, camera, requestPermission]);
+
+  // Handle device orientation changes
+  useEffect(() => {
+    if (!enabled || !hasPermission || !isSupported) return;
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      const alpha = event.alpha ?? 0; // Z axis (compass direction)
+      const beta = event.beta ?? 0;   // X axis (front-back tilt)
+      const gamma = event.gamma ?? 0; // Y axis (left-right tilt)
+
+      // Convert degrees to radians
+      const alphaRad = THREE.MathUtils.degToRad(alpha);
+      const betaRad = THREE.MathUtils.degToRad(beta);
+      const gammaRad = THREE.MathUtils.degToRad(gamma);
+
+      // Set euler angles in 'YXZ' order (standard for device orientation)
+      euler.current.set(betaRad, alphaRad, -gammaRad, 'YXZ');
+
+      // Convert to quaternion
+      deviceQuaternion.current.setFromEuler(euler.current);
+
+      // Adjust for screen orientation
+      deviceQuaternion.current.multiply(q1.current);
+
+      // Apply screen orientation rotation
+      q0.current.setFromAxisAngle(zee.current, -screenOrientation.current);
+      deviceQuaternion.current.multiply(q0.current);
+    };
+
+    const handleOrientationChange = () => {
+      screenOrientation.current = THREE.MathUtils.degToRad(window.orientation as number || 0);
+    };
+
+    // Initialize screen orientation
+    handleOrientationChange();
+
+    // Add listeners
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    window.addEventListener('orientationchange', handleOrientationChange, false);
+
+    console.log('[DeviceOrientationControls] Listeners attached');
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+      window.removeEventListener('orientationchange', handleOrientationChange, false);
+      console.log('[DeviceOrientationControls] Listeners removed');
+    };
+  }, [enabled, hasPermission, isSupported]);
+
+  // Update camera each frame
+  useFrame(() => {
+    if (!enabled || !hasPermission || !isSupported) return;
+
+    // Apply the device orientation to the camera
+    camera.quaternion.copy(deviceQuaternion.current);
+  });
+
+  // Show permission button if needed (iOS)
+  if (enabled && hasPermission === false) {
+    return null; // Permission denied - could show UI feedback
+  }
 
   return null;
 }
@@ -705,6 +837,12 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
                 target={[0, 1.5, 0]}
                 maxPolarAngle={Math.PI * 0.85}
               />
+            )}
+
+            {/* Mobile VR/AR Preview controls - uses device gyroscope for 360 look-around */}
+            {/* Active when in VR/AR mode WITHOUT an actual XR session (preview mode) */}
+            {(spatialMode === 'vr' || spatialMode === 'ar') && sessionState !== 'active' && shouldShowCanvas && (
+              <DeviceOrientationControls enabled={true} />
             )}
           </XR>
         </XRErrorBoundary>
