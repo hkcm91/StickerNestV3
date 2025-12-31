@@ -17,6 +17,26 @@ export type { FloatingPanelProps } from './FloatingPanel';
 export { XRToolbar } from './XRToolbar';
 export type { XRToolbarProps, XRToolType } from './XRToolbar';
 
+// VR Tool Hub (3D native toolbar)
+export { VRToolHub } from './VRToolHub';
+export type { VRToolHubProps, VRToolType as VRToolHubToolType } from './VRToolHub';
+
+// Widget 3D Handles (resize, rotate, move)
+export { Widget3DHandles } from './widget-handles';
+export type {
+  Widget3DHandlesProps,
+  HandleType,
+  TwoHandedState,
+  ManipulationState,
+  HapticCapabilities,
+} from './widget-handles';
+
+// Widget 3D Handles - Hooks (for custom implementations)
+export { useXRHaptics, useTwoHandedGesture } from './widget-handles';
+
+// Widget 3D Handles - Constants
+export { HANDLE_CONSTANTS, HAPTIC_PRESETS } from './widget-handles';
+
 // Widget Library
 export { XRWidgetLibrary } from './XRWidgetLibrary';
 export type { XRWidgetLibraryProps } from './XRWidgetLibrary';

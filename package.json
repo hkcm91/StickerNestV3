@@ -24,6 +24,7 @@
     "dependencies": {
         "@iwsdk/locomotor": "^0.2.2",
         "@iwsdk/xr-input": "^0.2.2",
+        "@react-spring/three": "^10.0.3",
         "@react-three/drei": "^10.7.7",
         "@react-three/fiber": "^8.18.0",
         "@react-three/xr": "^6.6.28",
