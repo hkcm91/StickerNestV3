@@ -233,12 +233,33 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         // Detect mobile devices - use preview mode by default on phones
         // Real WebXR sessions on mobile are meant for cardboard headsets
         // but most users just want to see the 3D view on their screen
-        const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isTablet = /iPad|Android/i.test(navigator.userAgent) && !/Mobile/i.test(navigator.userAgent);
-        const preferPreviewMode = isMobile && !isTablet;
+        //
+        // IMPORTANT: User agent detection alone is NOT reliable because:
+        // - Chrome "desktop view mode" spoofs desktop user agent on mobile
+        // - Some tablets report as mobile
+        // We use multiple signals to detect mobile:
+        // 1. User agent (traditional check)
+        // 2. Touch support (most reliable for actual mobile devices)
+        // 3. Screen size (phones have small screens)
+        const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isSmallScreen = window.innerWidth <= 1024 && window.innerHeight <= 1366;
+        const isTabletUserAgent = /iPad|Android/i.test(navigator.userAgent) && !/Mobile/i.test(navigator.userAgent);
 
-        if (preferPreviewMode && mode === 'vr') {
-          console.log('[SpatialModeToggle] Mobile device detected, using VR preview mode (HTML widgets work here)');
+        // Consider it a mobile phone if:
+        // - Has touch support AND small screen (catches "desktop view mode")
+        // - OR user agent says mobile (but not tablet)
+        const isMobilePhone = (hasTouchSupport && isSmallScreen) || (userAgentMobile && !isTabletUserAgent);
+
+        // For VR mode on phones, always use preview mode
+        // Real WebXR VR is meant for headsets, not phones
+        if (isMobilePhone && mode === 'vr') {
+          console.log('[SpatialModeToggle] Mobile phone detected (touch + small screen), using VR preview mode', {
+            userAgentMobile,
+            hasTouchSupport,
+            isSmallScreen,
+            screenSize: `${window.innerWidth}x${window.innerHeight}`,
+          });
           useSpatialModeStore.getState().enterPreviewMode('vr');
           return;
         }
