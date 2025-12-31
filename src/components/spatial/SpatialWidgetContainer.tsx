@@ -470,10 +470,13 @@ function SpatialWidget({
           {/* NOTE: Removed 'occlude' prop - it was hiding content behind the transparent panel */}
           {/* distanceFactor: Scale factor for HTML content in 3D space. Higher = larger content at distance. */}
           {/* At VR viewing distances (1-3m), distanceFactor ~10 gives readable UI */}
+          {/* zIndexRange ensures Html content layers properly on mobile browsers */}
           <Html
             transform
             distanceFactor={10}
             position={[0, 0, 0.02]}
+            zIndexRange={[100, 0]}
+            center
             style={{
               width: `${widget.width}px`,
               height: `${widget.height}px`,
@@ -566,6 +569,37 @@ function SpatialWidget({
                     html = mockAPI + html;
                   }
 
+                  // For simple text widgets, render directly instead of iframe (better mobile support)
+                  if (widget.widgetDefId === 'stickernest.basic-text') {
+                    const state = normalizedState as any;
+                    return (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: state.textAlign === 'left' ? 'flex-start' :
+                                         state.textAlign === 'right' ? 'flex-end' : 'center',
+                          padding: state.padding || 8,
+                          color: state.color || '#ffffff',
+                          fontSize: state.fontSize || 16,
+                          fontFamily: state.fontFamily || 'system-ui, sans-serif',
+                          fontWeight: state.fontWeight || 'normal',
+                          textAlign: state.textAlign || 'center',
+                          backgroundColor: state.backgroundColor || 'transparent',
+                          borderRadius: state.borderRadius || 0,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {state.content || state.text || 'Text'}
+                      </div>
+                    );
+                  }
+
+                  // For complex widgets, use iframe with permissive sandbox for mobile
                   return (
                     <iframe
                       srcDoc={html}
@@ -574,8 +608,9 @@ function SpatialWidget({
                         height: '100%',
                         border: 'none',
                         borderRadius: 8,
+                        backgroundColor: 'transparent',
                       }}
-                      sandbox="allow-scripts"
+                      sandbox="allow-scripts allow-same-origin"
                       title={widget.name || widget.widgetDefId}
                     />
                   );
