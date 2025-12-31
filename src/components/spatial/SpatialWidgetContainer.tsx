@@ -639,7 +639,8 @@ function SpatialWidget({
                 }
 
                 // Show loading state for local widgets while fetching HTML
-                if (source === 'local' && htmlLoadState === 'loading') {
+                // 'idle' also shows loading as we haven't started fetch yet
+                if (source === 'local' && (htmlLoadState === 'loading' || htmlLoadState === 'idle')) {
                   return (
                     <div
                       style={{
@@ -655,6 +656,7 @@ function SpatialWidget({
                     >
                       <div style={{ fontSize: 24, animation: 'spin 1s linear infinite' }}>⟳</div>
                       <div style={{ fontSize: 14 }}>Loading widget...</div>
+                      <div style={{ fontSize: 11, color: '#6b7280' }}>{widget.widgetDefId}</div>
                       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
                     </div>
                   );
@@ -686,6 +688,42 @@ function SpatialWidget({
 
                 // Then try to render as HTML widget in an iframe
                 const htmlContent = getWidgetHtml(widget);
+
+                // Mobile detection for fallback rendering
+                const isMobile = typeof navigator !== 'undefined' &&
+                  /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                // If no HTML content available, show a preview card
+                if (!htmlContent) {
+                  return (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#a5b4fc',
+                        gap: 12,
+                        padding: 16,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ fontSize: 32 }}>{getWidgetTypeEmoji(widget.widgetDefId)}</div>
+                      <div style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>
+                        {widget.name || formatWidgetType(widget.widgetDefId)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                        {widget.widgetDefId}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 8 }}>
+                        {source || 'unknown'} • {Math.round(widget.width)}×{Math.round(widget.height)}
+                      </div>
+                    </div>
+                  );
+                }
+
                 if (htmlContent) {
                   // Normalize state for compatibility: map 'text' to 'content' for BasicTextWidget
                   const normalizedState = { ...widget.state };
