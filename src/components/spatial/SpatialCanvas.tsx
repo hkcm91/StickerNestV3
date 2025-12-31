@@ -756,7 +756,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           antialias: true,
           alpha: true,
           powerPreference: 'high-performance',
+          // Enable high-resolution rendering for VR/AR
+          // This ensures textures and rendered content stay crisp at close viewing distances
+          preserveDrawingBuffer: true,
+          precision: 'highp',
         }}
+        // Use device pixel ratio for crisp rendering on high-DPI displays
+        // Clamp to max 2 to prevent performance issues on very high DPI devices
+        dpr={Math.min(window.devicePixelRatio || 1, 2)}
         camera={{
           position: [0, 1.6, 3], // Eye height, slightly back
           fov: 75,
@@ -772,6 +779,19 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           setCanvasReady(true);
           console.log('[SpatialCanvas] Canvas created and ready for XR');
           console.log('[SpatialCanvas] WebGL XR compatible:', gl.xr?.enabled);
+          console.log('[SpatialCanvas] Device pixel ratio:', window.devicePixelRatio);
+
+          // Enable anisotropic filtering for textures (improves quality at angles)
+          const ext = gl.getContext().getExtension('EXT_texture_filter_anisotropic') ||
+                      gl.getContext().getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+                      gl.getContext().getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+          if (ext) {
+            const maxAnisotropy = gl.getContext().getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+            console.log('[SpatialCanvas] Anisotropic filtering available, max:', maxAnisotropy);
+            // Store for use by texture loaders
+            (gl as any).anisotropyExt = ext;
+            (gl as any).maxAnisotropy = maxAnisotropy;
+          }
         }}
       >
         {/* We use our own SpatialModeToggle in the toolbar for XR entry */}
