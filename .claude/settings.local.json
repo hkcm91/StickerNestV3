@@ -80,7 +80,8 @@
       "Bash(findstr:*)",
       "Bash(git stash drop:*)",
       "Skill(implementing-spatial-xr)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Skill(building-skills)"
     ],
     "deny": [],
     "ask": []
