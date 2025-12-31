@@ -235,7 +235,28 @@ export function XREntryButtons({
 
   // Handle entering AR
   const handleEnterAR = useCallback(async () => {
-    if (isLoading || !capabilities.arSupported) return;
+    if (isLoading) return;
+
+    // On touch devices (phones/tablets), use preview mode instead of WebXR
+    // Real WebXR AR requires device support which many phones lack
+    const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (hasTouchSupport || userAgentMobile) {
+      console.log('[XREntryButtons] Touch device detected, using AR preview mode', {
+        hasTouchSupport,
+        maxTouchPoints: navigator.maxTouchPoints,
+        userAgentMobile,
+      });
+      useSpatialModeStore.getState().enterPreviewMode('ar');
+      return;
+    }
+
+    if (!capabilities.arSupported) {
+      console.log('[XREntryButtons] AR not supported, using preview mode');
+      useSpatialModeStore.getState().enterPreviewMode('ar');
+      return;
+    }
 
     try {
       setSessionState('requesting');
@@ -245,8 +266,8 @@ export function XREntryButtons({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to enter AR';
       console.error('[XREntryButtons] AR entry failed:', message);
-      setError(message);
-      setSessionState('error');
+      // Fall back to preview mode instead of error
+      useSpatialModeStore.getState().enterPreviewMode('ar');
     }
   }, [isLoading, capabilities.arSupported, setSessionState, setError]);
 

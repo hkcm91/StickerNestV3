@@ -237,24 +237,19 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // For VR mode: Use preview if device has touch (phone/tablet) unless it's a VR headset
+        // For VR/AR mode: Use preview if device has touch (phone/tablet) unless it's a VR headset
         // VR headsets don't have touch screens, so this safely catches all phones/tablets
-        if (mode === 'vr' && hasTouchSupport) {
-          console.log('[SpatialModeToggle] Touch device detected, using VR preview mode (no WebXR)', {
+        // AR on mobile phones needs real AR session for camera access, but we can use preview
+        // mode as a fallback for devices that don't support WebXR AR
+        if (hasTouchSupport || userAgentMobile) {
+          console.log(`[SpatialModeToggle] Touch device detected, using ${mode.toUpperCase()} preview mode (no WebXR)`, {
             hasTouchSupport,
             maxTouchPoints: navigator.maxTouchPoints,
             userAgentMobile,
             screenSize: `${window.innerWidth}x${window.innerHeight}`,
           });
           // Go directly to preview mode - don't call requestMode() first
-          useSpatialModeStore.getState().enterPreviewMode('vr');
-          return;
-        }
-
-        // Also use preview mode if user agent indicates mobile (backup check)
-        if (mode === 'vr' && userAgentMobile) {
-          console.log('[SpatialModeToggle] Mobile user agent detected, using VR preview mode');
-          useSpatialModeStore.getState().enterPreviewMode('vr');
+          useSpatialModeStore.getState().enterPreviewMode(mode);
           return;
         }
 
