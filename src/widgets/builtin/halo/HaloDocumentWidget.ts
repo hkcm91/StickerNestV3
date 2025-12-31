@@ -427,13 +427,40 @@ export const DocumentEditorWidgetHTML = `
         setTimeout(() => savedIndicator.classList.remove('visible'), 2000);
       }
 
-      function scheduleAutoSave() {
+      async function scheduleAutoSave() {
         if (saveTimeout) clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => {
+        saveTimeout = setTimeout(async () => {
           state.content = editor.innerHTML;
           state.title = titleInput.value || 'Untitled Document';
-          API.setState(state);
+
+          const docData = {
+            title: state.title,
+            content: state.content,
+            contentType: 'html',
+            category: state.category || 'general',
+          };
+
+          try {
+            if (state.documentId) {
+              // Update existing document in unified store
+              await API.request('document:update', { id: state.documentId, updates: docData });
+            } else {
+              // Create new document in unified store
+              const result = await API.request('document:create', {
+                ...docData,
+                tags: ['document'],
+                sourceType: 'manual',
+              });
+              state.documentId = result.document.id;
+            }
+            // Save only the reference in widget state
+            API.setState({ documentId: state.documentId, category: state.category });
+          } catch (err) {
+            API.log('Auto-save failed: ' + err.message, 'error');
+          }
+
           API.emitOutput('document.changed', {
+            id: state.documentId,
             title: state.title,
             content: state.content,
             wordCount: editor.innerText.trim().split(/\\s+/).filter(w => w.length).length,
@@ -656,26 +683,38 @@ export const DocumentEditorWidgetHTML = `
         }
       }
 
-      function saveDocument() {
-        const doc = {
+      async function saveDocument() {
+        const docData = {
           title: titleInput.value || 'Untitled Document',
           content: editor.innerHTML,
           contentType: 'html',
           category: state.category || 'general',
-          tags: ['document'],
-          sourceType: 'manual',
-          starred: false,
-          archived: false,
         };
 
-        if (state.documentId) {
-          doc.id = state.documentId;
-        }
+        try {
+          let doc;
+          if (state.documentId) {
+            // Update existing document
+            const result = await API.request('document:update', { id: state.documentId, updates: docData });
+            doc = result.document;
+          } else {
+            // Create new document
+            const result = await API.request('document:create', {
+              ...docData,
+              tags: ['document'],
+              sourceType: 'manual',
+            });
+            doc = result.document;
+            state.documentId = doc.id;
+            API.setState({ documentId: state.documentId, category: state.category });
+          }
 
-        API.emitOutput('document.saved', doc);
-        API.emit('document.created', doc);
-        showSavedIndicator();
-        API.log('Document saved');
+          API.emitOutput('document.saved', { id: state.documentId, ...docData });
+          showSavedIndicator();
+          API.log('Document saved to unified store');
+        } catch (err) {
+          API.log('Failed to save document: ' + err.message, 'error');
+        }
       }
 
       // Event listeners
@@ -772,13 +811,52 @@ export const DocumentEditorWidgetHTML = `
       });
 
       // Lifecycle
-      API.onMount((context) => {
+      API.onMount(async (context) => {
         const saved = context.state || {};
-        if (saved.title) titleInput.value = saved.title;
-        if (saved.content) editor.innerHTML = saved.content;
         if (saved.category) state.category = saved.category;
-        if (saved.documentId) state.documentId = saved.documentId;
-        state = { ...state, ...saved };
+
+        // Check for document reference
+        if (saved.documentId) {
+          state.documentId = saved.documentId;
+          try {
+            const result = await API.request('document:get', { id: saved.documentId });
+            if (result.document) {
+              titleInput.value = result.document.title || 'Untitled Document';
+              editor.innerHTML = result.document.content || '';
+              state.category = result.document.category || 'general';
+              API.log('Loaded document from unified store: ' + saved.documentId);
+            }
+          } catch (err) {
+            API.log('Failed to load document: ' + err.message, 'error');
+          }
+        } else if (saved.content || saved.title) {
+          // Migrate legacy inline content to unified store
+          titleInput.value = saved.title || 'Untitled Document';
+          editor.innerHTML = saved.content || '';
+
+          try {
+            const result = await API.request('document:create', {
+              title: titleInput.value,
+              content: editor.innerHTML,
+              contentType: 'html',
+              category: saved.category || 'general',
+              tags: ['document'],
+              sourceType: 'import',
+            });
+            state.documentId = result.document.id;
+            API.setState({
+              documentId: state.documentId,
+              category: state.category,
+              // Clear legacy fields
+              title: undefined,
+              content: undefined,
+            });
+            API.log('Migrated legacy document to unified store: ' + state.documentId);
+          } catch (err) {
+            API.log('Failed to migrate document: ' + err.message, 'error');
+          }
+        }
+
         updateStats();
         API.log('DocumentEditorWidget mounted');
       });

@@ -340,6 +340,7 @@ export const Win98NotepadWidgetHTML = `
       let currentFileName = 'Untitled';
       let isModified = false;
       let isMinimized = false;
+      let documentId = null;  // Reference to unified document store
 
       const textArea = document.getElementById('textArea');
       const titleText = document.getElementById('titleText');
@@ -361,6 +362,36 @@ export const Win98NotepadWidgetHTML = `
         statusText.textContent = 'Ln ' + line + ', Col ' + col;
       }
 
+      // Save to unified document store
+      async function saveToStore() {
+        const docData = {
+          title: currentFileName || 'Untitled',
+          content: textArea.value,
+          contentType: 'text',
+          category: 'note',
+        };
+
+        try {
+          if (documentId) {
+            await API.request('document:update', { id: documentId, updates: docData });
+          } else {
+            const result = await API.request('document:create', {
+              ...docData,
+              tags: ['notepad', 'text'],
+              sourceType: 'manual',
+            });
+            documentId = result.document.id;
+            API.setState({ documentId });
+          }
+          isModified = false;
+          updateTitle();
+          API.emitOutput('file.save', { name: currentFileName, content: textArea.value, documentId });
+          API.log('Saved to unified store');
+        } catch (err) {
+          API.log('Failed to save: ' + err.message, 'error');
+        }
+      }
+
       // Text area events
       textArea.addEventListener('input', function() {
         isModified = true;
@@ -379,13 +410,15 @@ export const Win98NotepadWidgetHTML = `
         });
       });
 
-      function handleMenuAction(action) {
+      async function handleMenuAction(action) {
         switch(action) {
           case 'new':
             if (isModified && !confirm('Do you want to save changes?')) return;
             textArea.value = '';
             currentFileName = 'Untitled';
+            documentId = null;
             isModified = false;
+            API.setState({ documentId: undefined });
             updateTitle();
             break;
           case 'selectAll':
@@ -415,9 +448,7 @@ export const Win98NotepadWidgetHTML = `
             document.execCommand('undo');
             break;
           case 'save':
-            API.emitOutput('file.save', { name: currentFileName, content: textArea.value });
-            isModified = false;
-            updateTitle();
+            await saveToStore();
             break;
           case 'exit':
             API.emitOutput('window.state', { state: 'closed' });
@@ -434,16 +465,37 @@ export const Win98NotepadWidgetHTML = `
         API.emitOutput('window.state', { state: 'minimized', title: titleText.textContent });
       });
 
-      document.getElementById('closeBtn').addEventListener('click', function() {
-        if (isModified && !confirm('Save changes to ' + currentFileName + '?')) return;
+      document.getElementById('closeBtn').addEventListener('click', async function() {
+        if (isModified) {
+          if (confirm('Save changes to ' + currentFileName + '?')) {
+            await saveToStore();
+          }
+        }
         API.emitOutput('window.state', { state: 'closed' });
       });
 
       // Handle inputs
-      API.onInput('file.load', function(data) {
-        if (data && data.content) {
+      API.onInput('file.load', async function(data) {
+        if (data && data.documentId) {
+          // Load from unified store by ID
+          try {
+            const result = await API.request('document:get', { id: data.documentId });
+            if (result.document) {
+              textArea.value = result.document.content || '';
+              currentFileName = result.document.title || 'Untitled';
+              documentId = data.documentId;
+              isModified = false;
+              API.setState({ documentId });
+              updateTitle();
+              API.log('Loaded document from unified store');
+            }
+          } catch (err) {
+            API.log('Failed to load document: ' + err.message, 'error');
+          }
+        } else if (data && data.content) {
           textArea.value = data.content;
           currentFileName = data.name || 'Untitled';
+          documentId = null;
           isModified = false;
           updateTitle();
         }
@@ -461,7 +513,48 @@ export const Win98NotepadWidgetHTML = `
       });
 
       // Initial state
-      API.onMount(function() {
+      API.onMount(async function(context) {
+        const state = context.state || {};
+
+        if (state.documentId) {
+          // Load from unified store
+          documentId = state.documentId;
+          try {
+            const result = await API.request('document:get', { id: documentId });
+            if (result.document) {
+              textArea.value = result.document.content || '';
+              currentFileName = result.document.title || 'Untitled';
+              API.log('Loaded from unified store: ' + documentId);
+            }
+          } catch (err) {
+            API.log('Failed to load document: ' + err.message, 'error');
+          }
+        } else if (state.textContent) {
+          // Migrate legacy content
+          textArea.value = state.textContent;
+          currentFileName = state.currentFileName || 'Untitled';
+
+          try {
+            const result = await API.request('document:create', {
+              title: currentFileName,
+              content: textArea.value,
+              contentType: 'text',
+              category: 'note',
+              tags: ['notepad', 'text'],
+              sourceType: 'import',
+            });
+            documentId = result.document.id;
+            API.setState({
+              documentId,
+              textContent: undefined,
+              currentFileName: undefined
+            });
+            API.log('Migrated legacy content to unified store');
+          } catch (err) {
+            API.log('Failed to migrate: ' + err.message, 'error');
+          }
+        }
+
         updateTitle();
         updateStatus();
         API.emitOutput('window.state', { state: 'open', title: titleText.textContent });

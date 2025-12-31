@@ -16,39 +16,96 @@
  * - No interactive elements when hidden
  */
 
-import React, { Suspense, useEffect, useState, useMemo } from 'react';
+import React, { Suspense, useEffect, useState, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { XR, XROrigin, useXR } from '@react-three/xr';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, Text } from '@react-three/drei';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { SpatialScene } from './SpatialScene';
 import { xrStore } from './xrStore';
 import * as THREE from 'three';
 
 // ============================================================================
-// Frame Loop Controller (inside XR context)
+// XR Error Boundary - Catches XR-related errors without crashing the app
+// ============================================================================
+
+interface XRErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class XRErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, XRErrorBoundaryState> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): XRErrorBoundaryState {
+    console.warn('[XRErrorBoundary] Caught XR error:', error.message);
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('[XRErrorBoundary] XR component error (non-fatal):', error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? null;
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Fallback 3D content when XR has errors - shows message instead of crashing
+ */
+function XRErrorFallback() {
+  return (
+    <group>
+      <Text
+        position={[0, 1.6, -2]}
+        fontSize={0.08}
+        color="#f59e0b"
+        anchorX="center"
+        anchorY="middle"
+      >
+        XR Features Limited
+      </Text>
+      <Text
+        position={[0, 1.45, -2]}
+        fontSize={0.05}
+        color="#9ca3af"
+        anchorX="center"
+        anchorY="middle"
+        maxWidth={2}
+        textAlign="center"
+      >
+        3D preview available. VR/AR features may need updated dependencies.
+      </Text>
+    </group>
+  );
+}
+
+// ============================================================================
+// XR Debug Logger (inside XR context)
 // ============================================================================
 
 /**
- * Controls the render loop based on visibility and XR state.
- * Frame loop must ALWAYS run during XR sessions.
- *
- * IMPORTANT: This component must be placed INSIDE the <XR> provider
- * so it can use useXR to detect active sessions.
+ * Logs XR session state changes for debugging.
+ * Frame loop is now always running (frameloop="always" on Canvas).
  */
-function FrameLoopController({ shouldRender }: { shouldRender: boolean }) {
-  const { set } = useThree();
+function XRDebugLogger() {
   const session = useXR((state) => state.session);
-  const isXRActive = !!session;
 
   useEffect(() => {
-    // Frame loop must run when:
-    // 1. Canvas should be visible on screen (shouldRender), OR
-    // 2. An XR session is active
-    const frameloop = (shouldRender || isXRActive) ? 'always' : 'never';
-    console.log('[FrameLoopController] Setting frameloop to:', frameloop, { shouldRender, isXRActive });
-    set({ frameloop });
-  }, [shouldRender, isXRActive, set]);
+    if (session) {
+      const mode = (session as unknown as { mode?: string })?.mode;
+      console.log('[XRDebugLogger] XR session ACTIVE:', { mode, session });
+    } else {
+      console.log('[XRDebugLogger] No XR session');
+    }
+  }, [session]);
 
   return null;
 }
@@ -491,73 +548,83 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           near: 0.1,
           far: 1000,
         }}
-        // Start with frame loop paused - FrameLoopController will enable when needed
-        frameloop="never"
-        onCreated={() => {
+        // CRITICAL: Frame loop must ALWAYS run for XR to work!
+        // XR sessions require an active render loop to initialize and present frames.
+        // We control visibility via CSS (z-index/opacity), not by pausing rendering.
+        frameloop="always"
+        onCreated={({ gl }) => {
           // Mark canvas as ready for XR sessions
           setCanvasReady(true);
           console.log('[SpatialCanvas] Canvas created and ready for XR');
+          console.log('[SpatialCanvas] WebGL XR compatible:', gl.xr?.enabled);
         }}
       >
         {/* We use our own SpatialModeToggle in the toolbar for XR entry */}
-        <XR store={xrStore}>
-          {/* Frame loop controller - must be inside XR to detect session state */}
-          <FrameLoopController shouldRender={shouldShowCanvas} />
+        {/* Wrap entire XR tree in error boundary to prevent crashes */}
+        <XRErrorBoundary fallback={<XRErrorFallback />}>
+          <XR store={xrStore}>
+            {/* Debug logger for XR session state */}
+            <XRDebugLogger />
 
-          {/* XR Session State Tracker - always render to sync state */}
-          <XRSessionStateTracker />
+            {/* XR Session State Tracker - syncs XR state to our store */}
+            <XRSessionStateTracker />
 
-          {/*
-            CRITICAL: Scene content must ALWAYS be rendered, not conditional!
-            XR sessions require the 3D scene graph to exist BEFORE the session starts.
-            If we conditionally render based on shouldShowCanvas, the XR session
-            starts but finds an empty scene, resulting in a blank view.
+            {/*
+              CRITICAL: Scene content must ALWAYS be rendered, not conditional!
+              XR sessions require the 3D scene graph to exist BEFORE the session starts.
+              If we conditionally render based on shouldShowCanvas, the XR session
+              starts but finds an empty scene, resulting in a blank view.
 
-            The visibility of the canvas container (z-index, opacity) controls
-            what the user sees on the 2D screen. The 3D content inside XR
-            must always exist so XR can render it.
-          */}
+              The visibility of the canvas container (z-index, opacity) controls
+              what the user sees on the 2D screen. The 3D content inside XR
+              must always exist so XR can render it.
+            */}
 
-          {/* Lighting - essential for seeing anything! */}
-          <ambientLight intensity={0.6} />
-          <directionalLight
-            position={[5, 10, 5]}
-            intensity={1.0}
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-          />
-          <hemisphereLight args={['#87CEEB', '#362D59', 0.3]} />
-
-          {/* User origin (feet position) */}
-          <XROrigin />
-
-          {/* 360 Grid Environment (VR and 3D preview - customizable) */}
-          {/* Pass isXRSession=true when we're in an active XR session */}
-          <GridEnvironment360
-            forceShow={active}
-            isXRSession={isXRActive}
-          />
-
-          {/* Ground reference */}
-          <GroundPlane />
-
-          {/* Main scene content */}
-          <Suspense fallback={<LoadingFallback />}>
-            <SpatialScene />
-          </Suspense>
-
-          {/* Desktop controls - ONLY when canvas is visible AND in desktop spatial mode */}
-          {/* This prevents OrbitControls from capturing mouse events when hidden */}
-          {spatialMode === 'desktop' && shouldShowCanvas && (
-            <OrbitControls
-              enablePan
-              enableZoom
-              enableRotate
-              target={[0, 1.5, 0]}
-              maxPolarAngle={Math.PI * 0.85}
+            {/* Lighting - essential for seeing anything! */}
+            <ambientLight intensity={0.6} />
+            <directionalLight
+              position={[5, 10, 5]}
+              intensity={1.0}
+              castShadow
+              shadow-mapSize={[2048, 2048]}
             />
-          )}
-        </XR>
+            <hemisphereLight args={['#87CEEB', '#362D59', 0.3]} />
+
+            {/* User origin (feet position) - wrap in error boundary */}
+            <XRErrorBoundary>
+              <XROrigin />
+            </XRErrorBoundary>
+
+            {/* 360 Grid Environment (VR and 3D preview - customizable) */}
+            {/* Pass isXRSession=true when we're in an active XR session */}
+            <GridEnvironment360
+              forceShow={active}
+              isXRSession={isXRActive}
+            />
+
+            {/* Ground reference */}
+            <GroundPlane />
+
+            {/* Main scene content - wrap in error boundary for XR-related errors */}
+            <XRErrorBoundary>
+              <Suspense fallback={<LoadingFallback />}>
+                <SpatialScene />
+              </Suspense>
+            </XRErrorBoundary>
+
+            {/* Desktop controls - ONLY when canvas is visible AND in desktop spatial mode */}
+            {/* This prevents OrbitControls from capturing mouse events when hidden */}
+            {spatialMode === 'desktop' && shouldShowCanvas && (
+              <OrbitControls
+                enablePan
+                enableZoom
+                enableRotate
+                target={[0, 1.5, 0]}
+                maxPolarAngle={Math.PI * 0.85}
+              />
+            )}
+          </XR>
+        </XRErrorBoundary>
       </Canvas>
     </div>
   );

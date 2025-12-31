@@ -259,6 +259,8 @@ export const ToDoListWidgetHTML = `
 
       let items = [];
       let nextId = 1;
+      let documentId = null;  // Reference to unified document store
+      let saveTimeout = null;
 
       function render() {
         if (items.length === 0) {
@@ -285,10 +287,38 @@ export const ToDoListWidgetHTML = `
         return div.innerHTML;
       }
 
-      function saveAndEmit() {
-        API.setState({ items: items });
-        API.emitOutput('data.changed', items);
-        API.emitOutput('list.reordered', items);
+      async function saveAndEmit() {
+        // Debounce saves
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(async () => {
+          const content = JSON.stringify(items);
+          const title = 'Todo List (' + items.length + ' items)';
+
+          try {
+            if (documentId) {
+              await API.request('document:update', {
+                id: documentId,
+                updates: { title, content }
+              });
+            } else {
+              const result = await API.request('document:create', {
+                title,
+                content,
+                contentType: 'text',
+                category: 'todo',
+                tags: ['todo', 'tasks'],
+                sourceType: 'manual',
+              });
+              documentId = result.document.id;
+              API.setState({ documentId });
+            }
+          } catch (err) {
+            API.log('Failed to save todo list: ' + err.message, 'error');
+          }
+
+          API.emitOutput('data.changed', items);
+          API.emitOutput('list.reordered', items);
+        }, 500);
       }
 
       function addItem(text) {
@@ -324,12 +354,48 @@ export const ToDoListWidgetHTML = `
       }
 
       // Initialize
-      API.onMount(function(context) {
+      API.onMount(async function(context) {
         const state = context.state || {};
-        if (Array.isArray(state.items)) {
+
+        if (state.documentId) {
+          // Load from unified store
+          documentId = state.documentId;
+          try {
+            const result = await API.request('document:get', { id: documentId });
+            if (result.document && result.document.content) {
+              items = JSON.parse(result.document.content);
+              nextId = Math.max(1, ...items.map(i => i.id || 0)) + 1;
+              API.log('Loaded todo list from unified store');
+            }
+          } catch (err) {
+            API.log('Failed to load todo list: ' + err.message, 'error');
+          }
+        } else if (Array.isArray(state.items) && state.items.length > 0) {
+          // Migrate legacy items to unified store
           items = state.items;
           nextId = Math.max(1, ...items.map(i => i.id || 0)) + 1;
+
+          try {
+            const content = JSON.stringify(items);
+            const result = await API.request('document:create', {
+              title: 'Todo List (' + items.length + ' items)',
+              content,
+              contentType: 'text',
+              category: 'todo',
+              tags: ['todo', 'tasks'],
+              sourceType: 'import',
+            });
+            documentId = result.document.id;
+            API.setState({
+              documentId,
+              items: undefined  // Clear legacy field
+            });
+            API.log('Migrated todo list to unified store');
+          } catch (err) {
+            API.log('Failed to migrate todo list: ' + err.message, 'error');
+          }
         }
+
         render();
         API.log('ToDoListWidget mounted');
       });
@@ -411,6 +477,9 @@ export const ToDoListWidgetHTML = `
       });
 
       API.onDestroy(function() {
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+        }
         API.log('ToDoListWidget destroyed');
       });
     })();

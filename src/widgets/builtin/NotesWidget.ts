@@ -160,6 +160,7 @@ export const NotesWidgetHTML = `
 
       let saveTimeout = null;
       let lastSaved = Date.now();
+      let documentId = null;  // Reference to unified document store
 
       function updateFooter() {
         const elapsed = Date.now() - lastSaved;
@@ -172,18 +173,34 @@ export const NotesWidgetHTML = `
         }
       }
 
-      function saveNote() {
-        const data = {
-          title: titleEl.value,
+      async function saveNote() {
+        const docData = {
+          title: titleEl.value || 'Untitled Note',
           content: contentEl.innerHTML,
-          savedAt: Date.now()
+          contentType: 'html',
+          category: 'note',
         };
-        API.setState(data);
-        API.emitOutput('text.submitted', data);
-        API.emitOutput('data.changed', data);
-        lastSaved = Date.now();
-        updateFooter();
-        API.log('Note saved');
+
+        try {
+          if (documentId) {
+            // Update existing document
+            await API.request('document:update', { id: documentId, updates: docData });
+          } else {
+            // Create new document
+            const result = await API.request('document:create', docData);
+            documentId = result.document.id;
+            // Save only the reference
+            API.setState({ documentId, backgroundColor: note.style.background });
+          }
+
+          lastSaved = Date.now();
+          updateFooter();
+          API.emitOutput('text.submitted', { ...docData, id: documentId });
+          API.emitOutput('data.changed', { ...docData, id: documentId });
+          API.log('Note saved to unified store');
+        } catch (err) {
+          API.log('Failed to save note: ' + err.message, 'error');
+        }
       }
 
       function scheduleAutoSave() {
@@ -192,12 +209,59 @@ export const NotesWidgetHTML = `
       }
 
       // Initialize
-      API.onMount(function(context) {
+      API.onMount(async function(context) {
         const state = context.state || {};
-        if (state.title) titleEl.value = state.title;
-        if (state.content) contentEl.innerHTML = state.content;
-        if (state.backgroundColor) note.style.background = state.backgroundColor;
-        if (state.savedAt) lastSaved = state.savedAt;
+
+        // Apply background color from widget state
+        if (state.backgroundColor) {
+          note.style.background = state.backgroundColor;
+        }
+
+        // Check if we have a document reference
+        if (state.documentId) {
+          documentId = state.documentId;
+          try {
+            const result = await API.request('document:get', { id: documentId });
+            if (result.document) {
+              titleEl.value = result.document.title || '';
+              contentEl.innerHTML = result.document.content || '';
+              lastSaved = result.document.updatedAt || Date.now();
+              API.log('Loaded note from unified store: ' + documentId);
+            }
+          } catch (err) {
+            API.log('Failed to load note: ' + err.message, 'error');
+          }
+        } else if (state.content || state.title) {
+          // Migrate legacy inline content to unified store
+          titleEl.value = state.title || 'New Note';
+          contentEl.innerHTML = state.content || '';
+          if (state.savedAt) lastSaved = state.savedAt;
+
+          // Create document in unified store
+          try {
+            const result = await API.request('document:create', {
+              title: titleEl.value,
+              content: contentEl.innerHTML,
+              contentType: 'html',
+              category: 'note',
+              sourceType: 'import',
+            });
+            documentId = result.document.id;
+            // Save reference and clear legacy data
+            API.setState({
+              documentId,
+              backgroundColor: note.style.background,
+              // Clear legacy fields
+              title: undefined,
+              content: undefined,
+              savedAt: undefined,
+            });
+            API.log('Migrated legacy note to unified store: ' + documentId);
+          } catch (err) {
+            API.log('Failed to migrate note: ' + err.message, 'error');
+          }
+        }
+
         updateFooter();
         API.log('NotesWidget mounted');
       });
