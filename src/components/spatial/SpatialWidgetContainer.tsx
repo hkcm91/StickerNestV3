@@ -139,6 +139,15 @@ function is3DReactWidget(widgetDefId: string): boolean {
 }
 
 /**
+ * Check if a widget has a React component that can be rendered in VR
+ * This includes both 2D and 3D React widgets
+ */
+function isReactWidget(widgetDefId: string): boolean {
+  const builtin = getBuiltinWidget(widgetDefId);
+  return !!builtin?.component;
+}
+
+/**
  * Format widget definition ID for display
  */
 function formatWidgetType(widgetDefId: string): string {
@@ -406,8 +415,8 @@ function SpatialWidget({
         </mesh>
       )}
 
-      {/* Check if this is a 3D React component widget - render actual content */}
-      {is3DReactWidget(widget.widgetDefId) ? (
+      {/* Check if this is a React component widget - render actual content */}
+      {isReactWidget(widget.widgetDefId) ? (
         <>
           {/* Render actual React component via Html */}
           <Html
