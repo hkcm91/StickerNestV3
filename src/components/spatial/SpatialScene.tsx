@@ -708,50 +708,6 @@ export function SpatialScene() {
         />
       </group>
 
-      {/* Main canvas panel at comfortable viewing distance (VR only) */}
-      {effectiveMode === 'vr' && <CanvasPanel3D />}
-
-      {/* XR Mode Welcome/Status Panel - always visible to confirm system is working */}
-      {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
-        <XRWelcomePanel mode={effectiveMode} widgetCount={canvasWidgets.length} />
-      )}
-
-      {/* Debug: Widget count indicator */}
-      {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
-        <group position={[-2.5, 1.8, -2]} rotation={[0, 0.3, 0]}>
-          <mesh>
-            <planeGeometry args={[1.2, 0.6]} />
-            <meshStandardMaterial color="#1e1b4b" transparent opacity={0.95} />
-          </mesh>
-          <Text
-            position={[0, 0.15, 0.01]}
-            fontSize={0.08}
-            color="white"
-            anchorX="center"
-          >
-            Canvas Widgets
-          </Text>
-          <Text
-            position={[0, -0.05, 0.01]}
-            fontSize={0.15}
-            color={canvasWidgets.length > 0 ? '#22c55e' : '#ef4444'}
-            anchorX="center"
-          >
-            {canvasWidgets.length}
-          </Text>
-          <Text
-            position={[0, -0.22, 0.01]}
-            fontSize={0.05}
-            color="#9ca3af"
-            anchorX="center"
-          >
-            {canvasWidgets.length > 0
-              ? canvasWidgets.map(w => w.name || w.widgetDefId).join(', ').slice(0, 30)
-              : 'No widgets on canvas'}
-          </Text>
-        </group>
-      )}
-
       {/* Canvas widgets rendered in 3D space */}
       {/* These are the actual widgets from the user's canvas, converted to 3D panels */}
       {/* Pass effectiveMode so widgets render during transition */}
@@ -764,76 +720,6 @@ export function SpatialScene() {
         debug={showDebugInfo}
         forceRender={effectiveMode !== 'desktop'}
       />
-
-      {/* Demo interactive objects (VR only, AR uses placed objects) */}
-      {effectiveMode === 'vr' && (
-        <>
-          <InteractiveBox position={[-1.5, 1, -2]} color="#ef4444" />
-          <InteractiveBox position={[1.5, 1, -2]} color="#3b82f6" />
-          <InteractiveBox position={[0, 0.5, -1.5]} color="#f59e0b" />
-        </>
-      )}
-
-      {/* Floating info panel */}
-      <group position={[2.5, 1.8, -2]} rotation={[0, -0.3, 0]}>
-        <mesh>
-          <planeGeometry args={[1.2, 0.8]} />
-          <meshStandardMaterial color="#111827" transparent opacity={0.9} />
-        </mesh>
-        <Text
-          position={[0, 0.25, 0.01]}
-          fontSize={0.08}
-          color="white"
-          anchorX="center"
-        >
-          Spatial Mode
-        </Text>
-        <Text
-          position={[0, 0.05, 0.01]}
-          fontSize={0.12}
-          color="#8b5cf6"
-          anchorX="center"
-        >
-          {effectiveMode.toUpperCase()}
-        </Text>
-        <Text
-          position={[0, -0.2, 0.01]}
-          fontSize={0.06}
-          color="#6b7280"
-          anchorX="center"
-          maxWidth={1}
-          textAlign="center"
-        >
-          {effectiveMode === 'ar'
-            ? `${placedObjects.length} objects placed`
-            : 'Click boxes to interact'}
-        </Text>
-      </group>
-
-      {/* Add Widget Button (clickable in 3D preview) */}
-      <group
-        position={[-2.5, 1.2, -2]}
-        rotation={[0, 0.3, 0]}
-        onClick={handleAddWidget}
-      >
-        <mesh>
-          <planeGeometry args={[0.5, 0.15]} />
-          <meshStandardMaterial
-            color={showWidgetLibrary ? '#6366f1' : '#8b5cf6'}
-            transparent
-            opacity={0.95}
-          />
-        </mesh>
-        <Text
-          position={[0, 0, 0.01]}
-          fontSize={0.06}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {showWidgetLibrary ? '✕ Close Library' : '+ Add Widget'}
-        </Text>
-      </group>
     </group>
   );
 }
