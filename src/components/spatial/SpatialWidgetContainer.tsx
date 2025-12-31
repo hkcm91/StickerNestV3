@@ -27,6 +27,7 @@ import {
 } from '../../utils/spatialCoordinates';
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { getBuiltinWidget } from '../../widgets/builtin';
+import { Widget3DHandles, type HandleType } from './xr/Widget3DHandles';
 
 // ============================================================================
 // VR Widget HTML Cache
@@ -302,12 +303,16 @@ export interface SpatialWidgetProps {
   onRotationChange?: (widgetId: string, rotation: [number, number, number]) => void;
   /** Called when widget scale changes */
   onScaleChange?: (widgetId: string, scale: number) => void;
+  /** Called when widget size changes (in 3D meters) */
+  onSizeChange?: (widgetId: string, width: number, height: number) => void;
   /** Z-offset in meters from default plane */
   zOffset?: number;
   /** Enable interaction (grab, resize) */
   interactive?: boolean;
   /** Show debug information */
   debug?: boolean;
+  /** Accent color for handles */
+  accentColor?: string;
 }
 
 interface SpatialWidgetContainerProps {
@@ -324,6 +329,7 @@ interface SpatialWidgetContainerProps {
       position?: [number, number, number];
       rotation?: [number, number, number];
       scale?: number;
+      size?: { width: number; height: number };
     }
   ) => void;
   /** Base Z position for all widgets */
@@ -347,9 +353,11 @@ function SpatialWidget({
   onPositionChange,
   onRotationChange,
   onScaleChange,
+  onSizeChange,
   zOffset = 0,
   interactive = true,
   debug = false,
+  accentColor = '#8b5cf6',
 }: SpatialWidgetProps) {
   const groupRef = useRef<Group>(null);
   const meshRef = useRef<Mesh>(null);
@@ -362,6 +370,13 @@ function SpatialWidget({
   const [hovered, setHovered] = useState(false);
   const [grabbed, setGrabbed] = useState(false);
   const [grabOffset, setGrabOffset] = useState<Vector3 | null>(null);
+
+  // Resize state - track live size during resize
+  const [liveSize, setLiveSize] = useState<{ width: number; height: number } | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Rotation state for handle interaction
+  const [additionalRotation, setAdditionalRotation] = useState(0);
 
   // HTML loading state for local widgets
   const [htmlLoadState, setHtmlLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
@@ -448,10 +463,13 @@ function SpatialWidget({
     ];
   }, [widget.position, widget.width, widget.height, zOffset]);
 
-  // Convert 2D size to 3D (meters)
+  // Convert 2D size to 3D (meters) - use liveSize during resize for real-time feedback
   const size3D = useMemo(() => {
+    if (isResizing && liveSize) {
+      return { width: liveSize.width, height: liveSize.height };
+    }
     return toSpatialSize({ width: widget.width, height: widget.height });
-  }, [widget.width, widget.height]);
+  }, [widget.width, widget.height, isResizing, liveSize]);
 
   // Convert rotation - but also calculate lookAt rotation to face user
   const rotation3D = useMemo((): [number, number, number] => {
@@ -474,9 +492,50 @@ function SpatialWidget({
     // Return [X, Y, Z] Euler angles
     // X: 0 (no tilt)
     // Y: facing angle to look at user
-    // Z: existing canvas rotation
-    return [existingRotation[0], facingAngleY, existingRotation[2]];
-  }, [widget.rotation, position3D]);
+    // Z: existing canvas rotation + additional rotation from handle
+    return [existingRotation[0], facingAngleY, existingRotation[2] + additionalRotation];
+  }, [widget.rotation, position3D, additionalRotation]);
+
+  // Resize handlers
+  const handleResizeStart = useCallback((handle: HandleType) => {
+    setIsResizing(true);
+    setLiveSize({ width: size3D.width, height: size3D.height });
+  }, [size3D.width, size3D.height]);
+
+  const handleResize = useCallback((newWidth: number, newHeight: number, handle: HandleType) => {
+    setLiveSize({ width: newWidth, height: newHeight });
+  }, []);
+
+  const handleResizeEnd = useCallback(() => {
+    if (liveSize) {
+      // Convert meters back to pixels for onSizeChange callback
+      const widthPx = liveSize.width * PIXELS_PER_METER;
+      const heightPx = liveSize.height * PIXELS_PER_METER;
+      onSizeChange?.(widget.id, widthPx, heightPx);
+    }
+    setIsResizing(false);
+    setLiveSize(null);
+  }, [liveSize, widget.id, onSizeChange]);
+
+  // Rotation handlers
+  const handleRotateStart = useCallback(() => {
+    // Rotation starts - could capture initial state if needed
+  }, []);
+
+  const handleRotate = useCallback((angleDelta: number) => {
+    setAdditionalRotation(prev => prev + angleDelta);
+  }, []);
+
+  const handleRotateEnd = useCallback(() => {
+    // Commit the final rotation to the parent
+    if (additionalRotation !== 0) {
+      const currentRotationDeg = widget.rotation || 0;
+      const additionalDeg = (additionalRotation * 180) / Math.PI;
+      const newRotationDeg = currentRotationDeg + additionalDeg;
+      onRotationChange?.(widget.id, [0, rotation3D[1], newRotationDeg]);
+    }
+    setAdditionalRotation(0);
+  }, [additionalRotation, widget.id, widget.rotation, rotation3D, onRotationChange]);
 
   // Handle click
   const handleClick = useCallback(
@@ -564,17 +623,32 @@ function SpatialWidget({
         />
       </mesh>
 
-      {/* Selection border */}
-      {(selected || hovered) && (
+      {/* Hover border (only when not selected - handles provide border when selected) */}
+      {hovered && !selected && (
         <mesh position={[0, 0, -0.005]}>
           <planeGeometry args={[size3D.width + 0.02, size3D.height + 0.02]} />
           <meshBasicMaterial
             color={borderColor}
             transparent
-            opacity={selected ? 0.8 : 0.4}
+            opacity={0.4}
           />
         </mesh>
       )}
+
+      {/* 3D Resize/Rotate handles (when selected) */}
+      <Widget3DHandles
+        width={size3D.width}
+        height={size3D.height}
+        selected={selected}
+        interactive={interactive}
+        accentColor={accentColor}
+        onResizeStart={handleResizeStart}
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
+        onRotateStart={handleRotateStart}
+        onRotate={handleRotate}
+        onRotateEnd={handleRotateEnd}
+      />
 
       {/* Check if this is a renderable widget - render actual content */}
       {/* Debug: Log canRenderWidget result */}
@@ -1009,6 +1083,14 @@ export function SpatialWidgetContainer({
     [onWidgetTransformChange]
   );
 
+  // Handle size change - MUST be before any conditional returns
+  const handleSizeChange = useCallback(
+    (widgetId: string, width: number, height: number) => {
+      onWidgetTransformChange?.(widgetId, { size: { width, height } });
+    },
+    [onWidgetTransformChange]
+  );
+
   // Debug logging - detailed widget position info
   useEffect(() => {
     console.log('[SpatialWidgetContainer] Rendering state:', {
@@ -1053,9 +1135,11 @@ export function SpatialWidgetContainer({
           onClick={handleWidgetClick}
           onPositionChange={handlePositionChange}
           onRotationChange={handleRotationChange}
+          onSizeChange={handleSizeChange}
           zOffset={(index * 0.05)} // Slight Z offset to prevent z-fighting
           interactive={interactive}
           debug={debug}
+          accentColor="#8b5cf6"
         />
       ))}
     </group>

@@ -21,6 +21,10 @@ export type { XRToolbarProps, XRToolType } from './XRToolbar';
 export { VRToolHub } from './VRToolHub';
 export type { VRToolHubProps, VRToolType as VRToolHubToolType } from './VRToolHub';
 
+// Widget 3D Handles (resize, rotate, move)
+export { Widget3DHandles } from './Widget3DHandles';
+export type { Widget3DHandlesProps, HandleType } from './Widget3DHandles';
+
 // Widget Library
 export { XRWidgetLibrary } from './XRWidgetLibrary';
 export type { XRWidgetLibraryProps } from './XRWidgetLibrary';
