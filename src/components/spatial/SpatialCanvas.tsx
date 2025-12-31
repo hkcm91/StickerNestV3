@@ -135,7 +135,10 @@ function XRSessionStateTracker() {
         setActiveMode('vr');
       }
     } else {
-      console.log('[XRSessionStateTracker] No active XR session');
+      // CRITICAL: Reset state when session ends to return to desktop mode
+      console.log('[XRSessionStateTracker] No active XR session - resetting to desktop');
+      setSessionState('none');
+      setActiveMode('desktop');
     }
   }, [session, setActiveMode, setSessionState]);
 
@@ -362,14 +365,17 @@ function GridEnvironment360(props: GridEnvironment360Props & { forceShow?: boole
   // 2. isXRSession is true AND we're not in AR mode
   // 3. spatialMode is 'vr' (active VR session confirmed)
   // 4. sessionState is 'active' and targetMode is not 'ar'
-  const isARSession = spatialMode === 'ar' || (sessionState === 'active' && targetMode === 'ar');
+  // AR mode check includes both active AR sessions AND transitions to AR
+  const isARSession = spatialMode === 'ar' ||
+    (sessionState === 'active' && targetMode === 'ar') ||
+    (sessionState === 'requesting' && targetMode === 'ar');
   const shouldShow = forceShow || isXRSession || spatialMode === 'vr' ||
     (sessionState === 'active' && !isARSession) ||
     (sessionState === 'requesting' && targetMode === 'vr');
 
-  // Never show in AR mode (real world passthrough)
+  // Never show in AR mode (real world passthrough) - includes during transition
   if (isARSession) {
-    console.log('[GridEnvironment360] Hiding for AR mode');
+    console.log('[GridEnvironment360] Hiding for AR mode (including transition)');
     return null;
   }
 
@@ -519,11 +525,11 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   // Canvas is visible when:
   // 1. `active` prop is true (parent wants it visible), OR
   // 2. An XR session is ACTUALLY active, OR
-  // 3. We're transitioning into VR mode (requesting state with targetMode === 'vr')
-  //    This ensures the grid/environment is visible during VR browser emulation
+  // 3. We're transitioning into VR/AR mode (requesting state with targetMode set)
+  //    This ensures the canvas is visible during XR session initialization
   const isXRActive = sessionState === 'active';
-  const isTransitioningToVR = sessionState === 'requesting' && targetMode === 'vr';
-  const shouldShowCanvas = active || isXRActive || isTransitioningToVR;
+  const isTransitioningToXR = sessionState === 'requesting' && (targetMode === 'vr' || targetMode === 'ar');
+  const shouldShowCanvas = active || isXRActive || isTransitioningToXR;
 
   // Debug logging for state transitions
   useEffect(() => {
@@ -533,11 +539,11 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
       sessionState,
       targetMode,
       isXRActive,
-      isTransitioningToVR,
+      isTransitioningToXR,
       shouldShowCanvas,
       canvasReady,
     });
-  }, [active, spatialMode, sessionState, targetMode, isXRActive, isTransitioningToVR, shouldShowCanvas, canvasReady]);
+  }, [active, spatialMode, sessionState, targetMode, isXRActive, isTransitioningToXR, shouldShowCanvas, canvasReady]);
 
   // Subscribe to XR store session changes
   useEffect(() => {
