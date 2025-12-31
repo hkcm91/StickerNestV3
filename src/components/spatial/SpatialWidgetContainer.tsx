@@ -29,6 +29,72 @@ import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { getBuiltinWidget } from '../../widgets/builtin';
 
 // ============================================================================
+// VR Widget HTML Cache
+// ============================================================================
+
+/**
+ * Cache for fetched widget HTML content (for local/remote widgets)
+ * This prevents re-fetching on every render in VR mode
+ */
+const vrWidgetHtmlCache = new Map<string, string>();
+const vrWidgetHtmlFetchStatus = new Map<string, 'pending' | 'success' | 'error'>();
+
+/**
+ * Get cached HTML or null if not available
+ */
+function getCachedWidgetHtml(widgetDefId: string): string | null {
+  return vrWidgetHtmlCache.get(widgetDefId) || null;
+}
+
+/**
+ * Fetch and cache HTML for a local widget
+ */
+async function fetchAndCacheWidgetHtml(widgetDefId: string, source: string | undefined): Promise<string | null> {
+  // Check if already fetching or cached
+  const status = vrWidgetHtmlFetchStatus.get(widgetDefId);
+  if (status === 'success') {
+    return vrWidgetHtmlCache.get(widgetDefId) || null;
+  }
+  if (status === 'pending') {
+    return null; // Still fetching
+  }
+
+  // Only fetch for local widgets
+  if (source !== 'local') {
+    console.log(`[VR Widget] Skipping fetch for non-local widget: ${widgetDefId} (source: ${source})`);
+    return null;
+  }
+
+  vrWidgetHtmlFetchStatus.set(widgetDefId, 'pending');
+
+  try {
+    // First try to get the manifest to find the entry file
+    const manifestResponse = await fetch(`/test-widgets/${widgetDefId}/manifest.json`);
+    if (!manifestResponse.ok) {
+      throw new Error(`Manifest not found for ${widgetDefId}`);
+    }
+    const manifest = await manifestResponse.json();
+    const entry = manifest.entry || 'index.html';
+
+    // Fetch the entry HTML
+    const htmlResponse = await fetch(`/test-widgets/${widgetDefId}/${entry}`);
+    if (!htmlResponse.ok) {
+      throw new Error(`Entry file not found: ${entry}`);
+    }
+    const html = await htmlResponse.text();
+
+    console.log(`[VR Widget] Fetched HTML for ${widgetDefId} (${html.length} chars)`);
+    vrWidgetHtmlCache.set(widgetDefId, html);
+    vrWidgetHtmlFetchStatus.set(widgetDefId, 'success');
+    return html;
+  } catch (error) {
+    console.error(`[VR Widget] Failed to fetch HTML for ${widgetDefId}:`, error);
+    vrWidgetHtmlFetchStatus.set(widgetDefId, 'error');
+    return null;
+  }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -149,15 +215,23 @@ function isReactWidget(widgetDefId: string): boolean {
 
 /**
  * Check if a widget has HTML content that can be rendered in VR
- * This includes builtin HTML widgets and AI-generated widgets
+ * This includes builtin HTML widgets, AI-generated widgets, and local widgets with cached HTML
  */
 function hasHtmlContent(widget: WidgetInstance): boolean {
   // Check for builtin HTML widget
   const builtin = getBuiltinWidget(widget.widgetDefId);
   if (builtin?.html) return true;
 
-  // Check for AI-generated widget with HTML content
+  // Check for AI-generated widget with non-empty HTML content
   if (widget.metadata?.source === 'generated' && widget.metadata?.generatedContent?.html) {
+    return true;
+  }
+
+  // Check for local widget with cached HTML
+  if (widget.metadata?.source === 'local') {
+    const cached = getCachedWidgetHtml(widget.widgetDefId);
+    if (cached) return true;
+    // Return true to allow the component to attempt fetching
     return true;
   }
 
@@ -165,16 +239,21 @@ function hasHtmlContent(widget: WidgetInstance): boolean {
 }
 
 /**
- * Get HTML content for a widget (either from builtin or AI-generated)
+ * Get HTML content for a widget (from builtin, AI-generated, or cached local)
  */
 function getWidgetHtml(widget: WidgetInstance): string | null {
   // Check for builtin HTML widget
   const builtin = getBuiltinWidget(widget.widgetDefId);
   if (builtin?.html) return builtin.html;
 
-  // Check for AI-generated widget with HTML content
+  // Check for AI-generated widget with non-empty HTML content
   if (widget.metadata?.source === 'generated' && widget.metadata?.generatedContent?.html) {
     return widget.metadata.generatedContent.html;
+  }
+
+  // Check for local widget with cached HTML
+  if (widget.metadata?.source === 'local') {
+    return getCachedWidgetHtml(widget.widgetDefId);
   }
 
   return null;
@@ -283,6 +362,48 @@ function SpatialWidget({
   const [hovered, setHovered] = useState(false);
   const [grabbed, setGrabbed] = useState(false);
   const [grabOffset, setGrabOffset] = useState<Vector3 | null>(null);
+
+  // HTML loading state for local widgets
+  const [htmlLoadState, setHtmlLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [, forceUpdate] = useState({});
+
+  // Effect to fetch HTML for local widgets
+  useEffect(() => {
+    const source = widget.metadata?.source;
+
+    // Only fetch for local widgets
+    if (source === 'local') {
+      const cached = getCachedWidgetHtml(widget.widgetDefId);
+      if (cached) {
+        setHtmlLoadState('loaded');
+        return;
+      }
+
+      // Check if fetch is already in progress
+      const status = vrWidgetHtmlFetchStatus.get(widget.widgetDefId);
+      if (status === 'success') {
+        setHtmlLoadState('loaded');
+        return;
+      }
+      if (status === 'error') {
+        setHtmlLoadState('error');
+        return;
+      }
+
+      // Start fetching
+      setHtmlLoadState('loading');
+      console.log(`[VR Widget] Fetching HTML for local widget: ${widget.widgetDefId}`);
+
+      fetchAndCacheWidgetHtml(widget.widgetDefId, source).then((html) => {
+        if (html) {
+          setHtmlLoadState('loaded');
+          forceUpdate({}); // Force re-render to pick up cached HTML
+        } else {
+          setHtmlLoadState('error');
+        }
+      });
+    }
+  }, [widget.widgetDefId, widget.metadata?.source]);
 
   // Cursor feedback
   useCursor(hovered && interactive);
@@ -461,7 +582,20 @@ function SpatialWidget({
         const canRender = canRenderWidget(widget);
         const hasReact = isReactWidget(widget.widgetDefId);
         const hasHtml = hasHtmlContent(widget);
-        console.log(`[SpatialWidget] "${widget.name || widget.widgetDefId}": canRender=${canRender}, hasReact=${hasReact}, hasHtml=${hasHtml}`);
+        const source = widget.metadata?.source;
+        const htmlFromCache = getCachedWidgetHtml(widget.widgetDefId);
+        const htmlFromGenerated = widget.metadata?.generatedContent?.html;
+        const builtinHtml = getBuiltinWidget(widget.widgetDefId)?.html;
+        console.log(`[SpatialWidget] "${widget.name || widget.widgetDefId}":`, {
+          canRender,
+          hasReact,
+          hasHtml,
+          source,
+          htmlLoadState,
+          hasBuiltinHtml: !!builtinHtml,
+          hasGeneratedHtml: !!htmlFromGenerated && htmlFromGenerated.length > 0,
+          hasCachedHtml: !!htmlFromCache,
+        });
         return null;
       })()}
       {canRenderWidget(widget) ? (
@@ -495,12 +629,59 @@ function SpatialWidget({
               {/* Render either React component or HTML widget */}
               {(() => {
                 const builtin = getBuiltinWidget(widget.widgetDefId);
+                const source = widget.metadata?.source;
 
                 // First try to render as React component
                 if (builtin?.component) {
                   const Component = builtin.component as React.ComponentType<{ api: any }>;
                   const api = createSpatial3DAPI(widget);
                   return <Component api={api} />;
+                }
+
+                // Show loading state for local widgets while fetching HTML
+                if (source === 'local' && htmlLoadState === 'loading') {
+                  return (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#a5b4fc',
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ fontSize: 24, animation: 'spin 1s linear infinite' }}>⟳</div>
+                      <div style={{ fontSize: 14 }}>Loading widget...</div>
+                      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                    </div>
+                  );
+                }
+
+                // Show error state for local widgets that failed to load
+                if (source === 'local' && htmlLoadState === 'error') {
+                  return (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#f87171',
+                        gap: 8,
+                        padding: 16,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ fontSize: 24 }}>⚠️</div>
+                      <div style={{ fontSize: 14 }}>Failed to load widget</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af' }}>{widget.widgetDefId}</div>
+                    </div>
+                  );
                 }
 
                 // Then try to render as HTML widget in an iframe
@@ -532,8 +713,16 @@ function SpatialWidget({
                           Object.assign(window.WidgetAPI._state, patch);
                         },
                         _state: ${JSON.stringify(normalizedState)},
-                        // Asset handling
-                        getAssetUrl: function(path) { return path; },
+                        _source: '${source}',
+                        // Asset handling - resolve to proper base URL for local widgets
+                        getAssetUrl: function(path) {
+                          if (this._source === 'local') {
+                            // Local widgets: resolve to /test-widgets/{widgetDefId}/
+                            if (path.startsWith('/') || path.startsWith('http')) return path;
+                            return '/test-widgets/${widget.widgetDefId}/' + path;
+                          }
+                          return path;
+                        },
                         // Logging
                         log: function() { console.log.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
                         info: function() { console.info.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
@@ -559,14 +748,20 @@ function SpatialWidget({
                     </script>
                   `;
 
-                  // Inject API into HTML
+                  // Inject API and base tag into HTML
                   let html = htmlContent;
+
+                  // For local widgets, add a base tag so relative URLs resolve correctly
+                  const baseTag = source === 'local'
+                    ? `<base href="/test-widgets/${widget.widgetDefId}/">`
+                    : '';
+
                   if (html.includes('<head>')) {
-                    html = html.replace('<head>', `<head>${mockAPI}`);
+                    html = html.replace('<head>', `<head>${baseTag}${mockAPI}`);
                   } else if (html.includes('<html>')) {
-                    html = html.replace('<html>', `<html><head>${mockAPI}</head>`);
+                    html = html.replace('<html>', `<html><head>${baseTag}${mockAPI}</head>`);
                   } else {
-                    html = mockAPI + html;
+                    html = baseTag + mockAPI + html;
                   }
 
                   // For simple text widgets, render directly instead of iframe (better mobile support)
@@ -702,15 +897,26 @@ function SpatialWidget({
 
       {/* Debug info */}
       {debug && (
-        <Text
-          position={[0, -size3D.height / 2 - 0.08, 0.01]}
-          fontSize={0.03}
-          color="#9ca3af"
-          anchorX="center"
-          anchorY="top"
-        >
-          {`pos: (${position3D[0].toFixed(2)}, ${position3D[1].toFixed(2)}, ${position3D[2].toFixed(2)})`}
-        </Text>
+        <>
+          <Text
+            position={[0, -size3D.height / 2 - 0.08, 0.01]}
+            fontSize={0.03}
+            color="#9ca3af"
+            anchorX="center"
+            anchorY="top"
+          >
+            {`pos: (${position3D[0].toFixed(2)}, ${position3D[1].toFixed(2)}, ${position3D[2].toFixed(2)})`}
+          </Text>
+          <Text
+            position={[0, -size3D.height / 2 - 0.14, 0.01]}
+            fontSize={0.025}
+            color={htmlLoadState === 'error' ? '#f87171' : htmlLoadState === 'loaded' ? '#22c55e' : '#fbbf24'}
+            anchorX="center"
+            anchorY="top"
+          >
+            {`source: ${widget.metadata?.source || 'unknown'} | html: ${htmlLoadState}`}
+          </Text>
+        </>
       )}
     </group>
   );
