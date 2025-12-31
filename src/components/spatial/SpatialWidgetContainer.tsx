@@ -468,9 +468,11 @@ function SpatialWidget({
         <>
           {/* Render actual widget content via Html */}
           {/* NOTE: Removed 'occlude' prop - it was hiding content behind the transparent panel */}
+          {/* distanceFactor: Scale factor for HTML content in 3D space. Higher = larger content at distance. */}
+          {/* At VR viewing distances (1-3m), distanceFactor ~10 gives readable UI */}
           <Html
             transform
-            distanceFactor={1}
+            distanceFactor={10}
             position={[0, 0, 0.02]}
             style={{
               width: `${widget.width}px`,
@@ -501,26 +503,56 @@ function SpatialWidget({
                 // Then try to render as HTML widget in an iframe
                 const htmlContent = getWidgetHtml(widget);
                 if (htmlContent) {
-                  // Inject a minimal WidgetAPI mock for VR context
+                  // Normalize state for compatibility: map 'text' to 'content' for BasicTextWidget
+                  const normalizedState = { ...widget.state };
+                  if (normalizedState.text && !normalizedState.content) {
+                    normalizedState.content = normalizedState.text;
+                  }
+
+                  // Inject a complete WidgetAPI mock for VR context
                   const mockAPI = `
                     <script>
                       window.WidgetAPI = {
                         widgetId: '${widget.id}',
+                        widgetDefId: '${widget.widgetDefId}',
+                        // Event emission
+                        emit: function(type, data) { console.log('[VR Widget] emit:', type, data); },
                         emitEvent: function(e) { console.log('[VR Widget] emitEvent:', e); },
                         emitOutput: function(port, data) { console.log('[VR Widget] emitOutput:', port, data); },
+                        // Event handlers
                         onEvent: function(type, handler) { return function() {}; },
                         onInput: function(port, handler) { return function() {}; },
-                        getState: function() { return ${JSON.stringify(widget.state || {})}; },
-                        setState: function(patch) { console.log('[VR Widget] setState:', patch); },
+                        // State management
+                        getState: function() { return ${JSON.stringify(normalizedState)}; },
+                        setState: function(patch) {
+                          console.log('[VR Widget] setState:', patch);
+                          Object.assign(window.WidgetAPI._state, patch);
+                        },
+                        _state: ${JSON.stringify(normalizedState)},
+                        // Asset handling
                         getAssetUrl: function(path) { return path; },
+                        // Logging
                         log: function() { console.log.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
                         info: function() { console.info.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
                         warn: function() { console.warn.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
                         error: function() { console.error.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
                         debugLog: function(msg, data) { console.debug('[${widget.widgetDefId}]', msg, data); },
-                        onMount: function(callback) { callback({ state: ${JSON.stringify(widget.state || {})} }); },
-                        onStateChange: function(callback) { return function() {}; },
+                        // Lifecycle hooks
+                        onMount: function(callback) {
+                          setTimeout(function() { callback({ state: ${JSON.stringify(normalizedState)} }); }, 0);
+                        },
+                        onStateChange: function(callback) {
+                          window.WidgetAPI._stateChangeCallback = callback;
+                          return function() { window.WidgetAPI._stateChangeCallback = null; };
+                        },
+                        onDestroy: function(callback) {
+                          window.WidgetAPI._destroyCallback = callback;
+                          return function() { window.WidgetAPI._destroyCallback = null; };
+                        },
+                        _stateChangeCallback: null,
+                        _destroyCallback: null,
                       };
+                      console.log('[VR Widget] WidgetAPI initialized for ${widget.widgetDefId}');
                     </script>
                   `;
 
