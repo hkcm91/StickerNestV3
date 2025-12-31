@@ -219,23 +219,40 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       if (disabled) return;
       if (mode === activeMode) return;
 
-      // Check if mode is supported
-      if (mode === 'vr' && !capabilities.vrSupported) return;
-      if (mode === 'ar' && !capabilities.arSupported) return;
+      // Desktop mode is always supported
+      // VR/AR preview modes don't require actual XR hardware
 
       haptic('medium');
 
-      // For VR/AR modes, actually start the WebXR session
+      // For VR/AR modes, try to start a real WebXR session
+      // If that fails, fall back to "preview mode" (3D view without XR session)
       if (mode === 'vr' || mode === 'ar') {
         // Update state to show we're requesting the mode
         requestMode(mode);
 
+        // If XR isn't supported at all, go directly to preview mode
+        if (!capabilities.vrSupported && mode === 'vr') {
+          console.log('[SpatialModeToggle] VR not supported, entering VR preview mode');
+          // Set active mode to 'vr' without an XR session - this shows the 3D canvas
+          useSpatialModeStore.getState().setActiveMode('vr');
+          useSpatialModeStore.getState().setSessionState('none'); // No XR session, just preview
+          return;
+        }
+
+        if (!capabilities.arSupported && mode === 'ar') {
+          console.log('[SpatialModeToggle] AR not supported, cannot enter AR mode');
+          useSpatialModeStore.getState().setSessionState('none');
+          requestMode('desktop');
+          return;
+        }
+
         // Wait for the SpatialCanvas to be ready
         const canvasReady = await waitForCanvasReady(3000);
         if (!canvasReady) {
-          console.error('[SpatialModeToggle] Canvas not ready, cannot enter XR');
+          console.error('[SpatialModeToggle] Canvas not ready, entering preview mode');
+          // Fall back to preview mode
+          useSpatialModeStore.getState().setActiveMode(mode);
           useSpatialModeStore.getState().setSessionState('none');
-          requestMode('desktop');
           return;
         }
 
@@ -252,15 +269,16 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
               timeoutPromise,
             ]);
           } catch (e) {
-            console.error(`[SpatialModeToggle] Failed to enter ${mode}:`, e);
-            // Reset to desktop on failure
+            console.error(`[SpatialModeToggle] Failed to enter ${mode}, using preview mode:`, e);
+            // Fall back to preview mode instead of resetting to desktop
+            // This allows users to see the VR/3D view in their browser
+            useSpatialModeStore.getState().setActiveMode(mode);
             useSpatialModeStore.getState().setSessionState('none');
-            requestMode('desktop');
           }
         } else {
-          console.warn('[SpatialModeToggle] XR store not available');
+          console.warn('[SpatialModeToggle] XR store not available, entering preview mode');
+          useSpatialModeStore.getState().setActiveMode(mode);
           useSpatialModeStore.getState().setSessionState('none');
-          requestMode('desktop');
         }
       } else {
         // Desktop mode - just update state, exit any active session
@@ -285,11 +303,13 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
 
   const getButtonStyle = (mode: SpatialMode) => {
     const isActive = activeMode === mode;
+    // VR always has preview mode available, AR requires hardware
     const isSupported =
       mode === 'desktop' ||
-      (mode === 'vr' && capabilities.vrSupported) ||
+      mode === 'vr' || // VR preview always available
       (mode === 'ar' && capabilities.arSupported);
     const isRequesting = sessionState === 'requesting';
+    const isPreviewMode = mode === 'vr' && !capabilities.vrSupported;
 
     const baseStyle = {
       ...styles.button,
@@ -313,6 +333,15 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       };
     }
 
+    // Preview mode available but not full XR - show with slight opacity
+    if (isPreviewMode) {
+      return {
+        ...baseStyle,
+        ...styles.buttonInactive,
+        opacity: 0.8,
+      };
+    }
+
     return {
       ...baseStyle,
       ...styles.buttonInactive,
@@ -332,7 +361,7 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       label: 'VR',
       title: capabilities.vrSupported
         ? 'VR mode - immersive virtual reality editing'
-        : 'VR not supported on this device',
+        : 'VR Preview - view 3D scene in browser (no headset)',
     },
     {
       mode: 'ar',
@@ -345,11 +374,12 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
   ];
 
   // Filter modes if hideUnsupported is true
+  // Note: VR always shows because it has a preview mode available
   const visibleModes = hideUnsupported
     ? modes.filter(
         (m) =>
           m.mode === 'desktop' ||
-          (m.mode === 'vr' && capabilities.vrSupported) ||
+          m.mode === 'vr' || // VR preview always available
           (m.mode === 'ar' && capabilities.arSupported)
       )
     : modes;

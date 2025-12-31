@@ -255,10 +255,30 @@ function SpatialWidget({
     return toSpatialSize({ width: widget.width, height: widget.height });
   }, [widget.width, widget.height]);
 
-  // Convert rotation
-  const rotation3D = useMemo(() => {
-    return toSpatialRotation(widget.rotation || 0);
-  }, [widget.rotation]);
+  // Convert rotation - but also calculate lookAt rotation to face user
+  const rotation3D = useMemo((): [number, number, number] => {
+    // User is at origin (0, 1.6, 0) - widgets should face toward user
+    // Plane geometry in Three.js faces +Z by default
+    // We want the widget's front (+Z) to point toward the user
+
+    // Get widget position
+    const widgetX = position3D[0];
+    const widgetZ = position3D[2];
+
+    // Direction from widget TO user (origin) in XZ plane
+    // To make +Z face this direction, we rotate by atan2(-x, -z)
+    // This ensures widgets always face the user regardless of their canvas position
+    const facingAngleY = Math.atan2(-widgetX, -widgetZ);
+
+    // Combine with existing 2D rotation (Z-axis rotation from canvas)
+    const existingRotation = toSpatialRotation(widget.rotation || 0);
+
+    // Return [X, Y, Z] Euler angles
+    // X: 0 (no tilt)
+    // Y: facing angle to look at user
+    // Z: existing canvas rotation
+    return [existingRotation[0], facingAngleY, existingRotation[2]];
+  }, [widget.rotation, position3D]);
 
   // Handle click
   const handleClick = useCallback(
