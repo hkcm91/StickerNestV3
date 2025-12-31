@@ -470,10 +470,13 @@ function SpatialWidget({
           {/* NOTE: Removed 'occlude' prop - it was hiding content behind the transparent panel */}
           {/* distanceFactor: Scale factor for HTML content in 3D space. Higher = larger content at distance. */}
           {/* At VR viewing distances (1-3m), distanceFactor ~10 gives readable UI */}
+          {/* zIndexRange ensures Html content layers properly on mobile browsers */}
           <Html
             transform
             distanceFactor={10}
             position={[0, 0, 0.02]}
+            zIndexRange={[100, 0]}
+            center
             style={{
               width: `${widget.width}px`,
               height: `${widget.height}px`,
