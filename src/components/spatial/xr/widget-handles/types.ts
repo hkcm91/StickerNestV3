@@ -155,15 +155,22 @@ export interface HapticPattern {
   duration: number;
 }
 
-export interface HapticSequence {
-  patterns: (HapticPattern | { pause: number })[];
-}
+/** A sequence of haptic patterns for complex feedback */
+export type HapticSequence = HapticPattern[];
 
 export interface HapticCapabilities {
+  /** Whether any haptic feedback is supported */
   supported: boolean;
+  /** Whether device has HD haptics (Quest 3, Vision Pro) */
   hdHaptics: boolean;
+  /** Maximum intensity value (0-1) */
   maxIntensity: number;
+  /** Maximum duration in ms */
   maxDuration: number;
+  /** Whether device supports waveform patterns */
+  supportsWaveform?: boolean;
+  /** Whether using Vibration API fallback */
+  usesVibrationAPI?: boolean;
 }
 
 export const HAPTIC_PRESETS = {
