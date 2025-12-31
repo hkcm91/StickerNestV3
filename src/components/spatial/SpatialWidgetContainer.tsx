@@ -25,6 +25,45 @@ import {
   DEFAULT_WIDGET_Z,
   DEFAULT_EYE_HEIGHT,
 } from '../../utils/spatialCoordinates';
+
+// ============================================================================
+// VR/AR Resolution Settings
+// ============================================================================
+
+/**
+ * Resolution multiplier for widget rendering in VR/AR modes.
+ * Renders HTML content at higher resolution to prevent pixelation when scaled up.
+ * A value of 2 means 2x resolution (4x pixels), 3 means 3x resolution (9x pixels).
+ * Higher values = crisper text/graphics but more memory/CPU usage.
+ */
+const VR_RESOLUTION_SCALE = 2.5;
+
+/**
+ * Minimum resolution scale (for very large widgets to avoid memory issues)
+ */
+const MIN_RESOLUTION_SCALE = 1.5;
+
+/**
+ * Maximum widget dimension before reducing resolution scale (in pixels)
+ * Larger widgets use lower resolution scale to avoid memory issues
+ */
+const MAX_WIDGET_DIMENSION_FOR_FULL_SCALE = 600;
+
+/**
+ * Calculate the appropriate resolution scale for a widget based on its size.
+ * Larger widgets get a lower multiplier to balance quality vs performance.
+ */
+function getWidgetResolutionScale(width: number, height: number): number {
+  const maxDimension = Math.max(width, height);
+
+  if (maxDimension <= MAX_WIDGET_DIMENSION_FOR_FULL_SCALE) {
+    return VR_RESOLUTION_SCALE;
+  }
+
+  // Gradually reduce scale for larger widgets
+  const scaleFactor = MAX_WIDGET_DIMENSION_FOR_FULL_SCALE / maxDimension;
+  return Math.max(MIN_RESOLUTION_SCALE, VR_RESOLUTION_SCALE * scaleFactor);
+}
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { getBuiltinWidget } from '../../widgets/builtin';
 
@@ -605,29 +644,46 @@ function SpatialWidget({
           {/* distanceFactor: Scale factor for HTML content in 3D space. Higher = larger content at distance. */}
           {/* Lower distanceFactor (1-2) keeps widgets at readable size on mobile */}
           {/* zIndexRange ensures Html content layers properly on mobile browsers */}
-          <Html
-            transform
-            distanceFactor={1.5}
-            position={[0, 0, 0.02]}
-            zIndexRange={[100, 0]}
-            center
-            style={{
-              width: `${widget.width}px`,
-              height: `${widget.height}px`,
-              pointerEvents: 'auto',
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-            }}
-          >
+          {/* VR_RESOLUTION_SCALE: Renders HTML at higher resolution to prevent pixelation when scaled up */}
+          {(() => {
+            // Calculate resolution scale based on widget size
+            const resolutionScale = getWidgetResolutionScale(widget.width, widget.height);
+            // Render at higher resolution, then scale down visually
+            const scaledWidth = widget.width * resolutionScale;
+            const scaledHeight = widget.height * resolutionScale;
+            // Inverse scale to bring visual size back to original
+            const inverseScale = 1 / resolutionScale;
+
+            return (
+              <Html
+                transform
+                distanceFactor={1.5}
+                position={[0, 0, 0.02]}
+                zIndexRange={[100, 0]}
+                center
+                scale={inverseScale}
+                style={{
+                  width: `${scaledWidth}px`,
+                  height: `${scaledHeight}px`,
+                  pointerEvents: 'auto',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  // Enable GPU acceleration for crisp rendering
+                  transform: 'translateZ(0)',
+                  willChange: 'transform',
+                }}
+              >
             <div
               style={{
                 width: '100%',
                 height: '100%',
                 overflow: 'hidden',
-                borderRadius: 8,
+                borderRadius: 8 * resolutionScale,
                 background: 'rgba(20, 20, 30, 0.95)',
                 WebkitFontSmoothing: 'antialiased',
                 MozOsxFontSmoothing: 'grayscale',
+                // Scale all text to match the resolution multiplier
+                fontSize: `${16 * resolutionScale}px`,
               }}
             >
               {/* Render either React component or HTML widget */}
@@ -655,12 +711,12 @@ function SpatialWidget({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#a5b4fc',
-                        gap: 8,
+                        gap: 8 * resolutionScale,
                       }}
                     >
-                      <div style={{ fontSize: 24, animation: 'spin 1s linear infinite' }}>⟳</div>
-                      <div style={{ fontSize: 14 }}>Loading widget...</div>
-                      <div style={{ fontSize: 11, color: '#6b7280' }}>{widget.widgetDefId}</div>
+                      <div style={{ fontSize: 24 * resolutionScale, animation: 'spin 1s linear infinite' }}>⟳</div>
+                      <div style={{ fontSize: 14 * resolutionScale }}>Loading widget...</div>
+                      <div style={{ fontSize: 11 * resolutionScale, color: '#6b7280' }}>{widget.widgetDefId}</div>
                       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
                     </div>
                   );
@@ -678,14 +734,14 @@ function SpatialWidget({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#f87171',
-                        gap: 8,
-                        padding: 16,
+                        gap: 8 * resolutionScale,
+                        padding: 16 * resolutionScale,
                         textAlign: 'center',
                       }}
                     >
-                      <div style={{ fontSize: 24 }}>⚠️</div>
-                      <div style={{ fontSize: 14 }}>Failed to load widget</div>
-                      <div style={{ fontSize: 11, color: '#9ca3af' }}>{widget.widgetDefId}</div>
+                      <div style={{ fontSize: 24 * resolutionScale }}>⚠️</div>
+                      <div style={{ fontSize: 14 * resolutionScale }}>Failed to load widget</div>
+                      <div style={{ fontSize: 11 * resolutionScale, color: '#9ca3af' }}>{widget.widgetDefId}</div>
                     </div>
                   );
                 }
@@ -709,19 +765,19 @@ function SpatialWidget({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#a5b4fc',
-                        gap: 12,
-                        padding: 16,
+                        gap: 12 * resolutionScale,
+                        padding: 16 * resolutionScale,
                         textAlign: 'center',
                       }}
                     >
-                      <div style={{ fontSize: 32 }}>{getWidgetTypeEmoji(widget.widgetDefId)}</div>
-                      <div style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>
+                      <div style={{ fontSize: 32 * resolutionScale }}>{getWidgetTypeEmoji(widget.widgetDefId)}</div>
+                      <div style={{ fontSize: 14 * resolutionScale, fontWeight: 'bold', color: '#ffffff' }}>
                         {widget.name || formatWidgetType(widget.widgetDefId)}
                       </div>
-                      <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                      <div style={{ fontSize: 11 * resolutionScale, color: '#9ca3af' }}>
                         {widget.widgetDefId}
                       </div>
-                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 8 }}>
+                      <div style={{ fontSize: 10 * resolutionScale, color: '#6b7280', marginTop: 8 * resolutionScale }}>
                         {source || 'unknown'} • {Math.round(widget.width)}×{Math.round(widget.height)}
                       </div>
                     </div>
@@ -818,14 +874,14 @@ function SpatialWidget({
                           alignItems: 'center',
                           justifyContent: state.textAlign === 'left' ? 'flex-start' :
                                          state.textAlign === 'right' ? 'flex-end' : 'center',
-                          padding: state.padding || 8,
+                          padding: (state.padding || 8) * resolutionScale,
                           color: state.color || '#ffffff',
-                          fontSize: state.fontSize || 16,
+                          fontSize: (state.fontSize || 16) * resolutionScale,
                           fontFamily: state.fontFamily || 'system-ui, sans-serif',
                           fontWeight: state.fontWeight || 'normal',
                           textAlign: state.textAlign || 'center',
                           backgroundColor: state.backgroundColor || 'transparent',
-                          borderRadius: state.borderRadius || 0,
+                          borderRadius: (state.borderRadius || 0) * resolutionScale,
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
                           overflow: 'hidden',
@@ -837,6 +893,22 @@ function SpatialWidget({
                   }
 
                   // For complex widgets, use iframe with permissive sandbox for mobile
+                  // Inject CSS to scale fonts within the iframe for hi-res rendering
+                  const hiResStyle = `
+                    <style>
+                      /* VR/AR Hi-Res: Scale all content for crisp rendering */
+                      html { font-size: ${16 * resolutionScale}px !important; }
+                      body { font-size: inherit; }
+                      /* Ensure images and media are also crisp */
+                      img, video, canvas { image-rendering: -webkit-optimize-contrast; }
+                    </style>
+                  `;
+                  if (html.includes('</head>')) {
+                    html = html.replace('</head>', `${hiResStyle}</head>`);
+                  } else {
+                    html = hiResStyle + html;
+                  }
+
                   return (
                     <iframe
                       srcDoc={html}
@@ -844,7 +916,7 @@ function SpatialWidget({
                         width: '100%',
                         height: '100%',
                         border: 'none',
-                        borderRadius: 8,
+                        borderRadius: 8 * resolutionScale,
                         backgroundColor: 'transparent',
                       }}
                       sandbox="allow-scripts allow-same-origin"
@@ -857,6 +929,8 @@ function SpatialWidget({
               })()}
             </div>
           </Html>
+            );
+          })()}
         </>
       ) : (
         <>

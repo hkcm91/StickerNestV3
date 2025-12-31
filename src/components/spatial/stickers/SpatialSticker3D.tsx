@@ -6,11 +6,11 @@
  * Handles click behaviors to launch widgets, open URLs, etc.
  */
 
-import React, { useState, useRef, useMemo, useCallback, Suspense } from 'react';
-import { useFrame } from '@react-three/fiber';
+import React, { useState, useRef, useMemo, useCallback, Suspense, useEffect } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture, useGLTF, Billboard, Html } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
-import { Mesh, Group, MathUtils, Color } from 'three';
+import { Mesh, Group, MathUtils, Color, LinearFilter, LinearMipmapLinearFilter } from 'three';
 import {
   SpatialSticker,
   SpatialTransform,
@@ -174,6 +174,33 @@ interface ImageSticker3DProps {
 
 function ImageSticker3D({ mediaSrc, size, opacity, billboard }: ImageSticker3DProps) {
   const texture = useTexture(mediaSrc);
+  const { gl } = useThree();
+
+  // Apply high-quality texture filtering for VR/AR
+  useEffect(() => {
+    if (texture) {
+      // Use linear filtering for smooth scaling
+      texture.minFilter = LinearMipmapLinearFilter;
+      texture.magFilter = LinearFilter;
+
+      // Generate mipmaps for quality at various distances
+      texture.generateMipmaps = true;
+
+      // Apply anisotropic filtering if available (prevents blurriness at angles)
+      const glAny = gl as any;
+      if (glAny.anisotropyExt && glAny.maxAnisotropy) {
+        texture.anisotropy = glAny.maxAnisotropy;
+      } else {
+        // Fallback: try to get anisotropy from renderer capabilities
+        const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
+        if (maxAnisotropy > 1) {
+          texture.anisotropy = maxAnisotropy;
+        }
+      }
+
+      texture.needsUpdate = true;
+    }
+  }, [texture, gl]);
 
   // Calculate aspect ratio from texture
   const aspectRatio = texture.image
