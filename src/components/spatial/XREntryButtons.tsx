@@ -199,43 +199,51 @@ export function XREntryButtons({
   const handleEnterVR = useCallback(async () => {
     if (isLoading) return;
 
-    // On touch devices (phones/tablets), use preview mode instead of WebXR
-    // Real WebXR VR requires a headset - phones should use preview mode
+    // PRIORITY 1: If WebXR VR is supported, USE IT!
+    // This includes Quest 3 and other VR headsets (even though they have "touch" and "Android" in UA)
+    // Quest 3 reports vrSupported=true because it supports immersive-vr sessions
+    if (capabilities.vrSupported) {
+      console.log('[XREntryButtons] VR supported via WebXR, entering real VR mode');
+      try {
+        setSessionState('requesting');
+        setError(null);
+        // Use retry logic in case XR context needs more time
+        await enterXRWithRetry('vr', 2);
+        return;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to enter VR';
+        console.error('[XREntryButtons] VR entry failed:', message);
+        // Fall back to preview mode instead of error
+        useSpatialModeStore.getState().enterPreviewMode('vr');
+        return;
+      }
+    }
+
+    // PRIORITY 2: On touch devices without VR support (phones/tablets), use preview mode
+    // These devices can still see a 3D view with gyroscope controls
     const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (hasTouchSupport || userAgentMobile) {
-      console.log('[XREntryButtons] Touch device detected, using VR preview mode', {
+      console.log('[XREntryButtons] Mobile device without VR support, using preview mode', {
         hasTouchSupport,
         maxTouchPoints: navigator.maxTouchPoints,
         userAgentMobile,
+        vrSupported: capabilities.vrSupported,
       });
       useSpatialModeStore.getState().enterPreviewMode('vr');
       return;
     }
 
-    if (!capabilities.vrSupported) {
-      console.log('[XREntryButtons] VR not supported, using preview mode');
-      useSpatialModeStore.getState().enterPreviewMode('vr');
-      return;
-    }
-
-    try {
-      setSessionState('requesting');
-      setError(null);
-      // Use retry logic in case XR context needs more time
-      await enterXRWithRetry('vr', 2);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to enter VR';
-      console.error('[XREntryButtons] VR entry failed:', message);
-      // Fall back to preview mode instead of error
-      useSpatialModeStore.getState().enterPreviewMode('vr');
-    }
+    // PRIORITY 3: Desktop without VR - use preview mode
+    console.log('[XREntryButtons] No VR support detected, using preview mode');
+    useSpatialModeStore.getState().enterPreviewMode('vr');
   }, [isLoading, capabilities.vrSupported, setSessionState, setError]);
 
   // Handle entering AR
   // AR should TRY WebXR first for camera passthrough, even on mobile
   // Many phones support WebXR AR (ARCore/ARKit) - only fallback to preview if it fails
+  // NOTE: Quest 3 AR passthrough can be resource-intensive - use careful error handling
   const handleEnterAR = useCallback(async () => {
     if (isLoading) return;
 
@@ -249,12 +257,30 @@ export function XREntryButtons({
     try {
       setSessionState('requesting');
       setError(null);
-      // Use retry logic in case XR context needs more time
-      await enterXRWithRetry('ar', 2);
+
+      // Add timeout protection for AR session - Quest 3 passthrough can hang
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('AR session request timed out')), 10000);
+      });
+
+      console.log('[XREntryButtons] Requesting AR session...');
+
+      // Race between AR entry and timeout
+      await Promise.race([
+        enterXRWithRetry('ar', 1), // Fewer retries for AR to avoid repeated crashes
+        timeoutPromise,
+      ]);
+
+      console.log('[XREntryButtons] AR session started successfully');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to enter AR';
       console.error('[XREntryButtons] AR entry failed:', message);
-      // Fall back to preview mode instead of error
+
+      // Reset session state to prevent stuck UI
+      setSessionState('none');
+
+      // On Quest 3 and other devices, AR failures are common - use preview mode gracefully
+      console.log('[XREntryButtons] Falling back to AR preview mode');
       useSpatialModeStore.getState().enterPreviewMode('ar');
     }
   }, [isLoading, capabilities.arSupported, setSessionState, setError]);

@@ -21,6 +21,12 @@ import { createXRStore } from '@react-three/xr';
  * 1. Session mode is 'immersive-ar' (handled by enterAR())
  * 2. WebGL context has alpha: true (set in SpatialCanvas)
  * 3. Scene has no opaque background (GridEnvironment360 hides in AR)
+ *
+ * QUEST 3 COMPATIBILITY:
+ * - Quest 3 browser reports both VR and AR as supported
+ * - VR mode works reliably with most features enabled
+ * - AR passthrough can be unstable with too many features - keep it minimal
+ * - Hand tracking + AR passthrough together can cause performance issues
  */
 export const xrStore = createXRStore({
   // CRITICAL: Reference space determines world-space vs head-locked rendering
@@ -34,24 +40,27 @@ export const xrStore = createXRStore({
     right: true,
     teleportPointer: true,
   },
-  // Hand tracking
+  // Hand tracking - Note: Can be resource-intensive with AR passthrough on Quest 3
   hand: {
     left: true,
     right: true,
     teleportPointer: true,
   },
   // Performance settings
-  frameRate: 'high',
+  // Use 'default' instead of 'high' for better AR stability on Quest 3
+  frameRate: 'default',
   foveation: 1,
-  // Core features (widely supported)
+  // Core features - be conservative for Quest 3 AR compatibility
+  // Hand tracking: Enable for VR, but AR sessions request this separately
   handTracking: true,
-  hitTest: true,
-  anchors: true,
-  // Optional features - set to false to request as optional, avoiding session failures
-  // on devices that don't support these newer features
-  planeDetection: false,  // Request as optional - not all devices support
-  meshDetection: false,   // Request as optional - Meta Quest specific
-  depthSensing: false,    // Request as optional - experimental feature
+  // Hit test: Essential for AR placement, but can be unstable - request as optional
+  hitTest: false,  // Changed to false - request explicitly when needed
+  // Anchors: Useful but not required for basic AR
+  anchors: false,  // Changed to false - request explicitly when needed
+  // Optional features - keep disabled to avoid session request failures
+  planeDetection: false,
+  meshDetection: false,
+  depthSensing: false,
 });
 
 /**
