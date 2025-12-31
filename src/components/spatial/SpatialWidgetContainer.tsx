@@ -456,14 +456,22 @@ function SpatialWidget({
       )}
 
       {/* Check if this is a renderable widget - render actual content */}
+      {/* Debug: Log canRenderWidget result */}
+      {(() => {
+        const canRender = canRenderWidget(widget);
+        const hasReact = isReactWidget(widget.widgetDefId);
+        const hasHtml = hasHtmlContent(widget);
+        console.log(`[SpatialWidget] "${widget.name || widget.widgetDefId}": canRender=${canRender}, hasReact=${hasReact}, hasHtml=${hasHtml}`);
+        return null;
+      })()}
       {canRenderWidget(widget) ? (
         <>
           {/* Render actual widget content via Html */}
+          {/* NOTE: Removed 'occlude' prop - it was hiding content behind the transparent panel */}
           <Html
             transform
-            occlude
             distanceFactor={1}
-            position={[0, 0, 0.01]}
+            position={[0, 0, 0.02]}
             style={{
               width: `${widget.width}px`,
               height: `${widget.height}px`,
