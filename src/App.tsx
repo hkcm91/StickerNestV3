@@ -29,6 +29,7 @@ import { useDebugShortcuts } from './hooks/useDebugShortcuts';
 import { useViewport } from './hooks/useResponsive';
 import { useCanvasManager } from './services/canvasManager';
 import { useSocialStore } from './state/useSocialStore';
+import { initializeHaloDocumentStore } from './state/useHaloDocumentStore';
 import './App.css';
 
 // WebSocket server URL - defaults to same host with /ws path
@@ -152,6 +153,11 @@ const App: React.FC = () => {
           await socialStore.initialize(userId);
           console.log('[App] useSocialStore initialized - following:', socialStore.following.size);
         }
+
+        // Initialize HaloDocumentStore for unified document storage
+        console.log('[App] Initializing HaloDocumentStore...');
+        await initializeHaloDocumentStore();
+        console.log('[App] HaloDocumentStore initialized');
 
         // Initialize SocialEventBridge for social store -> EventBus bridging
         if (!socialBridgeRef.current) {

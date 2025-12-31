@@ -27,7 +27,6 @@ import {
 } from '../../utils/spatialCoordinates';
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { getBuiltinWidget } from '../../widgets/builtin';
-import type { WidgetAPI } from '../../types/runtime';
 
 // ============================================================================
 // Helper Functions
@@ -80,44 +79,45 @@ function getWidgetTypeEmoji(widgetDefId: string): string {
 /**
  * Create a minimal WidgetAPI for 3D React component widgets.
  * This provides the essential API methods that widgets need.
+ * Uses 'any' type since widgets expect extended API beyond the base WidgetAPI interface.
  */
-function createSpatial3DAPI(widget: WidgetInstance): WidgetAPI {
+function createSpatial3DAPI(widget: WidgetInstance): any {
   return {
     widgetId: widget.id,
     widgetDefId: widget.widgetDefId,
 
-    emitEvent: (event) => {
+    emitEvent: (event: any) => {
       console.log('[Spatial3DAPI] emitEvent:', event);
     },
 
-    emitOutput: (port, data) => {
+    emitOutput: (port: string, data: any) => {
       console.log('[Spatial3DAPI] emitOutput:', port, data);
     },
 
-    onEvent: (type, handler) => {
+    onEvent: (type: string, handler: any) => {
       // Return unsubscribe function
       return () => {};
     },
 
-    onInput: (port, handler) => {
+    onInput: (port: string, handler: any) => {
       // Return unsubscribe function
       return () => {};
     },
 
     getState: () => widget.state || {},
 
-    setState: (patch) => {
+    setState: (patch: any) => {
       console.log('[Spatial3DAPI] setState:', patch);
       // In a full implementation, this would update widget state
     },
 
-    getAssetUrl: (path) => path,
+    getAssetUrl: (path: string) => path,
 
-    log: (...args) => console.log(`[${widget.widgetDefId}]`, ...args),
-    info: (...args) => console.info(`[${widget.widgetDefId}]`, ...args),
-    warn: (...args) => console.warn(`[${widget.widgetDefId}]`, ...args),
-    error: (...args) => console.error(`[${widget.widgetDefId}]`, ...args),
-    debugLog: (...args) => console.debug(`[${widget.widgetDefId}]`, ...args),
+    log: (...args: any[]) => console.log(`[${widget.widgetDefId}]`, ...args),
+    info: (...args: any[]) => console.info(`[${widget.widgetDefId}]`, ...args),
+    warn: (...args: any[]) => console.warn(`[${widget.widgetDefId}]`, ...args),
+    error: (...args: any[]) => console.error(`[${widget.widgetDefId}]`, ...args),
+    debugLog: (msg: string, data?: any) => console.debug(`[${widget.widgetDefId}]`, msg, data),
 
     onMount: (callback: (context: { state: any }) => void) => {
       // Call immediately since we're already mounted
@@ -386,7 +386,7 @@ function SpatialWidget({
               {(() => {
                 const builtin = getBuiltinWidget(widget.widgetDefId);
                 if (builtin?.component) {
-                  const Component = builtin.component;
+                  const Component = builtin.component as React.ComponentType<{ api: any }>;
                   const api = createSpatial3DAPI(widget);
                   return <Component api={api} />;
                 }

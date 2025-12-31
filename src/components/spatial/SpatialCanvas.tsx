@@ -26,24 +26,29 @@ import { xrStore } from './xrStore';
 import * as THREE from 'three';
 
 // ============================================================================
-// Frame Loop Controller
+// Frame Loop Controller (inside XR context)
 // ============================================================================
 
 /**
- * Controls the render loop based on visibility.
- * When hidden, we use "demand" mode to stop continuous rendering.
- * When visible or in XR, we use "always" for smooth animation.
+ * Controls the render loop based on visibility and XR state.
+ * Frame loop must ALWAYS run during XR sessions.
+ *
+ * IMPORTANT: This component must be placed INSIDE the <XR> provider
+ * so it can use useXR to detect active sessions.
  */
 function FrameLoopController({ shouldRender }: { shouldRender: boolean }) {
   const { set } = useThree();
+  const session = useXR((state) => state.session);
+  const isXRActive = !!session;
 
   useEffect(() => {
-    // When hidden, pause the frame loop to save resources
-    // When visible, ensure continuous rendering
-    const frameloop = shouldRender ? 'always' : 'never';
-    console.log('[FrameLoopController] Setting frameloop to:', frameloop, 'shouldRender:', shouldRender);
+    // Frame loop must run when:
+    // 1. Canvas should be visible on screen (shouldRender), OR
+    // 2. An XR session is active
+    const frameloop = (shouldRender || isXRActive) ? 'always' : 'never';
+    console.log('[FrameLoopController] Setting frameloop to:', frameloop, { shouldRender, isXRActive });
     set({ frameloop });
-  }, [shouldRender, set]);
+  }, [shouldRender, isXRActive, set]);
 
   return null;
 }
@@ -494,59 +499,63 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           console.log('[SpatialCanvas] Canvas created and ready for XR');
         }}
       >
-        {/* Frame loop controller - pauses rendering when hidden */}
-        <FrameLoopController shouldRender={shouldShowCanvas} />
+        {/* We use our own SpatialModeToggle in the toolbar for XR entry */}
+        <XR store={xrStore}>
+          {/* Frame loop controller - must be inside XR to detect session state */}
+          <FrameLoopController shouldRender={shouldShowCanvas} />
 
-        {/* overlay={false} disables the default "Enter XR" button from @react-three/xr */}
-        {/* We use our own SpatialModeToggle in the toolbar instead */}
-        <XR store={xrStore} overlay={false}>
           {/* XR Session State Tracker - always render to sync state */}
           <XRSessionStateTracker />
 
-          {/* Only render scene content when the canvas should be visible */}
-          {/* This prevents interference with 2D modes and saves resources */}
-          {shouldShowCanvas && (
-            <>
-              {/* Lighting - essential for seeing anything! */}
-              <ambientLight intensity={0.6} />
-              <directionalLight
-                position={[5, 10, 5]}
-                intensity={1.0}
-                castShadow
-                shadow-mapSize={[2048, 2048]}
-              />
-              <hemisphereLight args={['#87CEEB', '#362D59', 0.3]} />
+          {/*
+            CRITICAL: Scene content must ALWAYS be rendered, not conditional!
+            XR sessions require the 3D scene graph to exist BEFORE the session starts.
+            If we conditionally render based on shouldShowCanvas, the XR session
+            starts but finds an empty scene, resulting in a blank view.
 
-              {/* User origin (feet position) */}
-              <XROrigin />
+            The visibility of the canvas container (z-index, opacity) controls
+            what the user sees on the 2D screen. The 3D content inside XR
+            must always exist so XR can render it.
+          */}
 
-              {/* 360 Grid Environment (VR and 3D preview - customizable) */}
-              {/* Pass isXRSession=true when we're in an active XR session */}
-              <GridEnvironment360
-                forceShow={active}
-                isXRSession={isXRActive}
-              />
+          {/* Lighting - essential for seeing anything! */}
+          <ambientLight intensity={0.6} />
+          <directionalLight
+            position={[5, 10, 5]}
+            intensity={1.0}
+            castShadow
+            shadow-mapSize={[2048, 2048]}
+          />
+          <hemisphereLight args={['#87CEEB', '#362D59', 0.3]} />
 
-              {/* Ground reference */}
-              <GroundPlane />
+          {/* User origin (feet position) */}
+          <XROrigin />
 
-              {/* Main scene content */}
-              <Suspense fallback={<LoadingFallback />}>
-                <SpatialScene />
-              </Suspense>
+          {/* 360 Grid Environment (VR and 3D preview - customizable) */}
+          {/* Pass isXRSession=true when we're in an active XR session */}
+          <GridEnvironment360
+            forceShow={active}
+            isXRSession={isXRActive}
+          />
 
-              {/* Desktop controls - ONLY when canvas is visible AND in desktop spatial mode */}
-              {/* This prevents OrbitControls from capturing mouse events when hidden */}
-              {spatialMode === 'desktop' && (
-                <OrbitControls
-                  enablePan
-                  enableZoom
-                  enableRotate
-                  target={[0, 1.5, 0]}
-                  maxPolarAngle={Math.PI * 0.85}
-                />
-              )}
-            </>
+          {/* Ground reference */}
+          <GroundPlane />
+
+          {/* Main scene content */}
+          <Suspense fallback={<LoadingFallback />}>
+            <SpatialScene />
+          </Suspense>
+
+          {/* Desktop controls - ONLY when canvas is visible AND in desktop spatial mode */}
+          {/* This prevents OrbitControls from capturing mouse events when hidden */}
+          {spatialMode === 'desktop' && shouldShowCanvas && (
+            <OrbitControls
+              enablePan
+              enableZoom
+              enableRotate
+              target={[0, 1.5, 0]}
+              maxPolarAngle={Math.PI * 0.85}
+            />
           )}
         </XR>
       </Canvas>

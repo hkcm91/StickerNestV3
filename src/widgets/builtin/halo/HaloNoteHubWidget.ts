@@ -356,16 +356,13 @@ export const NoteHubWidgetHTML = `
       const loading = document.getElementById('loading');
       const stats = document.getElementById('stats');
 
-      // State
+      // State - documents now come from unified HaloDocumentStore via API
       let state = {
-        documents: [],
+        documents: [],  // Array of document metadata
         filter: 'all',
         searchQuery: '',
         selectedId: null,
       };
-
-      // Document store
-      let documentStore = {};
 
       function getSourceIcon(sourceType) {
         const icons = {
@@ -396,14 +393,8 @@ export const NoteHubWidgetHTML = `
         return text.substring(0, 100) + (text.length > 100 ? '...' : '');
       }
 
-      function countWords(content) {
-        if (!content) return 0;
-        const text = content.replace(/<[^>]*>/g, ' ');
-        return text.trim().split(/\\s+/).filter(w => w.length > 0).length;
-      }
-
       function filterDocuments() {
-        let docs = Object.values(documentStore);
+        let docs = state.documents;
 
         if (state.filter === 'starred') {
           docs = docs.filter(d => d.starred);
@@ -411,12 +402,13 @@ export const NoteHubWidgetHTML = `
           docs = docs.filter(d => d.category === state.filter);
         }
 
+        // Note: full-text search on content requires fetching full documents
+        // For now, search on title and tags from metadata
         if (state.searchQuery.trim()) {
           const query = state.searchQuery.toLowerCase();
           docs = docs.filter(d =>
             d.title.toLowerCase().includes(query) ||
-            d.content.toLowerCase().includes(query) ||
-            d.tags.some(t => t.toLowerCase().includes(query))
+            (d.tags && d.tags.some(t => t.toLowerCase().includes(query)))
           );
         }
 
@@ -434,7 +426,7 @@ export const NoteHubWidgetHTML = `
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <p>\${state.searchQuery ? 'No documents match your search' : 'No documents yet'}</p>
-              <p style="margin-top:8px;opacity:0.7">Use OCR or Voice to add documents</p>
+              <p style="margin-top:8px;opacity:0.7">Use OCR, Voice, or NotePad widgets to add documents</p>
             </div>
           \`;
           return;
@@ -450,11 +442,10 @@ export const NoteHubWidgetHTML = `
             <div class="document-meta">
               <span>\${formatDate(doc.updatedAt)}</span>
               <span>•</span>
-              <span>\${countWords(doc.content)} words</span>
+              <span>\${doc.wordCount || 0} words</span>
               <span>•</span>
               <span>\${doc.category}</span>
             </div>
-            <div class="document-preview">\${getPreview(doc.content)}</div>
             <div class="document-actions">
               <button class="action-btn" data-open="\${doc.id}">Open</button>
               <button class="action-btn" data-export="\${doc.id}">Export</button>
@@ -463,66 +454,94 @@ export const NoteHubWidgetHTML = `
           </div>
         \`).join('');
 
-        const total = Object.keys(documentStore).length;
+        const total = state.documents.length;
         stats.textContent = total + ' document' + (total === 1 ? '' : 's') + ' | Protected';
         API.emitOutput('stats.count', total);
       }
 
-      function selectDocument(id) {
+      // Load documents from unified HaloDocumentStore
+      async function loadDocuments() {
+        try {
+          loading.style.display = 'block';
+          const result = await API.request('document:list');
+          state.documents = result.documents || [];
+          loading.style.display = 'none';
+          renderDocuments();
+          API.log('Loaded ' + state.documents.length + ' documents from unified store');
+        } catch (err) {
+          loading.style.display = 'none';
+          API.log('Failed to load documents: ' + err.message, 'error');
+          state.documents = [];
+          renderDocuments();
+        }
+      }
+
+      // Search documents via unified API
+      async function searchDocuments(query) {
+        if (!query.trim()) {
+          return loadDocuments();
+        }
+        try {
+          const result = await API.request('document:search', { query });
+          state.documents = result.documents || [];
+          renderDocuments();
+        } catch (err) {
+          API.log('Search failed: ' + err.message, 'error');
+        }
+      }
+
+      async function selectDocument(id) {
         state.selectedId = id;
-        const doc = documentStore[id];
-        if (doc) {
-          API.emitOutput('document.selected', doc);
-          API.emit('document.opened', doc);
+        try {
+          // Fetch full document content
+          const result = await API.request('document:get', { id });
+          if (result.document) {
+            API.emitOutput('document.selected', result.document);
+            API.emit('document.opened', result.document);
+          }
+        } catch (err) {
+          API.log('Failed to get document: ' + err.message, 'error');
         }
         renderDocuments();
       }
 
-      function toggleStar(id) {
-        if (documentStore[id]) {
-          documentStore[id].starred = !documentStore[id].starred;
-          documentStore[id].updatedAt = Date.now();
-          saveStore();
+      async function toggleStar(id) {
+        try {
+          await API.request('document:toggleStarred', { id });
+          // Update local state
+          const doc = state.documents.find(d => d.id === id);
+          if (doc) {
+            doc.starred = !doc.starred;
+          }
           renderDocuments();
+        } catch (err) {
+          API.log('Failed to toggle star: ' + err.message, 'error');
         }
       }
 
-      function deleteDocument(id) {
+      async function deleteDocument(id) {
         if (confirm('Delete this document permanently? This cannot be undone.')) {
-          delete documentStore[id];
-          if (state.selectedId === id) state.selectedId = null;
-          saveStore();
-          renderDocuments();
-          API.emitOutput('document.deleted', id);
+          try {
+            await API.request('document:delete', { id });
+            if (state.selectedId === id) state.selectedId = null;
+            // Reload documents
+            await loadDocuments();
+            API.emitOutput('document.deleted', id);
+          } catch (err) {
+            API.log('Failed to delete document: ' + err.message, 'error');
+          }
         }
       }
 
-      function addDocument(doc) {
-        const id = doc.id || 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        const now = Date.now();
-
-        documentStore[id] = {
-          id,
-          title: doc.title || 'Untitled',
-          content: doc.content || '',
-          contentType: doc.contentType || 'text',
-          category: doc.category || 'general',
-          tags: doc.tags || [],
-          sourceType: doc.sourceType || 'manual',
-          starred: doc.starred || false,
-          archived: doc.archived || false,
-          originalImage: doc.originalImage,
-          createdAt: doc.createdAt || now,
-          updatedAt: now,
-        };
-
-        saveStore();
-        renderDocuments();
-        API.log('Document added: ' + documentStore[id].title);
-      }
-
-      function saveStore() {
-        API.setState({ documentStore });
+      async function exportDocument(id) {
+        try {
+          const result = await API.request('document:get', { id });
+          if (result.document) {
+            API.emitOutput('document.selected', result.document);
+          }
+        } catch (err) {
+          API.log('Failed to export document: ' + err.message, 'error');
+        }
       }
 
       // Event delegation
@@ -538,10 +557,7 @@ export const NoteHubWidgetHTML = `
           selectDocument(target.dataset.open);
         } else if (target.dataset.export) {
           e.stopPropagation();
-          const doc = documentStore[target.dataset.export];
-          if (doc) {
-            API.emitOutput('document.selected', doc);
-          }
+          exportDocument(target.dataset.export);
         } else if (target.dataset.delete) {
           e.stopPropagation();
           deleteDocument(target.dataset.delete);
@@ -557,50 +573,67 @@ export const NoteHubWidgetHTML = `
           state.filter = tab.dataset.filter;
           filterTabs.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
+          API.setState({ filter: state.filter });
           renderDocuments();
         }
       });
 
-      // Search
+      // Search with debounce
       let searchTimeout = null;
       searchInput.addEventListener('input', () => {
         if (searchTimeout) clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
           state.searchQuery = searchInput.value;
-          renderDocuments();
+          if (state.searchQuery.trim()) {
+            searchDocuments(state.searchQuery);
+          } else {
+            loadDocuments();
+          }
         }, 300);
       });
 
       // Pipeline inputs
-      API.onInput('document.save', (doc) => {
+      API.onInput('document.save', async (doc) => {
+        // Create document in unified store
         if (doc && (doc.content || doc.title)) {
-          addDocument(doc);
+          try {
+            await API.request('document:create', {
+              title: doc.title || 'Untitled',
+              content: doc.content || '',
+              contentType: doc.contentType || 'text',
+              category: doc.category || 'general',
+              tags: doc.tags || [],
+              sourceType: doc.sourceType || 'manual',
+            });
+            await loadDocuments();
+          } catch (err) {
+            API.log('Failed to save document: ' + err.message, 'error');
+          }
         }
       });
 
       API.onInput('trigger.refresh', () => {
-        renderDocuments();
+        loadDocuments();
       });
 
       API.onInput('search.query', (query) => {
         searchInput.value = query || '';
         state.searchQuery = query || '';
-        renderDocuments();
+        if (query) {
+          searchDocuments(query);
+        } else {
+          loadDocuments();
+        }
       });
 
-      // Broadcast listeners
-      API.on('document.created', (doc) => {
-        if (doc) addDocument(doc);
-      });
+      // Listen for document changes from other widgets
+      API.on('document:created', () => loadDocuments());
+      API.on('document:updated', () => loadDocuments());
+      API.on('document:deleted', () => loadDocuments());
 
       // Lifecycle
       API.onMount((context) => {
-        loading.style.display = 'none';
-
         const saved = context.state || {};
-        if (saved.documentStore) {
-          documentStore = saved.documentStore;
-        }
         if (saved.filter) {
           state.filter = saved.filter;
           filterTabs.querySelectorAll('.filter-tab').forEach(t => {
@@ -608,12 +641,13 @@ export const NoteHubWidgetHTML = `
           });
         }
 
-        renderDocuments();
-        API.log('NoteHubWidget mounted with ' + Object.keys(documentStore).length + ' documents');
+        // Load documents from unified store
+        loadDocuments();
+        API.log('NoteHubWidget mounted - loading from unified document store');
       });
 
       API.onDestroy(() => {
-        saveStore();
+        API.setState({ filter: state.filter });
         API.log('NoteHubWidget destroyed');
       });
     })();

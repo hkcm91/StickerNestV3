@@ -20,6 +20,7 @@ import { useFeedStore } from '../state/useFeedStore';
 import { useSocialStore } from '../state/useSocialStore';
 import { useNotificationStore } from '../state/useNotificationStore';
 import { searchApi } from '../services/api/search';
+import { useHaloDocumentStore } from '../state/useHaloDocumentStore';
 
 /** Message types for parent <-> iframe communication */
 type ParentToWidgetMessageType =
@@ -912,6 +913,8 @@ export class WidgetSandboxHost {
         result = await this.handleSocialApiRequest(action, data);
       } else if (action.startsWith('storage:')) {
         result = this.handleStorageCapability(action.replace('storage:', ''), data);
+      } else if (action.startsWith('document:')) {
+        result = await this.handleDocumentApiRequest(action, data);
       } else {
         throw new Error(`Unknown API action: ${action}`);
       }
@@ -1100,6 +1103,143 @@ export class WidgetSandboxHost {
 
       default:
         throw new Error(`Unknown social action: ${action}`);
+    }
+  }
+
+  /**
+   * Handle document API requests (list, get, create, update, delete, search)
+   * Provides unified document storage accessible from any widget
+   */
+  private async handleDocumentApiRequest(action: string, data: any): Promise<any> {
+    const store = useHaloDocumentStore.getState();
+
+    switch (action) {
+      case 'document:list': {
+        const documents = store.getAllMetadata();
+        return { documents };
+      }
+
+      case 'document:get': {
+        const { id } = data || {};
+        if (!id) {
+          throw new Error('document:get requires id');
+        }
+        const document = await store.getDocument(id);
+        return { document: document || null };
+      }
+
+      case 'document:create': {
+        const { title, content, contentType, category, tags, sourceType } = data || {};
+        const document = await store.createDocument({
+          title: title || 'Untitled',
+          content: content || '',
+          contentType: contentType || 'text',
+          category: category || 'general',
+          tags: tags || [],
+          sourceWidgetId: this.widgetInstance.id,
+          sourceCanvasId: this.widgetInstance.canvasId,
+          sourceType: sourceType || 'manual',
+          starred: false,
+          archived: false,
+        });
+
+        // Emit event for other widgets (e.g., NoteHub) to refresh
+        this.eventBus.emit({
+          type: 'document:created',
+          scope: 'canvas',
+          payload: { document },
+          sourceWidgetId: this.widgetInstance.id,
+          timestamp: Date.now()
+        });
+
+        return { document };
+      }
+
+      case 'document:update': {
+        const { id, updates } = data || {};
+        if (!id) {
+          throw new Error('document:update requires id');
+        }
+        const document = await store.updateDocument(id, updates || {});
+
+        if (document) {
+          // Emit event for other widgets to refresh
+          this.eventBus.emit({
+            type: 'document:updated',
+            scope: 'canvas',
+            payload: { document },
+            sourceWidgetId: this.widgetInstance.id,
+            timestamp: Date.now()
+          });
+        }
+
+        return { document: document || null };
+      }
+
+      case 'document:delete': {
+        const { id } = data || {};
+        if (!id) {
+          throw new Error('document:delete requires id');
+        }
+        const success = await store.deleteDocument(id);
+
+        if (success) {
+          // Emit event for other widgets to refresh
+          this.eventBus.emit({
+            type: 'document:deleted',
+            scope: 'canvas',
+            payload: { id },
+            sourceWidgetId: this.widgetInstance.id,
+            timestamp: Date.now()
+          });
+        }
+
+        return { success };
+      }
+
+      case 'document:search': {
+        const { query } = data || {};
+        if (!query) {
+          return { documents: [] };
+        }
+        const documents = await store.searchDocuments(query);
+        return { documents };
+      }
+
+      case 'document:getByCategory': {
+        const { category } = data || {};
+        if (!category) {
+          throw new Error('document:getByCategory requires category');
+        }
+        const documents = await store.getByCategory(category);
+        return { documents };
+      }
+
+      case 'document:toggleStarred': {
+        const { id } = data || {};
+        if (!id) {
+          throw new Error('document:toggleStarred requires id');
+        }
+        await store.toggleStarred(id);
+        return { success: true };
+      }
+
+      case 'document:toggleArchived': {
+        const { id } = data || {};
+        if (!id) {
+          throw new Error('document:toggleArchived requires id');
+        }
+        await store.toggleArchived(id);
+        return { success: true };
+      }
+
+      case 'document:getStats': {
+        const stats = store.getStats();
+        return stats;
+      }
+
+      default:
+        throw new Error(`Unknown document action: ${action}`);
     }
   }
 

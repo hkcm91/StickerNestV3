@@ -79,7 +79,8 @@
       "Bash(timeout 60 npm run build)",
       "Bash(findstr:*)",
       "Bash(git stash drop:*)",
-      "Skill(implementing-spatial-xr)"
+      "Skill(implementing-spatial-xr)",
+      "Bash(head:*)"
     ],
     "deny": [],
     "ask": []
