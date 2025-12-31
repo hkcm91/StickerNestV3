@@ -826,7 +826,7 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
         var body = document.body;
         var html = document.documentElement;
 
-        // Get the maximum content dimensions from scroll/offset
+        // Get base dimensions from scroll/offset
         var contentWidth = Math.max(
           body.scrollWidth || 0,
           body.offsetWidth || 0,
@@ -840,31 +840,41 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
           html.offsetHeight || 0
         );
 
-        // Also check all direct children for their bounding rects
-        // This catches absolutely positioned elements that don't affect scroll size
-        var children = body.children;
-        for (var i = 0; i < children.length; i++) {
-          var child = children[i];
-          var rect = child.getBoundingClientRect();
-          // Include element position + size
-          var childRight = rect.left + rect.width;
-          var childBottom = rect.top + rect.height;
-          if (childRight > contentWidth) contentWidth = Math.ceil(childRight);
-          if (childBottom > contentHeight) contentHeight = Math.ceil(childBottom);
+        // Deep scan all elements to find the true bounding box
+        // This catches absolutely/fixed positioned elements, transformed elements, etc.
+        function scanElement(el, depth) {
+          if (depth > 50) return; // Prevent infinite recursion
+          if (!el || el.nodeType !== 1) return;
+
+          // Skip script, style, and hidden elements
+          var tagName = el.tagName && el.tagName.toLowerCase();
+          if (tagName === 'script' || tagName === 'style' || tagName === 'noscript') return;
+
+          var style = window.getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden') return;
+
+          var rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            var right = Math.ceil(rect.right);
+            var bottom = Math.ceil(rect.bottom);
+            if (right > contentWidth) contentWidth = right;
+            if (bottom > contentHeight) contentHeight = bottom;
+          }
+
+          // Recursively scan children
+          var children = el.children;
+          for (var i = 0; i < children.length; i++) {
+            scanElement(children[i], depth + 1);
+          }
         }
+
+        // Scan entire body tree
+        scanElement(body, 0);
 
         // Also check widget-root if it exists (for JS module widgets)
         var widgetRoot = document.getElementById('widget-root');
         if (widgetRoot) {
-          var rootChildren = widgetRoot.children;
-          for (var j = 0; j < rootChildren.length; j++) {
-            var rootChild = rootChildren[j];
-            var rootRect = rootChild.getBoundingClientRect();
-            var rootChildRight = rootRect.left + rootRect.width;
-            var rootChildBottom = rootRect.top + rootRect.height;
-            if (rootChildRight > contentWidth) contentWidth = Math.ceil(rootChildRight);
-            if (rootChildBottom > contentHeight) contentHeight = Math.ceil(rootChildBottom);
-          }
+          scanElement(widgetRoot, 0);
         }
 
         console.log('[WidgetAPI] autoReportContentSize measured:', {
@@ -1042,6 +1052,50 @@ export function generateWidgetSDKScript(instanceId: string, assetBaseUrl: string
     setTimeout(function() {
       window.WidgetAPI.autoReportContentSize();
     }, 1000);
+
+    // Setup ResizeObserver to detect dynamic content changes
+    // This will re-measure and report content size when DOM changes
+    if (typeof ResizeObserver !== 'undefined') {
+      var resizeDebounceTimer = null;
+
+      var contentObserver = new ResizeObserver(function(entries) {
+        // Debounce to avoid excessive updates
+        if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+        resizeDebounceTimer = setTimeout(function() {
+          window.WidgetAPI.autoReportContentSize();
+        }, 100);
+      });
+
+      // Observe body and widget-root for size changes
+      contentObserver.observe(document.body);
+      var widgetRoot = document.getElementById('widget-root');
+      if (widgetRoot) {
+        contentObserver.observe(widgetRoot);
+      }
+
+      // Also use MutationObserver to detect new elements being added
+      var mutationObserver = new MutationObserver(function(mutations) {
+        var shouldRecheck = false;
+        for (var i = 0; i < mutations.length; i++) {
+          var mutation = mutations[i];
+          if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
+            shouldRecheck = true;
+            break;
+          }
+        }
+        if (shouldRecheck) {
+          if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+          resizeDebounceTimer = setTimeout(function() {
+            window.WidgetAPI.autoReportContentSize();
+          }, 150);
+        }
+      });
+
+      mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
   }
 
   function handleStateUpdate(payload) {

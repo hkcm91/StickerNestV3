@@ -18,7 +18,7 @@
 
 import React, { Suspense, useEffect, useState, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { XR, XROrigin } from '@react-three/xr';
+import { XR, XROrigin, useXR } from '@react-three/xr';
 import { OrbitControls, Grid } from '@react-three/drei';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { SpatialScene } from './SpatialScene';
@@ -44,6 +44,38 @@ function FrameLoopController({ shouldRender }: { shouldRender: boolean }) {
     console.log('[FrameLoopController] Setting frameloop to:', frameloop, 'shouldRender:', shouldRender);
     set({ frameloop });
   }, [shouldRender, set]);
+
+  return null;
+}
+
+// ============================================================================
+// XR Session State Tracker
+// ============================================================================
+
+/**
+ * Tracks XR session state from within the XR context and syncs to our store.
+ * This component must be inside the <XR> provider to access useXR hooks.
+ */
+function XRSessionStateTracker() {
+  const session = useXR((state) => state.session);
+  const setActiveMode = useSpatialModeStore((s) => s.setActiveMode);
+  const setSessionState = useSpatialModeStore((s) => s.setSessionState);
+
+  useEffect(() => {
+    if (session) {
+      // WebXR session.mode exists but TypeScript types may be outdated
+      const sessionMode = (session as unknown as { mode?: string }).mode;
+      console.log('[XRSessionStateTracker] Active XR session detected:', sessionMode);
+      setSessionState('active');
+      if (sessionMode === 'immersive-ar') {
+        setActiveMode('ar');
+      } else {
+        setActiveMode('vr');
+      }
+    } else {
+      console.log('[XRSessionStateTracker] No active XR session');
+    }
+  }, [session, setActiveMode, setSessionState]);
 
   return null;
 }
@@ -199,30 +231,36 @@ function useGridSphereMaterial(props: GridEnvironment360Props) {
  * 360 Grid Environment for VR mode and 3D preview.
  * Creates an immersive grid-sphere environment like a holodeck.
  */
-function GridEnvironment360(props: GridEnvironment360Props & { forceShow?: boolean }) {
-  const { radius = 50, forceShow = false } = props;
+function GridEnvironment360(props: GridEnvironment360Props & { forceShow?: boolean; isXRSession?: boolean }) {
+  const { radius = 50, forceShow = false, isXRSession = false } = props;
   const spatialMode = useActiveSpatialMode();
   const sessionState = useSpatialModeStore((s) => s.sessionState);
   const targetMode = useSpatialModeStore((s) => s.targetMode);
 
   const material = useGridSphereMaterial(props);
 
-  // Show environment when:
+  // SIMPLIFIED LOGIC: Show environment when:
   // 1. forceShow is true (3D preview mode on desktop)
-  // 2. In VR mode
-  // 3. Transitioning to VR (not AR)
-  // 4. XR session active and not in AR
-  const isVROrTransitioning = spatialMode === 'vr' ||
-    (sessionState === 'requesting' && targetMode !== 'ar') ||
-    (sessionState === 'active' && spatialMode !== 'ar');
-
-  const shouldShow = forceShow || isVROrTransitioning;
+  // 2. isXRSession is true AND we're not in AR mode
+  // 3. spatialMode is 'vr' (active VR session confirmed)
+  // 4. sessionState is 'active' and targetMode is not 'ar'
+  const isARSession = spatialMode === 'ar' || (sessionState === 'active' && targetMode === 'ar');
+  const shouldShow = forceShow || isXRSession || spatialMode === 'vr' ||
+    (sessionState === 'active' && !isARSession) ||
+    (sessionState === 'requesting' && targetMode === 'vr');
 
   // Never show in AR mode (real world passthrough)
-  if (spatialMode === 'ar') return null;
-  if (!shouldShow) return null;
+  if (isARSession) {
+    console.log('[GridEnvironment360] Hiding for AR mode');
+    return null;
+  }
 
-  console.log('[GridEnvironment360] Rendering environment:', { spatialMode, sessionState, targetMode, forceShow, shouldShow });
+  if (!shouldShow) {
+    console.log('[GridEnvironment360] Not showing:', { spatialMode, sessionState, targetMode, forceShow, isXRSession });
+    return null;
+  }
+
+  console.log('[GridEnvironment360] RENDERING environment:', { spatialMode, sessionState, targetMode, forceShow, isXRSession, shouldShow });
 
   return (
     <group name="grid-environment-360">
@@ -247,6 +285,20 @@ function GridEnvironment360(props: GridEnvironment360Props & { forceShow?: boole
         <ringGeometry args={[0.3, 0.35, 32]} />
         <meshBasicMaterial color="#8b5cf6" transparent opacity={0.5} />
       </mesh>
+
+      {/* Axis reference lines at origin for spatial orientation */}
+      <group name="origin-axes">
+        {/* X axis - red */}
+        <mesh position={[1, 0.02, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.01, 0.01, 2, 8]} />
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.6} />
+        </mesh>
+        {/* Z axis - blue */}
+        <mesh position={[0, 0.02, 1]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.01, 0.01, 2, 8]} />
+          <meshBasicMaterial color="#3b82f6" transparent opacity={0.6} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -364,6 +416,32 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
     });
   }, [active, spatialMode, sessionState, isXRActive, shouldShowCanvas, canvasReady]);
 
+  // Subscribe to XR store session changes
+  useEffect(() => {
+    const unsubscribe = xrStore.subscribe((state, prevState) => {
+      // Session started
+      if (state.session && !prevState.session) {
+        console.log('[SpatialCanvas] XR session started via subscription');
+        setSessionState('active');
+        const mode = (state.session as unknown as { mode?: string })?.mode;
+        console.log('[SpatialCanvas] XR session mode:', mode);
+        if (mode === 'immersive-ar') {
+          setActiveMode('ar');
+        } else {
+          setActiveMode('vr');
+        }
+      }
+      // Session ended
+      if (!state.session && prevState.session) {
+        console.log('[SpatialCanvas] XR session ended via subscription');
+        setSessionState('none');
+        setActiveMode('desktop');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [setActiveMode, setSessionState]);
+
   // IMPORTANT: We ALWAYS render the Canvas and XR components at FULL SIZE.
   // This is required because:
   // 1. @react-three/xr needs the <XR> component to be mounted in the React tree
@@ -419,43 +497,35 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
         {/* Frame loop controller - pauses rendering when hidden */}
         <FrameLoopController shouldRender={shouldShowCanvas} />
 
-        <XR
-          store={xrStore}
-          onSessionStart={() => {
-            console.log('[SpatialCanvas] XR session started');
-            setSessionState('active');
-            // Detect mode from session type
-            const session = xrStore.getState().session;
-            if (session?.mode === 'immersive-ar') {
-              setActiveMode('ar');
-            } else {
-              setActiveMode('vr');
-            }
-          }}
-          onSessionEnd={() => {
-            console.log('[SpatialCanvas] XR session ended');
-            setSessionState('none');
-            setActiveMode('desktop');
-          }}
-        >
+        {/* overlay={false} disables the default "Enter XR" button from @react-three/xr */}
+        {/* We use our own SpatialModeToggle in the toolbar instead */}
+        <XR store={xrStore} overlay={false}>
+          {/* XR Session State Tracker - always render to sync state */}
+          <XRSessionStateTracker />
+
           {/* Only render scene content when the canvas should be visible */}
           {/* This prevents interference with 2D modes and saves resources */}
           {shouldShowCanvas && (
             <>
-              {/* Lighting */}
-              <ambientLight intensity={0.4} />
+              {/* Lighting - essential for seeing anything! */}
+              <ambientLight intensity={0.6} />
               <directionalLight
                 position={[5, 10, 5]}
-                intensity={0.8}
+                intensity={1.0}
                 castShadow
                 shadow-mapSize={[2048, 2048]}
               />
+              <hemisphereLight args={['#87CEEB', '#362D59', 0.3]} />
 
               {/* User origin (feet position) */}
               <XROrigin />
 
               {/* 360 Grid Environment (VR and 3D preview - customizable) */}
-              <GridEnvironment360 forceShow={active} />
+              {/* Pass isXRSession=true when we're in an active XR session */}
+              <GridEnvironment360
+                forceShow={active}
+                isXRSession={isXRActive}
+              />
 
               {/* Ground reference */}
               <GroundPlane />

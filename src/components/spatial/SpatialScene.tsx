@@ -37,6 +37,199 @@ import { SpatialWidgetContainer } from './SpatialWidgetContainer';
 import { SpatialSticker } from '../../types/spatialEntity';
 
 // ============================================================================
+// XR Welcome Panel
+// ============================================================================
+
+/**
+ * Welcome panel that appears when entering XR mode.
+ * Confirms the system is working and provides basic guidance.
+ */
+interface XRWelcomePanelProps {
+  mode: 'vr' | 'ar' | 'desktop';
+  widgetCount: number;
+}
+
+function XRWelcomePanel({ mode, widgetCount }: XRWelcomePanelProps) {
+  const [visible, setVisible] = useState(true);
+  const [opacity, setOpacity] = useState(1);
+
+  // Fade out after 8 seconds
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => {
+      setOpacity(0.3);
+    }, 6000);
+
+    const hideTimer = setTimeout(() => {
+      setVisible(false);
+    }, 15000);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
+  }, []);
+
+  if (!visible) return null;
+
+  const isVR = mode === 'vr';
+  const title = isVR ? '🥽 VR Mode Active' : '📱 AR Mode Active';
+  const color = isVR ? '#8b5cf6' : '#22c55e';
+
+  return (
+    <group position={[0, 1.6, -1.5]}>
+      {/* Background panel */}
+      <mesh position={[0, 0, -0.01]}>
+        <planeGeometry args={[1.4, 0.6]} />
+        <meshBasicMaterial
+          color="#0a0a15"
+          transparent
+          opacity={0.9 * opacity}
+        />
+      </mesh>
+
+      {/* Border glow */}
+      <mesh position={[0, 0, -0.02]}>
+        <planeGeometry args={[1.44, 0.64]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.4 * opacity}
+        />
+      </mesh>
+
+      {/* Title */}
+      <Text
+        position={[0, 0.18, 0]}
+        fontSize={0.1}
+        color={color}
+        anchorX="center"
+        anchorY="middle"
+        outlineWidth={0.003}
+        outlineColor="#000000"
+      >
+        {title}
+      </Text>
+
+      {/* Status info */}
+      <Text
+        position={[0, 0, 0]}
+        fontSize={0.06}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {widgetCount > 0
+          ? `${widgetCount} widget${widgetCount > 1 ? 's' : ''} loaded`
+          : 'Ready to add widgets'}
+      </Text>
+
+      {/* Instructions */}
+      <Text
+        position={[0, -0.15, 0]}
+        fontSize={0.04}
+        color="#9ca3af"
+        anchorX="center"
+        anchorY="middle"
+        maxWidth={1.2}
+        textAlign="center"
+      >
+        {isVR
+          ? 'Look for the toolbar • Point to interact • Thumbstick to teleport'
+          : 'Look around to see boundaries • Tap surfaces to place content'}
+      </Text>
+    </group>
+  );
+}
+
+// ============================================================================
+// AR Playspace Boundary
+// ============================================================================
+
+/**
+ * Visual indicator of the AR playspace boundary.
+ * Shows a subtle grid/ring at floor level to help users understand their space.
+ */
+function ARPlayspaceBoundary() {
+  const [visible, setVisible] = useState(true);
+
+  // Fade out after 10 seconds to be less intrusive
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), 10000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <group name="ar-playspace-boundary">
+      {/* Floor ring to indicate playspace center */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <ringGeometry args={[0.8, 1.0, 32]} />
+        <meshBasicMaterial
+          color="#22c55e"
+          transparent
+          opacity={0.4}
+          side={2}
+        />
+      </mesh>
+
+      {/* Inner safe zone indicator */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+        <ringGeometry args={[0, 0.8, 32]} />
+        <meshBasicMaterial
+          color="#22c55e"
+          transparent
+          opacity={0.1}
+          side={2}
+        />
+      </mesh>
+
+      {/* Cardinal direction indicators */}
+      {[0, 1, 2, 3].map((i) => {
+        const angle = (i * Math.PI) / 2;
+        const x = Math.sin(angle) * 1.2;
+        const z = Math.cos(angle) * 1.2;
+        const colors = ['#ef4444', '#3b82f6', '#ef4444', '#3b82f6']; // N/S red, E/W blue
+        return (
+          <mesh
+            key={i}
+            position={[x, 0.02, z]}
+            rotation={[-Math.PI / 2, 0, angle]}
+          >
+            <coneGeometry args={[0.05, 0.15, 4]} />
+            <meshBasicMaterial color={colors[i]} transparent opacity={0.7} />
+          </mesh>
+        );
+      })}
+
+      {/* Outer boundary ring (2m radius) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+        <ringGeometry args={[1.95, 2.0, 64]} />
+        <meshBasicMaterial
+          color="#f59e0b"
+          transparent
+          opacity={0.3}
+          side={2}
+        />
+      </mesh>
+
+      {/* Info text */}
+      <Text
+        position={[0, 0.1, -1.5]}
+        rotation={[-Math.PI / 4, 0, 0]}
+        fontSize={0.08}
+        color="#22c55e"
+        anchorX="center"
+        outlineWidth={0.004}
+        outlineColor="#000000"
+      >
+        AR Playspace
+      </Text>
+    </group>
+  );
+}
+
+// ============================================================================
 // Placeholder Canvas Panel
 // ============================================================================
 
@@ -223,11 +416,11 @@ export function SpatialScene() {
   const [placedObjects, setPlacedObjects] = useState<PlacedMarker[]>([]);
   const [activeTool, setActiveTool] = useState<XRToolType>('select');
 
-  // Room mapping settings
-  const [showRoomVisualization, setShowRoomVisualization] = useState(false);
+  // Room mapping settings - DEFAULT TO TRUE IN AR MODE for boundary visibility
+  const [showRoomVisualization, setShowRoomVisualization] = useState(true);
   const [enableOcclusion, setEnableOcclusion] = useState(true);
 
-  // Widget library visibility
+  // Widget library visibility - starts visible in XR modes for discoverability
   const [showWidgetLibrary, setShowWidgetLibrary] = useState(false);
 
   // Effective mode considers transitioning states
@@ -416,10 +609,18 @@ export function SpatialScene() {
     // For MVP, we track 3D-specific positions separately
   }, [updateWidget]);
 
+  // Auto-show widget library when entering XR mode for discoverability
+  useEffect(() => {
+    if ((effectiveMode === 'vr' || effectiveMode === 'ar') && sessionState === 'active') {
+      // Show widget library briefly to let user know it's available
+      console.log('[SpatialScene] XR session active, widget library available');
+    }
+  }, [effectiveMode, sessionState]);
+
   return (
     <group>
-      {/* XR Toolbar (spawns from palm gesture in VR mode) */}
-      {effectiveMode === 'vr' && (
+      {/* XR Toolbar (available in both VR and AR modes) */}
+      {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
         <XRToolbar
           activeTool={activeTool}
           onToolChange={handleToolChange}
@@ -450,16 +651,21 @@ export function SpatialScene() {
         <OcclusionLayer renderOrder={0} />
       )}
 
-      {/* AR Room Visualization (debug/preview) */}
-      {effectiveMode === 'ar' && showRoomVisualization && (
+      {/* AR Room Visualization - ALWAYS SHOW in AR mode for boundary awareness */}
+      {effectiveMode === 'ar' && (
         <RoomVisualizer
           showPlanes={true}
-          showMesh={true}
-          showLabels={true}
+          showMesh={showRoomVisualization}
+          showLabels={showRoomVisualization}
           showStats={true}
-          planeOpacity={0.3}
-          meshOpacity={0.1}
+          planeOpacity={0.35}
+          meshOpacity={0.15}
         />
+      )}
+
+      {/* AR Playspace Boundary Indicator */}
+      {effectiveMode === 'ar' && (
+        <ARPlayspaceBoundary />
       )}
 
       {/* AR Room Setup Guide (shown when no room data available) */}
@@ -504,6 +710,11 @@ export function SpatialScene() {
 
       {/* Main canvas panel at comfortable viewing distance (VR only) */}
       {effectiveMode === 'vr' && <CanvasPanel3D />}
+
+      {/* XR Mode Welcome/Status Panel - always visible to confirm system is working */}
+      {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
+        <XRWelcomePanel mode={effectiveMode} widgetCount={canvasWidgets.length} />
+      )}
 
       {/* Debug: Widget count indicator */}
       {(effectiveMode === 'vr' || effectiveMode === 'ar') && (

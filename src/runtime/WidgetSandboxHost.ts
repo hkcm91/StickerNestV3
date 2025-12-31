@@ -1531,7 +1531,11 @@ export class WidgetSandboxHost {
   ">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; }
+    /* Don't constrain body to 100% - let content determine size for accurate measurement */
+    html, body {
+      min-width: 100%;
+      min-height: 100%;
+    }
   </style>
 </head>
 <body>
@@ -1604,8 +1608,17 @@ export class WidgetSandboxHost {
   <base href="${baseUrl}/">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; }
-    #widget-root { width: 100%; height: 100%; }
+    /* Don't constrain body to 100% - let content determine size for accurate measurement */
+    html, body {
+      min-width: 100%;
+      min-height: 100%;
+      /* Remove overflow:hidden to allow content to expand naturally for measurement */
+    }
+    #widget-root {
+      min-width: 100%;
+      min-height: 100%;
+      /* Content inside can overflow, and will be measured by autoReportContentSize */
+    }
   </style>
 </head>
 <body>

@@ -26,6 +26,8 @@ import {
   DEFAULT_EYE_HEIGHT,
 } from '../../utils/spatialCoordinates';
 import { useActiveSpatialMode } from '../../state/useSpatialModeStore';
+import { getBuiltinWidget } from '../../widgets/builtin';
+import type { WidgetAPI } from '../../types/runtime';
 
 // ============================================================================
 // Helper Functions
@@ -73,6 +75,67 @@ function getWidgetTypeEmoji(widgetDefId: string): string {
 
   // Default widget icon
   return '📦';
+}
+
+/**
+ * Create a minimal WidgetAPI for 3D React component widgets.
+ * This provides the essential API methods that widgets need.
+ */
+function createSpatial3DAPI(widget: WidgetInstance): WidgetAPI {
+  return {
+    widgetId: widget.id,
+    widgetDefId: widget.widgetDefId,
+
+    emitEvent: (event) => {
+      console.log('[Spatial3DAPI] emitEvent:', event);
+    },
+
+    emitOutput: (port, data) => {
+      console.log('[Spatial3DAPI] emitOutput:', port, data);
+    },
+
+    onEvent: (type, handler) => {
+      // Return unsubscribe function
+      return () => {};
+    },
+
+    onInput: (port, handler) => {
+      // Return unsubscribe function
+      return () => {};
+    },
+
+    getState: () => widget.state || {},
+
+    setState: (patch) => {
+      console.log('[Spatial3DAPI] setState:', patch);
+      // In a full implementation, this would update widget state
+    },
+
+    getAssetUrl: (path) => path,
+
+    log: (...args) => console.log(`[${widget.widgetDefId}]`, ...args),
+    info: (...args) => console.info(`[${widget.widgetDefId}]`, ...args),
+    warn: (...args) => console.warn(`[${widget.widgetDefId}]`, ...args),
+    error: (...args) => console.error(`[${widget.widgetDefId}]`, ...args),
+    debugLog: (...args) => console.debug(`[${widget.widgetDefId}]`, ...args),
+
+    onMount: (callback: (context: { state: any }) => void) => {
+      // Call immediately since we're already mounted
+      callback({ state: widget.state || {} });
+    },
+  };
+}
+
+/**
+ * Check if a widget should be rendered as a 3D React component
+ */
+function is3DReactWidget(widgetDefId: string): boolean {
+  const builtin = getBuiltinWidget(widgetDefId);
+  if (!builtin?.component) return false;
+
+  // Check if manifest indicates 3D widget
+  const manifest = builtin.manifest;
+  return manifest?.kind === '3d' || manifest?.capabilities?.supports3d === true;
 }
 
 /**
@@ -295,71 +358,112 @@ function SpatialWidget({
         </mesh>
       )}
 
-      {/* Widget name label */}
-      <Text
-        position={[0, size3D.height / 2 + 0.05, 0.01]}
-        fontSize={0.05}
-        color="white"
-        anchorX="center"
-        anchorY="bottom"
-        maxWidth={size3D.width}
-      >
-        {widget.name || widget.widgetDefId || 'Widget'}
-      </Text>
+      {/* Check if this is a 3D React component widget - render actual content */}
+      {is3DReactWidget(widget.widgetDefId) ? (
+        <>
+          {/* Render actual React component via Html */}
+          <Html
+            transform
+            occlude
+            distanceFactor={1}
+            position={[0, 0, 0.01]}
+            style={{
+              width: `${widget.width}px`,
+              height: `${widget.height}px`,
+              pointerEvents: 'auto',
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                overflow: 'hidden',
+                borderRadius: 8,
+                background: 'rgba(20, 20, 30, 0.95)',
+              }}
+            >
+              {/* Render the actual React component */}
+              {(() => {
+                const builtin = getBuiltinWidget(widget.widgetDefId);
+                if (builtin?.component) {
+                  const Component = builtin.component;
+                  const api = createSpatial3DAPI(widget);
+                  return <Component api={api} />;
+                }
+                return null;
+              })()}
+            </div>
+          </Html>
+        </>
+      ) : (
+        <>
+          {/* Widget name label (for placeholder widgets) */}
+          <Text
+            position={[0, size3D.height / 2 + 0.05, 0.01]}
+            fontSize={0.05}
+            color="white"
+            anchorX="center"
+            anchorY="bottom"
+            maxWidth={size3D.width}
+          >
+            {widget.name || widget.widgetDefId || 'Widget'}
+          </Text>
 
-      {/* Widget type icon and content preview */}
-      <group position={[0, 0.05, 0.01]}>
-        {/* Widget type icon background */}
-        <mesh position={[0, 0, -0.002]}>
-          <circleGeometry args={[0.08, 32]} />
-          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.8} />
-        </mesh>
-        {/* Widget type emoji/icon */}
-        <Text
-          position={[0, 0, 0]}
-          fontSize={0.08}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {getWidgetTypeEmoji(widget.widgetDefId)}
-        </Text>
-      </group>
+          {/* Widget type icon and content preview */}
+          <group position={[0, 0.05, 0.01]}>
+            {/* Widget type icon background */}
+            <mesh position={[0, 0, -0.002]}>
+              <circleGeometry args={[0.08, 32]} />
+              <meshBasicMaterial color="#8b5cf6" transparent opacity={0.8} />
+            </mesh>
+            {/* Widget type emoji/icon */}
+            <Text
+              position={[0, 0, 0]}
+              fontSize={0.08}
+              color="white"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {getWidgetTypeEmoji(widget.widgetDefId)}
+            </Text>
+          </group>
 
-      {/* Widget definition ID */}
-      <Text
-        position={[0, -0.08, 0.01]}
-        fontSize={0.05}
-        color="#a5b4fc"
-        anchorX="center"
-        anchorY="middle"
-        maxWidth={size3D.width * 0.9}
-      >
-        {formatWidgetType(widget.widgetDefId)}
-      </Text>
+          {/* Widget definition ID */}
+          <Text
+            position={[0, -0.08, 0.01]}
+            fontSize={0.05}
+            color="#a5b4fc"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={size3D.width * 0.9}
+          >
+            {formatWidgetType(widget.widgetDefId)}
+          </Text>
 
-      {/* Widget dimensions */}
-      <Text
-        position={[0, -0.18, 0.01]}
-        fontSize={0.035}
-        color="#6b7280"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {Math.round(widget.width)} × {Math.round(widget.height)} px
-      </Text>
+          {/* Widget dimensions */}
+          <Text
+            position={[0, -0.18, 0.01]}
+            fontSize={0.035}
+            color="#6b7280"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {Math.round(widget.width)} × {Math.round(widget.height)} px
+          </Text>
 
-      {/* Instance ID (smaller, for debugging) */}
-      {debug && (
-        <Text
-          position={[0, -0.26, 0.01]}
-          fontSize={0.025}
-          color="#4b5563"
-          anchorX="center"
-          anchorY="middle"
-        >
-          ID: {widget.id.slice(0, 8)}...
-        </Text>
+          {/* Instance ID (smaller, for debugging) */}
+          {debug && (
+            <Text
+              position={[0, -0.26, 0.01]}
+              fontSize={0.025}
+              color="#4b5563"
+              anchorX="center"
+              anchorY="middle"
+            >
+              ID: {widget.id.slice(0, 8)}...
+            </Text>
+          )}
+        </>
       )}
 
       {/* Grab indicator (when being dragged) */}
