@@ -233,9 +233,8 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         // If XR isn't supported at all, go directly to preview mode
         if (!capabilities.vrSupported && mode === 'vr') {
           console.log('[SpatialModeToggle] VR not supported, entering VR preview mode');
-          // Set active mode to 'vr' without an XR session - this shows the 3D canvas
-          useSpatialModeStore.getState().setActiveMode('vr');
-          useSpatialModeStore.getState().setSessionState('none'); // No XR session, just preview
+          // Use enterPreviewMode to show 3D canvas without XR session
+          useSpatialModeStore.getState().enterPreviewMode('vr');
           return;
         }
 
@@ -251,8 +250,7 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         if (!canvasReady) {
           console.error('[SpatialModeToggle] Canvas not ready, entering preview mode');
           // Fall back to preview mode
-          useSpatialModeStore.getState().setActiveMode(mode);
-          useSpatialModeStore.getState().setSessionState('none');
+          useSpatialModeStore.getState().enterPreviewMode(mode);
           return;
         }
 
@@ -272,13 +270,11 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
             console.error(`[SpatialModeToggle] Failed to enter ${mode}, using preview mode:`, e);
             // Fall back to preview mode instead of resetting to desktop
             // This allows users to see the VR/3D view in their browser
-            useSpatialModeStore.getState().setActiveMode(mode);
-            useSpatialModeStore.getState().setSessionState('none');
+            useSpatialModeStore.getState().enterPreviewMode(mode);
           }
         } else {
           console.warn('[SpatialModeToggle] XR store not available, entering preview mode');
-          useSpatialModeStore.getState().setActiveMode(mode);
-          useSpatialModeStore.getState().setSessionState('none');
+          useSpatialModeStore.getState().enterPreviewMode(mode);
         }
       } else {
         // Desktop mode - just update state, exit any active session

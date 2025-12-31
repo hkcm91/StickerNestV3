@@ -95,6 +95,8 @@ export interface SpatialModeActions {
   requestMode: (mode: SpatialMode) => void;
   /** Set the active mode directly (used by adapters) */
   setActiveMode: (mode: SpatialMode) => void;
+  /** Enter preview mode (VR/AR view without active XR session) */
+  enterPreviewMode: (mode: 'vr' | 'ar') => void;
   /** Update XR session state */
   setSessionState: (state: XRSessionState) => void;
   /** Set error message */
@@ -209,13 +211,42 @@ export const useSpatialModeStore = create<SpatialModeStore>()(
         });
       },
 
+      enterPreviewMode: (mode: 'vr' | 'ar') => {
+        // Enter VR/AR preview mode without an active XR session
+        // This allows users to see the 3D scene in their browser without VR hardware
+        // Used when XR session fails or device doesn't support XR
+        set({
+          activeMode: mode,
+          targetMode: null,
+          sessionState: 'none', // No active XR session, just preview
+          errorMessage: null,
+        });
+        console.log(`[SpatialModeStore] Entered ${mode.toUpperCase()} preview mode (no XR session)`);
+      },
+
       setSessionState: (sessionState: XRSessionState) => {
+        const { sessionState: currentSessionState, activeMode } = get();
         const updates: Partial<SpatialModeState> = { sessionState };
 
-        // If session ended or errored, return to desktop
+        // Only return to desktop if:
+        // 1. We're ending an ACTUAL XR session (was 'active' or 'requesting')
+        // 2. NOT when entering preview mode (which sets 'none' but keeps activeMode as vr/ar)
+        // This allows VR/AR preview modes to work without a real XR session
         if (sessionState === 'none' || sessionState === 'error') {
-          updates.activeMode = 'desktop';
-          updates.targetMode = null;
+          // Only reset to desktop if we were in an actual session
+          // Don't reset if activeMode was already set to vr/ar for preview mode
+          const wasInSession = currentSessionState === 'active' || currentSessionState === 'requesting';
+          if (wasInSession && sessionState === 'error') {
+            // Error during session - definitely return to desktop
+            updates.activeMode = 'desktop';
+            updates.targetMode = null;
+          } else if (currentSessionState === 'active' && sessionState === 'none') {
+            // Clean session end - return to desktop
+            updates.activeMode = 'desktop';
+            updates.targetMode = null;
+          }
+          // If currentSessionState was already 'none', don't change activeMode
+          // This allows setActiveMode('vr') followed by setSessionState('none') for preview mode
         }
 
         set(updates);
