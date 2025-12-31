@@ -43,31 +43,31 @@ export const xrStore = createXRStore({
   // Performance settings
   frameRate: 'high',
   foveation: 1,
-  // Features
+  // Core features (widely supported)
   handTracking: true,
-  // AR/VR features for room-scale and spatial anchoring
   hitTest: true,
   anchors: true,
-  // Plane detection for AR surface awareness
-  planeDetection: true,
-  // Mesh detection for room mapping (Meta Quest)
-  meshDetection: true,
-  // Depth sensing for occlusion
-  depthSensing: true,
+  // Optional features - set to false to request as optional, avoiding session failures
+  // on devices that don't support these newer features
+  planeDetection: false,  // Request as optional - not all devices support
+  meshDetection: false,   // Request as optional - Meta Quest specific
+  depthSensing: false,    // Request as optional - experimental feature
 });
 
 /**
  * Enter VR mode - call this from a button click handler
+ * Returns the session promise for proper async handling
  */
 export function enterVR() {
-  xrStore.enterVR();
+  return xrStore.enterVR();
 }
 
 /**
  * Enter AR mode - call this from a button click handler
+ * Returns the session promise for proper async handling
  */
 export function enterAR() {
-  xrStore.enterAR();
+  return xrStore.enterAR();
 }
 
 /**
