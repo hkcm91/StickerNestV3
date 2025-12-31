@@ -605,15 +605,17 @@ function SpatialWidget({
           {/* distanceFactor: Scale factor for HTML content in 3D space. Higher = larger content at distance. */}
           {/* At VR viewing distances (1-3m), distanceFactor ~10 gives readable UI */}
           {/* zIndexRange ensures Html content layers properly on mobile browsers */}
+          {/* RENDER SCALE: We render at 2x resolution then scale down via CSS for sharper text on mobile */}
           <Html
             transform
             distanceFactor={10}
             position={[0, 0, 0.02]}
             zIndexRange={[100, 0]}
             center
+            scale={0.5}
             style={{
-              width: `${widget.width}px`,
-              height: `${widget.height}px`,
+              width: `${widget.width * 2}px`,
+              height: `${widget.height * 2}px`,
               pointerEvents: 'auto',
             }}
           >
@@ -622,8 +624,11 @@ function SpatialWidget({
                 width: '100%',
                 height: '100%',
                 overflow: 'hidden',
-                borderRadius: 8,
+                borderRadius: 16,
                 background: 'rgba(20, 20, 30, 0.95)',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+                imageRendering: 'auto',
               }}
             >
               {/* Render either React component or HTML widget */}
@@ -640,6 +645,7 @@ function SpatialWidget({
 
                 // Show loading state for local widgets while fetching HTML
                 // 'idle' also shows loading as we haven't started fetch yet
+                // NOTE: Font sizes are 2x because we render at 2x scale for sharper text
                 if (source === 'local' && (htmlLoadState === 'loading' || htmlLoadState === 'idle')) {
                   return (
                     <div
@@ -651,18 +657,19 @@ function SpatialWidget({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#a5b4fc',
-                        gap: 8,
+                        gap: 16,
                       }}
                     >
-                      <div style={{ fontSize: 24, animation: 'spin 1s linear infinite' }}>⟳</div>
-                      <div style={{ fontSize: 14 }}>Loading widget...</div>
-                      <div style={{ fontSize: 11, color: '#6b7280' }}>{widget.widgetDefId}</div>
+                      <div style={{ fontSize: 48, animation: 'spin 1s linear infinite' }}>⟳</div>
+                      <div style={{ fontSize: 28 }}>Loading widget...</div>
+                      <div style={{ fontSize: 22, color: '#6b7280' }}>{widget.widgetDefId}</div>
                       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
                     </div>
                   );
                 }
 
                 // Show error state for local widgets that failed to load
+                // NOTE: Font sizes are 2x because we render at 2x scale for sharper text
                 if (source === 'local' && htmlLoadState === 'error') {
                   return (
                     <div
@@ -674,14 +681,14 @@ function SpatialWidget({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#f87171',
-                        gap: 8,
-                        padding: 16,
+                        gap: 16,
+                        padding: 32,
                         textAlign: 'center',
                       }}
                     >
-                      <div style={{ fontSize: 24 }}>⚠️</div>
-                      <div style={{ fontSize: 14 }}>Failed to load widget</div>
-                      <div style={{ fontSize: 11, color: '#9ca3af' }}>{widget.widgetDefId}</div>
+                      <div style={{ fontSize: 48 }}>⚠️</div>
+                      <div style={{ fontSize: 28 }}>Failed to load widget</div>
+                      <div style={{ fontSize: 22, color: '#9ca3af' }}>{widget.widgetDefId}</div>
                     </div>
                   );
                 }
@@ -694,6 +701,7 @@ function SpatialWidget({
                   /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
                 // If no HTML content available, show a preview card
+                // NOTE: Font sizes are 2x because we render at 2x scale for sharper text
                 if (!htmlContent) {
                   return (
                     <div
@@ -705,19 +713,19 @@ function SpatialWidget({
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#a5b4fc',
-                        gap: 12,
-                        padding: 16,
+                        gap: 24,
+                        padding: 32,
                         textAlign: 'center',
                       }}
                     >
-                      <div style={{ fontSize: 32 }}>{getWidgetTypeEmoji(widget.widgetDefId)}</div>
-                      <div style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>
+                      <div style={{ fontSize: 64 }}>{getWidgetTypeEmoji(widget.widgetDefId)}</div>
+                      <div style={{ fontSize: 28, fontWeight: 'bold', color: '#ffffff' }}>
                         {widget.name || formatWidgetType(widget.widgetDefId)}
                       </div>
-                      <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                      <div style={{ fontSize: 22, color: '#9ca3af' }}>
                         {widget.widgetDefId}
                       </div>
-                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 8 }}>
+                      <div style={{ fontSize: 20, color: '#6b7280', marginTop: 16 }}>
                         {source || 'unknown'} • {Math.round(widget.width)}×{Math.round(widget.height)}
                       </div>
                     </div>
