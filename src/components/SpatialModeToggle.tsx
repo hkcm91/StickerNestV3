@@ -230,6 +230,19 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         // Update state to show we're requesting the mode
         requestMode(mode);
 
+        // Detect mobile devices - use preview mode by default on phones
+        // Real WebXR sessions on mobile are meant for cardboard headsets
+        // but most users just want to see the 3D view on their screen
+        const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isTablet = /iPad|Android/i.test(navigator.userAgent) && !/Mobile/i.test(navigator.userAgent);
+        const preferPreviewMode = isMobile && !isTablet;
+
+        if (preferPreviewMode && mode === 'vr') {
+          console.log('[SpatialModeToggle] Mobile device detected, using VR preview mode (HTML widgets work here)');
+          useSpatialModeStore.getState().enterPreviewMode('vr');
+          return;
+        }
+
         // If XR isn't supported at all, go directly to preview mode
         if (!capabilities.vrSupported && mode === 'vr') {
           console.log('[SpatialModeToggle] VR not supported, entering VR preview mode');
