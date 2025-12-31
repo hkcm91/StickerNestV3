@@ -711,9 +711,14 @@ function SpatialWidget({
         });
         return null;
       })()}
-      {canRenderWidget(widget) ? (
+      {/*
+        CRITICAL: Do NOT render <Html> components in XR sessions!
+        The Html component creates DOM overlays that break immersive VR/AR.
+        When isPresenting (in XR), show only 3D placeholder panels.
+      */}
+      {canRenderWidget(widget) && !isPresenting ? (
         <>
-          {/* Render actual widget content via Html */}
+          {/* Render actual widget content via Html (desktop/preview only) */}
           {/* NOTE: Removed 'occlude' prop - it was hiding content behind the transparent panel */}
           {/* distanceFactor: Scale factor for HTML content in 3D space. Higher = larger content at distance. */}
           {/* Lower distanceFactor (1-2) keeps widgets at readable size on mobile */}
@@ -1008,7 +1013,7 @@ function SpatialWidget({
         </>
       ) : (
         <>
-          {/* Widget name label (for placeholder widgets) */}
+          {/* Widget name label (for placeholder widgets OR XR mode where Html isn't supported) */}
           <Text
             position={[0, size3D.height / 2 + 0.05, 0.01]}
             fontSize={0.05}
