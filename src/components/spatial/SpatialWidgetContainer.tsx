@@ -148,6 +148,46 @@ function isReactWidget(widgetDefId: string): boolean {
 }
 
 /**
+ * Check if a widget has HTML content that can be rendered in VR
+ * This includes builtin HTML widgets and AI-generated widgets
+ */
+function hasHtmlContent(widget: WidgetInstance): boolean {
+  // Check for builtin HTML widget
+  const builtin = getBuiltinWidget(widget.widgetDefId);
+  if (builtin?.html) return true;
+
+  // Check for AI-generated widget with HTML content
+  if (widget.metadata?.source === 'generated' && widget.metadata?.generatedContent?.html) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Get HTML content for a widget (either from builtin or AI-generated)
+ */
+function getWidgetHtml(widget: WidgetInstance): string | null {
+  // Check for builtin HTML widget
+  const builtin = getBuiltinWidget(widget.widgetDefId);
+  if (builtin?.html) return builtin.html;
+
+  // Check for AI-generated widget with HTML content
+  if (widget.metadata?.source === 'generated' && widget.metadata?.generatedContent?.html) {
+    return widget.metadata.generatedContent.html;
+  }
+
+  return null;
+}
+
+/**
+ * Check if a widget can be rendered in VR (has either component or HTML)
+ */
+function canRenderWidget(widget: WidgetInstance): boolean {
+  return isReactWidget(widget.widgetDefId) || hasHtmlContent(widget);
+}
+
+/**
  * Format widget definition ID for display
  */
 function formatWidgetType(widgetDefId: string): string {
@@ -415,10 +455,10 @@ function SpatialWidget({
         </mesh>
       )}
 
-      {/* Check if this is a React component widget - render actual content */}
-      {isReactWidget(widget.widgetDefId) ? (
+      {/* Check if this is a renderable widget - render actual content */}
+      {canRenderWidget(widget) ? (
         <>
-          {/* Render actual React component via Html */}
+          {/* Render actual widget content via Html */}
           <Html
             transform
             occlude
@@ -439,14 +479,68 @@ function SpatialWidget({
                 background: 'rgba(20, 20, 30, 0.95)',
               }}
             >
-              {/* Render the actual React component */}
+              {/* Render either React component or HTML widget */}
               {(() => {
                 const builtin = getBuiltinWidget(widget.widgetDefId);
+
+                // First try to render as React component
                 if (builtin?.component) {
                   const Component = builtin.component as React.ComponentType<{ api: any }>;
                   const api = createSpatial3DAPI(widget);
                   return <Component api={api} />;
                 }
+
+                // Then try to render as HTML widget in an iframe
+                const htmlContent = getWidgetHtml(widget);
+                if (htmlContent) {
+                  // Inject a minimal WidgetAPI mock for VR context
+                  const mockAPI = `
+                    <script>
+                      window.WidgetAPI = {
+                        widgetId: '${widget.id}',
+                        emitEvent: function(e) { console.log('[VR Widget] emitEvent:', e); },
+                        emitOutput: function(port, data) { console.log('[VR Widget] emitOutput:', port, data); },
+                        onEvent: function(type, handler) { return function() {}; },
+                        onInput: function(port, handler) { return function() {}; },
+                        getState: function() { return ${JSON.stringify(widget.state || {})}; },
+                        setState: function(patch) { console.log('[VR Widget] setState:', patch); },
+                        getAssetUrl: function(path) { return path; },
+                        log: function() { console.log.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
+                        info: function() { console.info.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
+                        warn: function() { console.warn.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
+                        error: function() { console.error.apply(console, ['[${widget.widgetDefId}]'].concat(Array.from(arguments))); },
+                        debugLog: function(msg, data) { console.debug('[${widget.widgetDefId}]', msg, data); },
+                        onMount: function(callback) { callback({ state: ${JSON.stringify(widget.state || {})} }); },
+                        onStateChange: function(callback) { return function() {}; },
+                      };
+                    </script>
+                  `;
+
+                  // Inject API into HTML
+                  let html = htmlContent;
+                  if (html.includes('<head>')) {
+                    html = html.replace('<head>', `<head>${mockAPI}`);
+                  } else if (html.includes('<html>')) {
+                    html = html.replace('<html>', `<html><head>${mockAPI}</head>`);
+                  } else {
+                    html = mockAPI + html;
+                  }
+
+                  return (
+                    <iframe
+                      srcDoc={html}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        borderRadius: 8,
+                      }}
+                      sandbox="allow-scripts"
+                      title={widget.name || widget.widgetDefId}
+                    />
+                  );
+                }
+
                 return null;
               })()}
             </div>
