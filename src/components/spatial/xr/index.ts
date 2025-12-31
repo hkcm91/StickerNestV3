@@ -17,6 +17,10 @@ export type { FloatingPanelProps } from './FloatingPanel';
 export { XRToolbar } from './XRToolbar';
 export type { XRToolbarProps, XRToolType } from './XRToolbar';
 
+// VR Tool Hub (3D native toolbar)
+export { VRToolHub } from './VRToolHub';
+export type { VRToolHubProps, VRToolType as VRToolHubToolType } from './VRToolHub';
+
 // Widget Library
 export { XRWidgetLibrary } from './XRWidgetLibrary';
 export type { XRWidgetLibraryProps } from './XRWidgetLibrary';

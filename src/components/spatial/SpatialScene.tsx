@@ -26,8 +26,10 @@ import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
 import {
   XRToolbar,
+  VRToolHub,
   XRWidgetLibrary,
   type XRToolType,
+  type VRToolHubToolType,
   RoomVisualizer,
   OcclusionLayer,
   RoomSetupGuide,
@@ -619,10 +621,9 @@ export function SpatialScene() {
 
   return (
     <group>
-      {/* XR Toolbar (available in both VR and AR modes) */}
+      {/* VR Tool Hub - 3D native toolbar (available in both VR and AR modes) */}
       {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
-        <XRToolbar
-          activeTool={activeTool}
+        <VRToolHub
           onToolChange={handleToolChange}
           onAddWidget={handleAddWidget}
           onUndo={handleUndo}
