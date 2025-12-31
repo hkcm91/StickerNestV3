@@ -49,6 +49,11 @@ export const xrStore = createXRStore({
   meshDetection: true,
   // Depth sensing for occlusion
   depthSensing: true,
+  // AR passthrough: enable DOM overlay for HTML content over camera feed
+  // This is required for AR mode to render UI elements over the real world
+  domOverlay: true,
+  // Unbounded AR for passthrough without guardian bounds
+  bounded: false,
 });
 
 /**
