@@ -506,6 +506,107 @@ function WristMenu({ items }: { items: MenuItem[] }) {
 
 ---
 
+## Industry-Standard Widget Manipulation
+
+StickerNest implements comprehensive widget manipulation matching Quest and Vision Pro patterns.
+
+### Widget3DHandles Component
+
+The `Widget3DHandles` component provides industry-standard interaction:
+
+```tsx
+import { Widget3DHandles } from '@/components/spatial/xr';
+
+<Widget3DHandles
+  width={widgetWidthMeters}
+  height={widgetHeightMeters}
+  selected={isSelected}
+  // Industry-standard features:
+  enableHaptics={true}           // XR controller haptic feedback
+  enableTwoHanded={true}         // Pinch-to-zoom with both hands
+  snapToGrid={true}              // Size snapping for alignment
+  gridSize={0.05}                // 5cm grid (adjustable)
+  snapAngles={true}              // Rotation snapping
+  snapAngleIncrement={15}        // 15°/45°/90° snaps
+  lockAspectRatio={false}        // Optional aspect ratio lock
+  // Callbacks:
+  onResize={(w, h, handle) => updateWidgetSize(w, h)}
+  onRotate={(angleDelta) => updateRotation(angleDelta)}
+  onDepthChange={(delta) => updateZPosition(delta)}
+  onTwoHandedScale={(factor) => handlePinchZoom(factor)}
+/>
+```
+
+### Handle Types
+
+| Handle | Geometry | Interaction | Use Case |
+|--------|----------|-------------|----------|
+| **Corner** | Spheres | Drag to resize proportionally | Resize from corners |
+| **Edge** | Capsules | Single-axis resize | Width or height only |
+| **Rotation** | Torus above widget | Rotate Z-axis | Orient widget |
+| **Depth** | Cone pointing forward | Push/pull Z | Bring closer/further |
+
+### Two-Handed Manipulation (Pinch-to-Zoom)
+
+Both hands grip widget → scale by changing hand distance:
+
+```typescript
+// Detection: Both controllers squeezing same widget
+const bothPressed = leftGripPressed && rightGripPressed;
+
+// Scale factor = current hand distance / initial hand distance
+const scaleFactor = currentDistance / initialDistance;
+
+// Haptic feedback scales with intensity
+triggerHaptic('both', 0.15 * scaleFactor, 20);
+```
+
+### XR Haptic Feedback Intensities
+
+```typescript
+const HAPTIC = {
+  HOVER: 0.1,        // Light pulse on handle hover
+  GRAB: 0.6,         // Medium pulse when grabbing handle
+  DRAG: 0.15,        // Subtle feedback during drag
+  RELEASE: 0.3,      // Confirmation pulse on release
+  SNAP: 0.4,         // Click when snapping to grid/angle
+  TWO_HAND_START: 0.8, // Strong pulse starting two-hand mode
+};
+```
+
+### Snapping Behavior
+
+**Size Snapping:**
+```typescript
+// Snap to grid when within threshold
+const SNAP_THRESHOLD = 0.008; // 8mm
+const snappedValue = Math.round(value / gridSize) * gridSize;
+if (Math.abs(value - snappedValue) < SNAP_THRESHOLD) {
+  triggerHaptic('both', 0.4, 30); // Snap feedback
+  return snappedValue;
+}
+```
+
+**Rotation Snapping (15°/45°/90°):**
+```typescript
+const ANGLE_SNAP_THRESHOLD = 3; // degrees
+const snappedAngle = Math.round(degrees / 15) * 15;
+if (Math.abs(degrees - snappedAngle) < ANGLE_SNAP_THRESHOLD) {
+  // Visual indicator: angle ticks appear during rotation
+  return snappedAngle;
+}
+```
+
+### Visual Feedback
+
+- **Selection border**: Dashed line turns green when snapped
+- **Angle indicators**: 24 tick marks appear during rotation (15° increments)
+- **Size display**: Shows dimensions in cm during resize
+- **Scale percentage**: Shows two-handed scale factor
+- **Aspect lock icon**: 🔒 appears when ratio locked
+
+---
+
 ## World-Anchored Content
 
 ### Anchoring Panels to Surfaces

@@ -23,7 +23,7 @@ export type { VRToolHubProps, VRToolType as VRToolHubToolType } from './VRToolHu
 
 // Widget 3D Handles (resize, rotate, move)
 export { Widget3DHandles } from './Widget3DHandles';
-export type { Widget3DHandlesProps, HandleType } from './Widget3DHandles';
+export type { Widget3DHandlesProps, HandleType, TwoHandedState } from './Widget3DHandles';
 
 // Widget Library
 export { XRWidgetLibrary } from './XRWidgetLibrary';
