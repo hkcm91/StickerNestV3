@@ -117,9 +117,14 @@ function XRDebugLogger() {
 /**
  * Tracks XR session state from within the XR context and syncs to our store.
  * This component must be inside the <XR> provider to access useXR hooks.
+ *
+ * IMPORTANT: This tracker must NOT reset to desktop mode when in preview mode.
+ * Preview mode (mobile VR/AR) deliberately runs without an XR session.
  */
 function XRSessionStateTracker() {
   const session = useXR((state) => state.session);
+  const activeMode = useSpatialModeStore((s) => s.activeMode);
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
   const setActiveMode = useSpatialModeStore((s) => s.setActiveMode);
   const setSessionState = useSpatialModeStore((s) => s.setSessionState);
 
@@ -135,12 +140,23 @@ function XRSessionStateTracker() {
         setActiveMode('vr');
       }
     } else {
-      // CRITICAL: Reset state when session ends to return to desktop mode
-      console.log('[XRSessionStateTracker] No active XR session - resetting to desktop');
-      setSessionState('none');
-      setActiveMode('desktop');
+      // IMPORTANT: Don't reset to desktop if we're in preview mode!
+      // Preview mode (used on mobile) runs VR/AR without an actual XR session.
+      // Only reset if we previously had an active session that ended.
+      const isInPreviewMode = (activeMode === 'vr' || activeMode === 'ar') && sessionState === 'none';
+
+      if (isInPreviewMode) {
+        console.log('[XRSessionStateTracker] In preview mode, keeping current mode:', activeMode);
+        // Don't change anything - we're in preview mode
+      } else if (sessionState === 'active') {
+        // Only reset if we had an active session that ended
+        console.log('[XRSessionStateTracker] XR session ended, resetting to desktop');
+        setSessionState('none');
+        setActiveMode('desktop');
+      }
+      // If sessionState is 'none' and activeMode is 'desktop', do nothing
     }
-  }, [session, setActiveMode, setSessionState]);
+  }, [session, activeMode, sessionState, setActiveMode, setSessionState]);
 
   return null;
 }
