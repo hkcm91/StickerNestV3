@@ -24,6 +24,7 @@ import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatia
 import { SpatialScene } from './SpatialScene';
 import { xrStore } from './xrStore';
 import * as THREE from 'three';
+import { initializeBVH, isBVHInitialized } from '../../utils/bvhSetup';
 
 // ============================================================================
 // XR Error Boundary - Catches XR-related errors without crashing the app
@@ -667,6 +668,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
 
     checkCapabilities();
   }, [setCapabilities]);
+
+  // Initialize BVH (Bounding Volume Hierarchy) for accelerated raycasting
+  // This extends THREE.js with faster collision detection
+  useEffect(() => {
+    if (!isBVHInitialized()) {
+      initializeBVH();
+    }
+  }, []);
 
   // Determine if the 3D canvas should be visible
   // The Canvas/XR MUST always be mounted, but visibility can be controlled
