@@ -16,6 +16,11 @@ import { createXRStore } from '@react-three/xr';
  * - 'unbounded': Large area tracking without boundaries
  *
  * Without proper reference space, the scene will be HEAD-LOCKED (moves with headset).
+ *
+ * NOTE: AR passthrough works automatically when:
+ * 1. Session mode is 'immersive-ar' (handled by enterAR())
+ * 2. WebGL context has alpha: true (set in SpatialCanvas)
+ * 3. Scene has no opaque background (GridEnvironment360 hides in AR)
  */
 export const xrStore = createXRStore({
   // CRITICAL: Reference space determines world-space vs head-locked rendering
