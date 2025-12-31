@@ -1113,6 +1113,15 @@ export class WidgetSandboxHost {
   private async handleDocumentApiRequest(action: string, data: any): Promise<any> {
     const store = useHaloDocumentStore.getState();
 
+    console.log(`[WidgetSandbox] 📄 Document API: ${action}`, data);
+
+    // Check if store is initialized (has been loaded from IndexedDB)
+    if (store.isLoading) {
+      console.warn('[WidgetSandbox] HaloDocumentStore is still loading, waiting...');
+      // Wait a bit for initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     switch (action) {
       case 'document:list': {
         const documents = store.getAllMetadata();
@@ -1130,6 +1139,8 @@ export class WidgetSandboxHost {
 
       case 'document:create': {
         const { title, content, contentType, category, tags, sourceType } = data || {};
+        console.log('[WidgetSandbox] 📄 Creating document:', { title, contentType, category });
+
         const document = await store.createDocument({
           title: title || 'Untitled',
           content: content || '',
@@ -1142,6 +1153,8 @@ export class WidgetSandboxHost {
           starred: false,
           archived: false,
         });
+
+        console.log('[WidgetSandbox] ✅ Document created:', document.id, document.title);
 
         // Emit event for other widgets (e.g., NoteHub) to refresh
         this.eventBus.emit({

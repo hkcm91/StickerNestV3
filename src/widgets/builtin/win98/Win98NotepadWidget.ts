@@ -371,6 +371,9 @@ export const Win98NotepadWidgetHTML = `
           category: 'note',
         };
 
+        // Show saving feedback
+        statusText.textContent = 'Saving...';
+
         try {
           if (documentId) {
             await API.request('document:update', { id: documentId, updates: docData });
@@ -385,9 +388,21 @@ export const Win98NotepadWidgetHTML = `
           }
           isModified = false;
           updateTitle();
+
+          // Show success feedback
+          statusText.textContent = 'Saved!';
+          setTimeout(function() {
+            updateStatus();
+          }, 1500);
+
           API.emitOutput('file.save', { name: currentFileName, content: textArea.value, documentId });
-          API.log('Saved to unified store');
+          API.log('Saved to unified store: ' + documentId);
         } catch (err) {
+          // Show error feedback
+          statusText.textContent = 'Save failed!';
+          setTimeout(function() {
+            updateStatus();
+          }, 2000);
           API.log('Failed to save: ' + err.message, 'error');
         }
       }

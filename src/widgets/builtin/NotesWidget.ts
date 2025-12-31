@@ -181,6 +181,10 @@ export const NotesWidgetHTML = `
           category: 'note',
         };
 
+        // Show saving indicator
+        footerEl.textContent = 'Saving...';
+        footerEl.style.color = '#f59e0b';
+
         try {
           if (documentId) {
             // Update existing document
@@ -194,11 +198,25 @@ export const NotesWidgetHTML = `
           }
 
           lastSaved = Date.now();
-          updateFooter();
+          // Show success feedback
+          footerEl.textContent = 'Saved!';
+          footerEl.style.color = '#22c55e';
+          setTimeout(function() {
+            footerEl.style.color = '#999';
+            updateFooter();
+          }, 1500);
+
           API.emitOutput('text.submitted', { ...docData, id: documentId });
           API.emitOutput('data.changed', { ...docData, id: documentId });
-          API.log('Note saved to unified store');
+          API.log('Note saved to unified store: ' + documentId);
         } catch (err) {
+          // Show error feedback
+          footerEl.textContent = 'Save failed!';
+          footerEl.style.color = '#ef4444';
+          setTimeout(function() {
+            footerEl.style.color = '#999';
+            updateFooter();
+          }, 2000);
           API.log('Failed to save note: ' + err.message, 'error');
         }
       }
