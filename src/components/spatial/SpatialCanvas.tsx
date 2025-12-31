@@ -182,7 +182,7 @@ export interface GridEnvironment360Props {
 
 /**
  * Creates a shader material for the 360 grid environment.
- * Renders a spherical grid pattern that can be customized.
+ * Renders a spherical grid pattern with panoramic sky and stars.
  */
 function useGridSphereMaterial(props: GridEnvironment360Props) {
   const {
@@ -191,7 +191,7 @@ function useGridSphereMaterial(props: GridEnvironment360Props) {
     backgroundColor = '#0a0a0f',
     majorGridSpacing = 2.0,
     minorGridSpacing = 0.5,
-    gridOpacity = 0.6,
+    gridOpacity = 0.8, // Increased for better visibility
     glow = true,
   } = props;
 
@@ -233,6 +233,21 @@ function useGridSphereMaterial(props: GridEnvironment360Props) {
         varying vec3 vNormal;
         varying vec2 vUv;
 
+        // Simple hash function for stars
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+
+        // Star field function
+        float stars(vec2 uv, float density) {
+          vec2 cell = floor(uv * density);
+          vec2 offset = fract(uv * density) - 0.5;
+          float starVal = hash(cell);
+          float brightness = step(0.97, starVal);
+          float dist = length(offset);
+          return brightness * smoothstep(0.2, 0.0, dist) * (0.5 + 0.5 * starVal);
+        }
+
         float grid(vec2 coord, float spacing, float thickness) {
           vec2 grid = abs(fract(coord / spacing - 0.5) - 0.5) / fwidth(coord / spacing);
           float line = min(grid.x, grid.y);
@@ -256,28 +271,69 @@ function useGridSphereMaterial(props: GridEnvironment360Props) {
 
           // Calculate grid lines
           float majorLine = grid(worldCoord, uMajorSpacing, 0.02);
-          float minorLine = grid(worldCoord, uMinorSpacing, 0.01) * 0.4;
+          float minorLine = grid(worldCoord, uMinorSpacing, 0.01) * 0.5;
 
-          // Spherical grid overlay
-          float sphereGrid = grid(sphereUV, 1.0, 0.02) * 0.3;
+          // Spherical grid overlay - reduced for cleaner look
+          float sphereGrid = grid(sphereUV, 1.0, 0.02) * 0.2;
 
           // Combine grids
           float totalGrid = max(majorLine, max(minorLine, sphereGrid));
 
+          // === PANORAMIC SKY ===
+          // Create a gradient from horizon to zenith
+          float heightFactor = pos.y; // -1 (floor) to +1 (ceiling)
+
+          // Sky colors: darker at zenith, lighter at horizon
+          vec3 zenithColor = vec3(0.02, 0.02, 0.08); // Deep space blue
+          vec3 horizonColor = vec3(0.08, 0.06, 0.15); // Purple-tinted horizon
+          vec3 nadirColor = vec3(0.01, 0.01, 0.02); // Very dark at floor
+
+          // Smooth gradient based on height
+          vec3 skyColor;
+          if (heightFactor > 0.0) {
+            // Upper hemisphere: horizon to zenith
+            float t = smoothstep(0.0, 0.8, heightFactor);
+            skyColor = mix(horizonColor, zenithColor, t);
+          } else {
+            // Lower hemisphere: horizon to nadir (floor area)
+            float t = smoothstep(0.0, -0.3, heightFactor);
+            skyColor = mix(horizonColor, nadirColor, t);
+          }
+
+          // Add stars in upper hemisphere
+          float starIntensity = 0.0;
+          if (heightFactor > -0.1) {
+            vec2 starUV = vec2(theta, phi);
+            starIntensity = stars(starUV * 8.0, 100.0) * 0.6;
+            starIntensity += stars(starUV * 4.0, 50.0) * 0.4;
+            starIntensity *= smoothstep(-0.1, 0.3, heightFactor); // Fade near horizon
+          }
+          vec3 starColor = vec3(0.9, 0.95, 1.0) * starIntensity;
+
+          // Horizon glow
+          float horizonGlow = exp(-abs(heightFactor) * 8.0) * 0.15;
+          vec3 horizonGlowColor = vec3(0.3, 0.2, 0.5) * horizonGlow;
+
+          // Combine sky
+          vec3 finalSky = skyColor + starColor + horizonGlowColor;
+
+          // === GRID OVERLAY ===
           // Add glow effect
           float glowAmount = uGlow * totalGrid * 0.5;
 
-          // Mix colors
+          // Mix colors for grid
           vec3 gridMix = mix(uGridColor, uGridColorAccent, majorLine);
-          vec3 finalColor = mix(uBackgroundColor, gridMix, totalGrid * uGridOpacity);
+
+          // Apply grid on top of sky
+          vec3 finalColor = mix(finalSky, gridMix, totalGrid * uGridOpacity);
 
           // Add subtle glow
-          finalColor += gridMix * glowAmount * 0.3;
+          finalColor += gridMix * glowAmount * 0.4;
 
-          // Fade at poles to avoid singularity
+          // Fade grid at poles to avoid singularity
           float poleFade = smoothstep(0.0, 0.3, abs(pos.y - 1.0)) *
                           smoothstep(0.0, 0.3, abs(pos.y + 1.0));
-          finalColor = mix(uBackgroundColor, finalColor, poleFade);
+          finalColor = mix(finalSky, finalColor, poleFade);
 
           gl_FragColor = vec4(finalColor, 1.0);
         }
@@ -419,6 +475,7 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   const setSessionState = useSpatialModeStore((s) => s.setSessionState);
   const setCapabilities = useSpatialModeStore((s) => s.setCapabilities);
   const sessionState = useSpatialModeStore((s) => s.sessionState);
+  const targetMode = useSpatialModeStore((s) => s.targetMode);
   const spatialMode = useActiveSpatialMode();
 
   // Track if we've mounted the Canvas (for XR readiness)
@@ -461,10 +518,12 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   // The Canvas/XR MUST always be mounted, but visibility can be controlled
   // Canvas is visible when:
   // 1. `active` prop is true (parent wants it visible), OR
-  // 2. An XR session is ACTUALLY active (NOT 'requesting' - that would block 2D interaction)
-  // IMPORTANT: Don't show canvas during 'requesting' state - it blocks pointer events on 2D canvas!
+  // 2. An XR session is ACTUALLY active, OR
+  // 3. We're transitioning into VR mode (requesting state with targetMode === 'vr')
+  //    This ensures the grid/environment is visible during VR browser emulation
   const isXRActive = sessionState === 'active';
-  const shouldShowCanvas = active || isXRActive;
+  const isTransitioningToVR = sessionState === 'requesting' && targetMode === 'vr';
+  const shouldShowCanvas = active || isXRActive || isTransitioningToVR;
 
   // Debug logging for state transitions
   useEffect(() => {
@@ -472,11 +531,13 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
       active,
       spatialMode,
       sessionState,
+      targetMode,
       isXRActive,
+      isTransitioningToVR,
       shouldShowCanvas,
       canvasReady,
     });
-  }, [active, spatialMode, sessionState, isXRActive, shouldShowCanvas, canvasReady]);
+  }, [active, spatialMode, sessionState, targetMode, isXRActive, isTransitioningToVR, shouldShowCanvas, canvasReady]);
 
   // Subscribe to XR store session changes
   useEffect(() => {
