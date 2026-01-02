@@ -203,12 +203,12 @@ export const useUserSearchStore = create<UserSearchState & UserSearchActions>()(
             console.log('[UserSearch] Backend API unavailable, falling back to Supabase');
           }
 
-          // Fallback: Search directly in Supabase user_profiles
+          // Fallback: Search directly in Supabase profiles table
           if (supabaseClient) {
             const { data, error: sbError } = await supabaseClient
-              .from('user_profiles')
-              .select('user_id, username, display_name, avatar_url, bio, is_verified, is_creator')
-              .or(`username.ilike.%${query}%,display_name.ilike.%${query}%,email.ilike.%${query}%`)
+              .from('profiles')
+              .select('id, username, display_name, avatar_url, bio')
+              .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
               .limit(20);
 
             if (sbError) {
@@ -218,13 +218,13 @@ export const useUserSearchStore = create<UserSearchState & UserSearchActions>()(
 
             // Map Supabase results to SearchableUser format
             const results: SearchableUser[] = (data || []).map((profile) => ({
-              id: profile.user_id,
+              id: profile.id,
               username: profile.username || 'user',
               displayName: profile.display_name || profile.username || 'User',
               avatarUrl: profile.avatar_url,
               bio: profile.bio,
-              isVerified: profile.is_verified || false,
-              isCreator: profile.is_creator || false,
+              isVerified: false,
+              isCreator: false,
               followerCount: 0,
               canvasCount: 0,
             }));
