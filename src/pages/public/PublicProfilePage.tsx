@@ -3,11 +3,12 @@
  * Public-facing user profile page accessible at /@username
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SNIcon } from '../../shared-ui/SNIcon';
 import { SNButton } from '../../shared-ui/SNButton';
 import { usePublicProfileStore } from '../../state/usePublicProfileStore';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   ProfileHeader,
   ProfileTabs,
@@ -19,6 +20,7 @@ import type { ProfileTab } from '../../types/profile';
 export const PublicProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const {
     profile,
@@ -39,6 +41,12 @@ export const PublicProfilePage: React.FC = () => {
   } = usePublicProfileStore();
 
   const [likedCanvases, setLikedCanvases] = useState<Set<string>>(new Set());
+
+  // Check if viewing own profile by comparing user IDs
+  const isOwnProfile = useMemo(() => {
+    if (!user || !profile) return false;
+    return user.id === profile.id;
+  }, [user, profile]);
 
   // Fetch profile data on mount
   useEffect(() => {
@@ -226,7 +234,7 @@ export const PublicProfilePage: React.FC = () => {
         {/* Profile Header */}
         <ProfileHeader
           profile={profile}
-          isOwnProfile={false} // TODO: Check against current user
+          isOwnProfile={isOwnProfile}
           isFollowing={isFollowing}
           followLoading={followLoading}
           onFollowToggle={toggleFollow}

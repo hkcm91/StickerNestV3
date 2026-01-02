@@ -200,8 +200,15 @@ const GalleryPage: React.FC = () => {
 
         setProfile(publicProfile);
 
+        // Also check if this is the user's own profile by comparing user IDs
+        // This handles cases where username comparison fails (e.g., OAuth users)
+        const isOwn = user && publicProfile.id === user.id;
+        if (isOwn) {
+          setIsOwnProfile(true);
+        }
+
         // Check follow status if viewing another user's profile
-        if (!isOwnProfile && isAuthenticated) {
+        if (!isOwn && !isOwnProfile && isAuthenticated) {
           const followResponse = await followApi.isFollowing(publicProfile.id);
           if (followResponse.success && followResponse.data) {
             setIsFollowing(followResponse.data.isFollowing);
