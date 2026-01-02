@@ -345,6 +345,51 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
   const setViewportRef = useRef(gestures.setViewport);
   setViewportRef.current = gestures.setViewport;
 
+  // CRITICAL: Force canvas visibility on mobile after mount
+  // This runs immediately after first render to ensure canvas is visible
+  useEffect(() => {
+    if (!isMobile) return;
+
+    // Force immediate canvas sizing and positioning
+    const forceCanvasVisibility = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      // Only proceed if container has valid dimensions
+      if (rect.width <= 0 || rect.height <= 0) {
+        // Retry after paint
+        requestAnimationFrame(forceCanvasVisibility);
+        return;
+      }
+
+      // Update canvas size to match device dimensions
+      const deviceWidth = Math.min(rect.width, window.innerWidth);
+      const deviceHeight = Math.min(rect.height, window.innerHeight - 64); // minus toolbar
+
+      // Initialize canvas size if it's still at default (1920x1080)
+      if (dragResizeHook.canvasSize.width > 1000) {
+        dragResizeHook.initCanvasSize(deviceWidth, deviceHeight);
+      }
+
+      // Set viewport to show canvas centered at zoom=1
+      if (!initialFitDoneRef.current) {
+        setViewportRef.current({
+          zoom: 1,
+          panX: Math.max(0, (rect.width - deviceWidth) / 2),
+          panY: Math.max(0, (rect.height - deviceHeight) / 2),
+        });
+        initialFitDoneRef.current = true;
+      }
+    };
+
+    // Run immediately and also after a short delay to catch late measurements
+    forceCanvasVisibility();
+    const timer = setTimeout(forceCanvasVisibility, 100);
+
+    return () => clearTimeout(timer);
+  }, [isMobile, dragResizeHook]);
+
   // Auto-fit canvas on mobile viewport (initial load) - uses measured container dimensions
   useEffect(() => {
     // Skip if not mobile, container not measured, or already fitted

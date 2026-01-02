@@ -66,8 +66,23 @@ export function useViewport(): ViewportSize {
 }
 
 function getViewportSize(): ViewportSize {
-  const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
-  const height = typeof window !== 'undefined' ? window.innerHeight : 768;
+  // Handle SSR - default to mobile dimensions to ensure canvas visibility
+  // This is better than defaulting to desktop (1024x768) which causes canvas to be off-screen
+  if (typeof window === 'undefined') {
+    return {
+      width: 390,
+      height: 844,
+      breakpoint: 'sm',
+      isMobile: true,
+      isTablet: false,
+      isDesktop: false,
+      isLandscape: false,
+      isPortrait: true,
+    };
+  }
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
 
   const breakpoint = getBreakpoint(width);
   const isMobile = width < BREAKPOINTS.md;
