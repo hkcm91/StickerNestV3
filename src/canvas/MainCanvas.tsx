@@ -33,7 +33,12 @@ import { MobileToolbar } from '../components/MobileToolbar';
 import { DEFAULT_CANVAS_SETTINGS, type WidgetInstance, type CanvasSettings, type ResponsiveLayout } from '../types/domain';
 import type { WidgetManifest } from '../types/manifest';
 import type { EventBus } from '../runtime/EventBus';
-import { useViewportModeStore, type ViewportMode } from '../state/useViewportModeStore';
+import {
+  useViewportModeStore,
+  useInitializeViewportForDevice,
+  type ViewportMode,
+} from '../state/useViewportModeStore';
+import { useDeviceCanvas, useContainerDimensions } from '../hooks/useDeviceCanvas';
 import {
   useMainCanvasWidgets,
   useMainCanvasStickers,
@@ -215,14 +220,40 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Initialize viewport mode for current device (auto-switches to mobile on mobile devices)
+  useInitializeViewportForDevice();
+
+  // Get viewport info early (needed for dimension calculations)
+  const { isMobile } = useViewport();
+
   // Viewport mode for responsive layouts (mobile vs web)
   const viewportMode = useViewportModeStore((state) => state.activeMode);
   const mobileWidth = useViewportModeStore((state) => state.mobileWidth);
   const mobileHeight = useViewportModeStore((state) => state.mobileHeight);
 
-  // Compute effective canvas dimensions based on viewport mode
-  const effectiveWidth = viewportMode === 'mobile' ? mobileWidth : width;
-  const effectiveHeight = viewportMode === 'mobile' ? mobileHeight : height;
+  // Get device-native canvas dimensions (for mobile devices)
+  const deviceCanvas = useDeviceCanvas({
+    defaultWidth: width,
+    defaultHeight: height,
+  });
+
+  // Get container dimensions with proper measurement (for fit-to-view)
+  const containerDimensions = useContainerDimensions(containerRef);
+
+  // Compute effective canvas dimensions based on viewport mode and device
+  // On mobile DEVICES (not just mobile mode), use device-native dimensions
+  // On desktop in mobile MODE (for preview), use the configured mobile dimensions
+  const effectiveWidth = isMobile
+    ? deviceCanvas.width // Mobile device: use actual screen width
+    : viewportMode === 'mobile'
+    ? mobileWidth // Desktop in mobile preview mode
+    : width; // Desktop in web mode
+
+  const effectiveHeight = isMobile
+    ? deviceCanvas.height // Mobile device: use actual screen height
+    : viewportMode === 'mobile'
+    ? mobileHeight // Desktop in mobile preview mode
+    : height; // Desktop in web mode
 
   // Notify parent of selection changes
   useEffect(() => {
@@ -250,8 +281,6 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     preventPullToRefresh: true,
     preventPageZoom: true,
   });
-
-  const { isMobile } = useViewport();
 
   // Border settings for mask overlay
   const borderSettings = useBorderSettings();
@@ -309,17 +338,122 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     dragResizeHook.initCanvasSize(effectiveWidth, effectiveHeight);
   }, [effectiveWidth, effectiveHeight, viewportMode]);
 
-  // Auto-fit canvas on mobile viewport (initial load)
+  // Track if initial fit has been performed (per-device-type)
+  const initialFitDoneRef = useRef(false);
+  const lastIsMobileRef = useRef<boolean | null>(null);
+
+  // Reset fit tracking when switching between mobile/desktop
+  if (lastIsMobileRef.current !== null && lastIsMobileRef.current !== isMobile) {
+    initialFitDoneRef.current = false;
+  }
+  lastIsMobileRef.current = isMobile;
+
+  // Store setViewport in a ref to avoid dependency issues
+  const setViewportRef = useRef(gestures.setViewport);
+  setViewportRef.current = gestures.setViewport;
+
+  // Auto-fit canvas to view on mobile (runs once after container is measured)
   useEffect(() => {
-    if (!isMobile || !containerRef.current) return;
+    // Only run on mobile devices
+    if (!isMobile) return;
+    // Skip if already fitted
+    if (initialFitDoneRef.current) return;
 
-    // Wait for container to be fully rendered
-    const timer = setTimeout(() => {
-      navHook.handleFitToView();
-    }, 300);
+    const container = containerRef.current;
+    if (!container) return;
 
-    return () => clearTimeout(timer);
-  }, [isMobile]); // Only run on initial mobile load
+    // Use the canvas size from the hook (which uses effectiveWidth/Height)
+    const canvasWidth = dragResizeHook.canvasSize.width;
+    const canvasHeight = dragResizeHook.canvasSize.height;
+
+    // Skip if canvas size isn't initialized yet
+    if (canvasWidth < 100 || canvasHeight < 100) return;
+
+    let retryCount = 0;
+    const maxRetries = 10;
+    let cancelled = false;
+    let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+    let pendingRaf: number | null = null;
+
+    // Wait for container to have valid dimensions
+    const attemptFit = (): boolean => {
+      if (cancelled) return true; // Pretend success to stop retries
+
+      const rect = container.getBoundingClientRect();
+
+      // Use container dimensions if valid, otherwise fallback to window dimensions
+      // minus estimated toolbar/header heights
+      let containerWidth = rect.width;
+      let containerHeight = rect.height;
+
+      // Fallback to window dimensions if container not measured
+      if (containerWidth < 100 || containerHeight < 100) {
+        containerWidth = window.innerWidth;
+        containerHeight = window.innerHeight - 150; // Subtract header/toolbar estimate
+      }
+
+      // Still invalid? Try again later
+      if (containerWidth < 100 || containerHeight < 100) {
+        return false;
+      }
+
+      // Calculate fit: scale canvas to fit container with padding
+      const padding = 16;
+      const availableWidth = containerWidth - padding * 2;
+      const availableHeight = containerHeight - padding * 2;
+
+      // Calculate zoom to fit canvas in container
+      const scaleX = availableWidth / canvasWidth;
+      const scaleY = availableHeight / canvasHeight;
+      const zoom = Math.min(scaleX, scaleY, 1); // Don't zoom beyond 100%
+
+      // Calculate pan to center canvas
+      const scaledWidth = canvasWidth * zoom;
+      const scaledHeight = canvasHeight * zoom;
+      const panX = (containerWidth - scaledWidth) / 2;
+      const panY = (containerHeight - scaledHeight) / 2;
+
+      setViewportRef.current({ zoom, panX, panY });
+      initialFitDoneRef.current = true;
+      return true;
+    };
+
+    // Retry loop with increasing delays
+    const scheduleRetry = () => {
+      if (cancelled) return;
+
+      if (retryCount >= maxRetries) {
+        // Last resort: just center with zoom 1
+        const fallbackPanX = Math.max(0, (window.innerWidth - canvasWidth) / 2);
+        const fallbackPanY = Math.max(0, (window.innerHeight - 150 - canvasHeight) / 2);
+        setViewportRef.current({ zoom: 1, panX: fallbackPanX, panY: fallbackPanY });
+        initialFitDoneRef.current = true;
+        return;
+      }
+
+      retryCount++;
+      const delay = retryCount * 50; // 50ms, 100ms, 150ms, etc.
+
+      pendingRaf = requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (!attemptFit()) {
+          pendingTimeout = setTimeout(scheduleRetry, delay);
+        }
+      });
+    };
+
+    // Try immediately
+    if (!attemptFit()) {
+      scheduleRetry();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      cancelled = true;
+      if (pendingTimeout) clearTimeout(pendingTimeout);
+      if (pendingRaf) cancelAnimationFrame(pendingRaf);
+    };
+  }, [isMobile, dragResizeHook.canvasSize.width, dragResizeHook.canvasSize.height]);
 
   // Sticker hook
   const stickerHook = useMainCanvasStickers({
@@ -356,21 +490,40 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     setIsCanvasResizeMode,
   });
 
-  // Auto-fit and center canvas when viewport mode changes
+  // Auto-fit and center canvas when viewport mode changes (desktop mode switching)
+  // Track the previous viewport mode to detect changes
+  const prevViewportModeRef = useRef(viewportMode);
   useEffect(() => {
-    // Small delay to ensure container is measured correctly
-    const timer = setTimeout(() => {
-      if (!containerRef.current) return;
+    // Only run when viewport mode actually changes (not on initial render)
+    if (prevViewportModeRef.current === viewportMode) return;
+    prevViewportModeRef.current = viewportMode;
 
-      // Calculate fit-to-view directly with the correct effective dimensions
-      // This avoids stale closure issues with navHook.handleFitToView
-      const rect = containerRef.current.getBoundingClientRect();
-      const containerSize = { width: rect.width, height: rect.height };
-      const newViewport = fitCanvasToView(effectiveWidth, effectiveHeight, containerSize);
-      gestures.setViewport(newViewport);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [viewportMode, effectiveWidth, effectiveHeight, gestures.setViewport]);
+    // Wait for container to be measured
+    if (!containerDimensions.measured) return;
+
+    const containerSize = {
+      width: containerDimensions.width,
+      height: containerDimensions.height,
+    };
+
+    // For mobile devices with screen-sized canvas, just center
+    if (isMobile && Math.abs(effectiveWidth - containerSize.width) < 50) {
+      setViewportRef.current({
+        zoom: 1,
+        panX: (containerSize.width - effectiveWidth) / 2,
+        panY: (containerSize.height - effectiveHeight) / 2,
+      });
+    } else {
+      // Fit canvas to view
+      const newViewport = fitCanvasToView(
+        effectiveWidth,
+        effectiveHeight,
+        containerSize,
+        isMobile ? 16 : 40
+      );
+      setViewportRef.current(newViewport);
+    }
+  }, [viewportMode, containerDimensions.measured, containerDimensions.width, containerDimensions.height, effectiveWidth, effectiveHeight, isMobile]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {

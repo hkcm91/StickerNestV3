@@ -66,8 +66,23 @@ export function useViewport(): ViewportSize {
 }
 
 function getViewportSize(): ViewportSize {
-  const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
-  const height = typeof window !== 'undefined' ? window.innerHeight : 768;
+  // SSR fallback - use desktop dimensions
+  // The actual dimensions will be set on client-side mount
+  if (typeof window === 'undefined') {
+    return {
+      width: 1024,
+      height: 768,
+      breakpoint: 'lg',
+      isMobile: false,
+      isTablet: false,
+      isDesktop: true,
+      isLandscape: true,
+      isPortrait: false,
+    };
+  }
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
 
   const breakpoint = getBreakpoint(width);
   const isMobile = width < BREAKPOINTS.md;

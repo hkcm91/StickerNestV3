@@ -10,3 +10,9 @@ export {
   SpatialMediaControllerWidgetManifest,
   SpatialMediaControllerWidgetHTML,
 } from './SpatialMediaControllerWidget';
+
+export {
+  EnvironmentControlWidget,
+  EnvironmentControlWidgetManifest,
+  EnvironmentControlWidgetHTML,
+} from './EnvironmentControlWidget';

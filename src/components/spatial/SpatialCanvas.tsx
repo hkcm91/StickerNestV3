@@ -25,6 +25,7 @@ import { SpatialScene } from './SpatialScene';
 import { xrStore } from './xrStore';
 import * as THREE from 'three';
 import { initializeBVH, isBVHInitialized } from '../../utils/bvhSetup';
+import { AmbientEnvironment } from './AmbientEnvironment';
 
 // ============================================================================
 // XR Error Boundary - Catches XR-related errors without crashing the app
@@ -390,14 +391,15 @@ function useGridSphereMaterial(props: GridEnvironment360Props) {
           return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
         }
 
-        // Star field function
-        float stars(vec2 uv, float density) {
+        // Star field function - enhanced for VR visibility
+        float stars(vec2 uv, float density, float threshold) {
           vec2 cell = floor(uv * density);
           vec2 offset = fract(uv * density) - 0.5;
           float starVal = hash(cell);
-          float brightness = step(0.97, starVal);
+          float brightness = step(threshold, starVal);
           float dist = length(offset);
-          return brightness * smoothstep(0.2, 0.0, dist) * (0.5 + 0.5 * starVal);
+          // Larger, brighter stars
+          return brightness * smoothstep(0.25, 0.0, dist) * (0.6 + 0.4 * starVal);
         }
 
         float grid(vec2 coord, float spacing, float thickness) {
@@ -431,43 +433,82 @@ function useGridSphereMaterial(props: GridEnvironment360Props) {
           // Combine grids
           float totalGrid = max(majorLine, max(minorLine, sphereGrid));
 
-          // === PANORAMIC SKY ===
+          // === PANORAMIC SKY - Enhanced for VR immersion ===
           // Create a gradient from horizon to zenith
           float heightFactor = pos.y; // -1 (floor) to +1 (ceiling)
 
-          // Sky colors: darker at zenith, lighter at horizon
-          vec3 zenithColor = vec3(0.02, 0.02, 0.08); // Deep space blue
-          vec3 horizonColor = vec3(0.08, 0.06, 0.15); // Purple-tinted horizon
-          vec3 nadirColor = vec3(0.01, 0.01, 0.02); // Very dark at floor
+          // Sky colors: richer, more colorful space environment
+          vec3 zenithColor = vec3(0.03, 0.02, 0.12); // Deep purple-blue space
+          vec3 midSkyColor = vec3(0.06, 0.04, 0.18); // Rich purple mid-sky
+          vec3 horizonColor = vec3(0.12, 0.06, 0.22); // Bright purple horizon
+          vec3 nadirColor = vec3(0.02, 0.02, 0.06); // Dark at floor
 
-          // Smooth gradient based on height
+          // Add subtle nebula-like color variations
+          float nebulaPattern = hash(floor(vec2(theta * 2.0, phi * 2.0)));
+          vec3 nebulaColor1 = vec3(0.15, 0.05, 0.25); // Deep purple
+          vec3 nebulaColor2 = vec3(0.05, 0.08, 0.20); // Blue tint
+          vec3 nebulaBlend = mix(nebulaColor1, nebulaColor2, nebulaPattern);
+
+          // Smooth gradient based on height with nebula influence
           vec3 skyColor;
           if (heightFactor > 0.0) {
-            // Upper hemisphere: horizon to zenith
-            float t = smoothstep(0.0, 0.8, heightFactor);
-            skyColor = mix(horizonColor, zenithColor, t);
+            // Upper hemisphere: horizon to zenith with mid-sky transition
+            float t1 = smoothstep(0.0, 0.4, heightFactor);
+            float t2 = smoothstep(0.4, 0.9, heightFactor);
+            skyColor = mix(horizonColor, midSkyColor, t1);
+            skyColor = mix(skyColor, zenithColor, t2);
+            // Add subtle nebula coloring in upper sky
+            float nebulaStrength = smoothstep(0.2, 0.7, heightFactor) * 0.3 * nebulaPattern;
+            skyColor = mix(skyColor, nebulaBlend, nebulaStrength);
           } else {
             // Lower hemisphere: horizon to nadir (floor area)
             float t = smoothstep(0.0, -0.3, heightFactor);
             skyColor = mix(horizonColor, nadirColor, t);
           }
 
-          // Add stars in upper hemisphere
+          // Add stars throughout the sky - much more visible
           float starIntensity = 0.0;
-          if (heightFactor > -0.1) {
+          if (heightFactor > -0.2) {
             vec2 starUV = vec2(theta, phi);
-            starIntensity = stars(starUV * 8.0, 100.0) * 0.6;
-            starIntensity += stars(starUV * 4.0, 50.0) * 0.4;
-            starIntensity *= smoothstep(-0.1, 0.3, heightFactor); // Fade near horizon
+            // Multiple star layers with different densities and sizes
+            // Bright prominent stars (fewer but more visible)
+            starIntensity = stars(starUV * 3.0, 30.0, 0.92) * 1.2;
+            // Medium stars
+            starIntensity += stars(starUV * 6.0, 60.0, 0.94) * 0.8;
+            // Dim background stars
+            starIntensity += stars(starUV * 12.0, 120.0, 0.96) * 0.5;
+            // Extra dense star cluster regions
+            float clusterNoise = hash(floor(starUV * 2.0));
+            if (clusterNoise > 0.7) {
+              starIntensity += stars(starUV * 20.0, 200.0, 0.93) * 0.6;
+            }
+            starIntensity *= smoothstep(-0.2, 0.2, heightFactor); // Fade near horizon
           }
-          vec3 starColor = vec3(0.9, 0.95, 1.0) * starIntensity;
+          // Colored stars - slight tint variations
+          float starHue = hash(floor(vec2(theta, phi) * 10.0));
+          vec3 starTint = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.9, 0.8), starHue * 0.3);
+          vec3 starColor = starTint * starIntensity;
 
-          // Horizon glow
-          float horizonGlow = exp(-abs(heightFactor) * 8.0) * 0.15;
-          vec3 horizonGlowColor = vec3(0.3, 0.2, 0.5) * horizonGlow;
+          // Horizon glow - more prominent atmospheric effect
+          float horizonGlow = exp(-abs(heightFactor) * 6.0) * 0.25;
+          float horizonGlow2 = exp(-abs(heightFactor) * 12.0) * 0.15; // Tighter inner glow
+          vec3 horizonGlowColor = vec3(0.4, 0.2, 0.6) * horizonGlow;
+          vec3 horizonGlowColor2 = vec3(0.3, 0.15, 0.5) * horizonGlow2;
+
+          // Add distant nebula clouds in the sky (larger scale pattern)
+          float cloudPattern = 0.0;
+          if (heightFactor > 0.1) {
+            vec2 cloudUV = vec2(theta * 0.5, phi * 0.5);
+            float c1 = hash(floor(cloudUV * 3.0));
+            float c2 = hash(floor(cloudUV * 5.0 + 0.5));
+            cloudPattern = smoothstep(0.6, 0.8, c1) * smoothstep(0.5, 0.7, c2);
+            cloudPattern *= smoothstep(0.1, 0.5, heightFactor);
+          }
+          vec3 nebulaCloudColor = mix(vec3(0.2, 0.1, 0.35), vec3(0.1, 0.15, 0.3), hash(vec2(theta, phi)));
+          vec3 cloudContribution = nebulaCloudColor * cloudPattern * 0.4;
 
           // Combine sky
-          vec3 finalSky = skyColor + starColor + horizonGlowColor;
+          vec3 finalSky = skyColor + starColor + horizonGlowColor + horizonGlowColor2 + cloudContribution;
 
           // === GRID OVERLAY ===
           // Add glow effect
@@ -839,11 +880,23 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               <XROrigin />
             </XRErrorBoundary>
 
-            {/* 360 Grid Environment (VR and 3D preview - customizable) */}
-            {/* Pass isXRSession=true when we're in an active XR session */}
-            <GridEnvironment360
+            {/* 360 Grid Environment - DISABLED: Too disorienting in VR/AR */}
+            {/* Keeping only floor grid for spatial reference */}
+            {/* <GridEnvironment360
               forceShow={active}
               isXRSession={isXRActive}
+            /> */}
+
+            {/* Ambient environment elements - particles, nebulae, structures */}
+            {/* Makes VR space feel alive and less empty */}
+            <AmbientEnvironment
+              particles={true}
+              particleCount={200}
+              nebulae={true}
+              structures={true}
+              aurora={true}
+              rings={true}
+              intensity={1.0}
             />
 
             {/* Ground reference */}
