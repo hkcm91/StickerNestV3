@@ -880,12 +880,12 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               <XROrigin />
             </XRErrorBoundary>
 
-            {/* 360 Grid Environment (VR and 3D preview - customizable) */}
-            {/* Pass isXRSession=true when we're in an active XR session */}
-            <GridEnvironment360
+            {/* 360 Grid Environment - DISABLED: Too disorienting in VR/AR */}
+            {/* Keeping only floor grid for spatial reference */}
+            {/* <GridEnvironment360
               forceShow={active}
               isXRSession={isXRActive}
-            />
+            /> */}
 
             {/* Ambient environment elements - particles, nebulae, structures */}
             {/* Makes VR space feel alive and less empty */}

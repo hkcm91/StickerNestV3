@@ -89,6 +89,7 @@ import { JitsiMeetWidget } from './JitsiMeetWidget';
 import { GreenScreenPlaneWidget } from './GreenScreenPlaneWidget';
 import { PanoramicOverlayWidget } from './PanoramicOverlayWidget';
 import { SpatialMediaControllerWidget } from './spatial/SpatialMediaControllerWidget';
+import { EnvironmentControlWidget } from './spatial/EnvironmentControlWidget';
 
 // Collaboration Widgets
 import { ViewSwitcherWidget } from './ViewSwitcherWidget';
@@ -285,6 +286,7 @@ export const BUILTIN_WIDGETS: Record<string, BuiltinWidget> = {
   'stickernest.green-screen-plane': GreenScreenPlaneWidget,
   'stickernest.panoramic-overlay': PanoramicOverlayWidget,
   'stickernest.spatial-media-controller': SpatialMediaControllerWidget,
+  'stickernest.environment-control': EnvironmentControlWidget,
   'stickernest.entity-panel-3d': {
     manifest: entityPanel3DManifest as unknown as WidgetManifest,
     component: EntityPanel3DWidget
