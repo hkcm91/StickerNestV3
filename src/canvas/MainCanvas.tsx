@@ -338,90 +338,122 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     dragResizeHook.initCanvasSize(effectiveWidth, effectiveHeight);
   }, [effectiveWidth, effectiveHeight, viewportMode]);
 
-  // Track if initial fit has been performed
+  // Track if initial fit has been performed (per-device-type)
   const initialFitDoneRef = useRef(false);
+  const lastIsMobileRef = useRef<boolean | null>(null);
+
+  // Reset fit tracking when switching between mobile/desktop
+  if (lastIsMobileRef.current !== null && lastIsMobileRef.current !== isMobile) {
+    initialFitDoneRef.current = false;
+  }
+  lastIsMobileRef.current = isMobile;
 
   // Store setViewport in a ref to avoid dependency issues
   const setViewportRef = useRef(gestures.setViewport);
   setViewportRef.current = gestures.setViewport;
 
-  // CRITICAL: Force canvas visibility on mobile after mount
-  // This runs immediately after first render to ensure canvas is visible
+  // Auto-fit canvas to view on mobile (runs once after container is measured)
   useEffect(() => {
+    // Only run on mobile devices
     if (!isMobile) return;
+    // Skip if already fitted
+    if (initialFitDoneRef.current) return;
 
-    // Force immediate canvas sizing and positioning
-    const forceCanvasVisibility = () => {
-      const container = containerRef.current;
-      if (!container) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Use the canvas size from the hook (which uses effectiveWidth/Height)
+    const canvasWidth = dragResizeHook.canvasSize.width;
+    const canvasHeight = dragResizeHook.canvasSize.height;
+
+    // Skip if canvas size isn't initialized yet
+    if (canvasWidth < 100 || canvasHeight < 100) return;
+
+    let retryCount = 0;
+    const maxRetries = 10;
+    let cancelled = false;
+    let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+    let pendingRaf: number | null = null;
+
+    // Wait for container to have valid dimensions
+    const attemptFit = (): boolean => {
+      if (cancelled) return true; // Pretend success to stop retries
 
       const rect = container.getBoundingClientRect();
-      // Only proceed if container has valid dimensions
-      if (rect.width <= 0 || rect.height <= 0) {
-        // Retry after paint
-        requestAnimationFrame(forceCanvasVisibility);
+
+      // Use container dimensions if valid, otherwise fallback to window dimensions
+      // minus estimated toolbar/header heights
+      let containerWidth = rect.width;
+      let containerHeight = rect.height;
+
+      // Fallback to window dimensions if container not measured
+      if (containerWidth < 100 || containerHeight < 100) {
+        containerWidth = window.innerWidth;
+        containerHeight = window.innerHeight - 150; // Subtract header/toolbar estimate
+      }
+
+      // Still invalid? Try again later
+      if (containerWidth < 100 || containerHeight < 100) {
+        return false;
+      }
+
+      // Calculate fit: scale canvas to fit container with padding
+      const padding = 16;
+      const availableWidth = containerWidth - padding * 2;
+      const availableHeight = containerHeight - padding * 2;
+
+      // Calculate zoom to fit canvas in container
+      const scaleX = availableWidth / canvasWidth;
+      const scaleY = availableHeight / canvasHeight;
+      const zoom = Math.min(scaleX, scaleY, 1); // Don't zoom beyond 100%
+
+      // Calculate pan to center canvas
+      const scaledWidth = canvasWidth * zoom;
+      const scaledHeight = canvasHeight * zoom;
+      const panX = (containerWidth - scaledWidth) / 2;
+      const panY = (containerHeight - scaledHeight) / 2;
+
+      setViewportRef.current({ zoom, panX, panY });
+      initialFitDoneRef.current = true;
+      return true;
+    };
+
+    // Retry loop with increasing delays
+    const scheduleRetry = () => {
+      if (cancelled) return;
+
+      if (retryCount >= maxRetries) {
+        // Last resort: just center with zoom 1
+        const fallbackPanX = Math.max(0, (window.innerWidth - canvasWidth) / 2);
+        const fallbackPanY = Math.max(0, (window.innerHeight - 150 - canvasHeight) / 2);
+        setViewportRef.current({ zoom: 1, panX: fallbackPanX, panY: fallbackPanY });
+        initialFitDoneRef.current = true;
         return;
       }
 
-      // Update canvas size to match device dimensions
-      const deviceWidth = Math.min(rect.width, window.innerWidth);
-      const deviceHeight = Math.min(rect.height, window.innerHeight - 64); // minus toolbar
+      retryCount++;
+      const delay = retryCount * 50; // 50ms, 100ms, 150ms, etc.
 
-      // Initialize canvas size if it's still at default (1920x1080)
-      if (dragResizeHook.canvasSize.width > 1000) {
-        dragResizeHook.initCanvasSize(deviceWidth, deviceHeight);
-      }
-
-      // Set viewport to show canvas centered at zoom=1
-      if (!initialFitDoneRef.current) {
-        setViewportRef.current({
-          zoom: 1,
-          panX: Math.max(0, (rect.width - deviceWidth) / 2),
-          panY: Math.max(0, (rect.height - deviceHeight) / 2),
-        });
-        initialFitDoneRef.current = true;
-      }
-    };
-
-    // Run immediately and also after a short delay to catch late measurements
-    forceCanvasVisibility();
-    const timer = setTimeout(forceCanvasVisibility, 100);
-
-    return () => clearTimeout(timer);
-  }, [isMobile, dragResizeHook]);
-
-  // Auto-fit canvas on mobile viewport (initial load) - uses measured container dimensions
-  useEffect(() => {
-    // Skip if not mobile, container not measured, or already fitted
-    if (!isMobile || !containerDimensions.measured || initialFitDoneRef.current) return;
-
-    // Container is properly measured, fit the canvas
-    const containerSize = {
-      width: containerDimensions.width,
-      height: containerDimensions.height,
-    };
-
-    // For mobile devices where canvas matches screen, use zoom=1 and center
-    if (Math.abs(effectiveWidth - containerSize.width) < 50) {
-      // Canvas is approximately screen-sized, just center it
-      setViewportRef.current({
-        zoom: 1,
-        panX: (containerSize.width - effectiveWidth) / 2,
-        panY: (containerSize.height - effectiveHeight) / 2,
+      pendingRaf = requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (!attemptFit()) {
+          pendingTimeout = setTimeout(scheduleRetry, delay);
+        }
       });
-    } else {
-      // Canvas is different size, fit to view
-      const newViewport = fitCanvasToView(
-        effectiveWidth,
-        effectiveHeight,
-        containerSize,
-        isMobile ? 16 : 40 // Less padding on mobile
-      );
-      setViewportRef.current(newViewport);
+    };
+
+    // Try immediately
+    if (!attemptFit()) {
+      scheduleRetry();
     }
 
-    initialFitDoneRef.current = true;
-  }, [isMobile, containerDimensions.measured, containerDimensions.width, containerDimensions.height, effectiveWidth, effectiveHeight]);
+    // Cleanup on unmount
+    return () => {
+      cancelled = true;
+      if (pendingTimeout) clearTimeout(pendingTimeout);
+      if (pendingRaf) cancelAnimationFrame(pendingRaf);
+    };
+  }, [isMobile, dragResizeHook.canvasSize.width, dragResizeHook.canvasSize.height]);
 
   // Sticker hook
   const stickerHook = useMainCanvasStickers({

@@ -964,6 +964,15 @@ export const landingAnimationsCSS = `
       margin: 0 !important;
       border-radius: 0 !important;
       position: relative !important;
+      min-height: 300px !important;
+      height: 100% !important;
+    }
+
+    /* Ensure canvas2 (MainCanvas) fills its container */
+    .canvas2 {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 300px !important;
     }
 
     /* Hide canvas controls on mobile landing page - header has controls */
