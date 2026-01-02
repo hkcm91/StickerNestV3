@@ -339,12 +339,16 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
   }, [effectiveWidth, effectiveHeight, viewportMode]);
 
   // Track if initial fit has been performed
-  const [initialFitDone, setInitialFitDone] = useState(false);
+  const initialFitDoneRef = useRef(false);
+
+  // Store setViewport in a ref to avoid dependency issues
+  const setViewportRef = useRef(gestures.setViewport);
+  setViewportRef.current = gestures.setViewport;
 
   // Auto-fit canvas on mobile viewport (initial load) - uses measured container dimensions
   useEffect(() => {
     // Skip if not mobile, container not measured, or already fitted
-    if (!isMobile || !containerDimensions.measured || initialFitDone) return;
+    if (!isMobile || !containerDimensions.measured || initialFitDoneRef.current) return;
 
     // Container is properly measured, fit the canvas
     const containerSize = {
@@ -355,7 +359,7 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     // For mobile devices where canvas matches screen, use zoom=1 and center
     if (Math.abs(effectiveWidth - containerSize.width) < 50) {
       // Canvas is approximately screen-sized, just center it
-      gestures.setViewport({
+      setViewportRef.current({
         zoom: 1,
         panX: (containerSize.width - effectiveWidth) / 2,
         panY: (containerSize.height - effectiveHeight) / 2,
@@ -368,11 +372,11 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
         containerSize,
         isMobile ? 16 : 40 // Less padding on mobile
       );
-      gestures.setViewport(newViewport);
+      setViewportRef.current(newViewport);
     }
 
-    setInitialFitDone(true);
-  }, [isMobile, containerDimensions.measured, containerDimensions.width, containerDimensions.height, initialFitDone, effectiveWidth, effectiveHeight, gestures]);
+    initialFitDoneRef.current = true;
+  }, [isMobile, containerDimensions.measured, containerDimensions.width, containerDimensions.height, effectiveWidth, effectiveHeight]);
 
   // Sticker hook
   const stickerHook = useMainCanvasStickers({
@@ -427,7 +431,7 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
 
     // For mobile devices with screen-sized canvas, just center
     if (isMobile && Math.abs(effectiveWidth - containerSize.width) < 50) {
-      gestures.setViewport({
+      setViewportRef.current({
         zoom: 1,
         panX: (containerSize.width - effectiveWidth) / 2,
         panY: (containerSize.height - effectiveHeight) / 2,
@@ -440,9 +444,9 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
         containerSize,
         isMobile ? 16 : 40
       );
-      gestures.setViewport(newViewport);
+      setViewportRef.current(newViewport);
     }
-  }, [viewportMode, containerDimensions.measured, containerDimensions.width, containerDimensions.height, effectiveWidth, effectiveHeight, isMobile, gestures]);
+  }, [viewportMode, containerDimensions.measured, containerDimensions.width, containerDimensions.height, effectiveWidth, effectiveHeight, isMobile]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {

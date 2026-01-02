@@ -11,6 +11,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useEffect, useRef } from 'react';
 
 // ============================================================================
 // CONSTANTS
@@ -246,15 +247,20 @@ export function useDeviceInitialized(): boolean {
  */
 export function useInitializeViewportForDevice(): void {
   const initializeForDevice = useViewportModeStore((state) => state.initializeForDevice);
-  const deviceInitialized = useViewportModeStore((state) => state.deviceInitialized);
+  const hasInitialized = useRef(false);
 
-  // Run initialization once on mount
-  if (!deviceInitialized && typeof window !== 'undefined') {
-    // Use setTimeout to avoid SSR issues and ensure DOM is ready
-    setTimeout(() => {
+  useEffect(() => {
+    // Only run once per component mount
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    // Small delay to ensure DOM is ready and safe areas are computed
+    const timer = setTimeout(() => {
       initializeForDevice();
-    }, 0);
-  }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [initializeForDevice]);
 }
 
 // Re-export helpers for external use
