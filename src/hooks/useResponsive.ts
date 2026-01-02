@@ -66,18 +66,18 @@ export function useViewport(): ViewportSize {
 }
 
 function getViewportSize(): ViewportSize {
-  // Handle SSR - default to mobile dimensions to ensure canvas visibility
-  // This is better than defaulting to desktop (1024x768) which causes canvas to be off-screen
+  // SSR fallback - use desktop dimensions
+  // The actual dimensions will be set on client-side mount
   if (typeof window === 'undefined') {
     return {
-      width: 390,
-      height: 844,
-      breakpoint: 'sm',
-      isMobile: true,
+      width: 1024,
+      height: 768,
+      breakpoint: 'lg',
+      isMobile: false,
       isTablet: false,
-      isDesktop: false,
-      isLandscape: false,
-      isPortrait: true,
+      isDesktop: true,
+      isLandscape: true,
+      isPortrait: false,
     };
   }
 
