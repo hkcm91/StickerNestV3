@@ -362,24 +362,45 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
     const container = containerRef.current;
     if (!container) return;
 
+    // Use the canvas size from the hook (which uses effectiveWidth/Height)
+    const canvasWidth = dragResizeHook.canvasSize.width;
+    const canvasHeight = dragResizeHook.canvasSize.height;
+
+    // Skip if canvas size isn't initialized yet
+    if (canvasWidth < 100 || canvasHeight < 100) return;
+
+    let retryCount = 0;
+    const maxRetries = 10;
+    let cancelled = false;
+    let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+    let pendingRaf: number | null = null;
+
     // Wait for container to have valid dimensions
-    const attemptFit = () => {
+    const attemptFit = (): boolean => {
+      if (cancelled) return true; // Pretend success to stop retries
+
       const rect = container.getBoundingClientRect();
 
-      // Container must have reasonable dimensions
-      if (rect.width < 100 || rect.height < 100) {
-        // Container not ready, retry
+      // Use container dimensions if valid, otherwise fallback to window dimensions
+      // minus estimated toolbar/header heights
+      let containerWidth = rect.width;
+      let containerHeight = rect.height;
+
+      // Fallback to window dimensions if container not measured
+      if (containerWidth < 100 || containerHeight < 100) {
+        containerWidth = window.innerWidth;
+        containerHeight = window.innerHeight - 150; // Subtract header/toolbar estimate
+      }
+
+      // Still invalid? Try again later
+      if (containerWidth < 100 || containerHeight < 100) {
         return false;
       }
 
       // Calculate fit: scale canvas to fit container with padding
       const padding = 16;
-      const availableWidth = rect.width - padding * 2;
-      const availableHeight = rect.height - padding * 2;
-
-      // Use the canvas size from the hook (which uses effectiveWidth/Height)
-      const canvasWidth = dragResizeHook.canvasSize.width;
-      const canvasHeight = dragResizeHook.canvasSize.height;
+      const availableWidth = containerWidth - padding * 2;
+      const availableHeight = containerHeight - padding * 2;
 
       // Calculate zoom to fit canvas in container
       const scaleX = availableWidth / canvasWidth;
@@ -389,25 +410,49 @@ export const MainCanvas = memo(forwardRef<MainCanvasRef, MainCanvasProps>(functi
       // Calculate pan to center canvas
       const scaledWidth = canvasWidth * zoom;
       const scaledHeight = canvasHeight * zoom;
-      const panX = (rect.width - scaledWidth) / 2;
-      const panY = (rect.height - scaledHeight) / 2;
+      const panX = (containerWidth - scaledWidth) / 2;
+      const panY = (containerHeight - scaledHeight) / 2;
 
       setViewportRef.current({ zoom, panX, panY });
       initialFitDoneRef.current = true;
       return true;
     };
 
-    // Try immediately
-    if (!attemptFit()) {
-      // Retry after layout settles
-      const timer1 = requestAnimationFrame(() => {
+    // Retry loop with increasing delays
+    const scheduleRetry = () => {
+      if (cancelled) return;
+
+      if (retryCount >= maxRetries) {
+        // Last resort: just center with zoom 1
+        const fallbackPanX = Math.max(0, (window.innerWidth - canvasWidth) / 2);
+        const fallbackPanY = Math.max(0, (window.innerHeight - 150 - canvasHeight) / 2);
+        setViewportRef.current({ zoom: 1, panX: fallbackPanX, panY: fallbackPanY });
+        initialFitDoneRef.current = true;
+        return;
+      }
+
+      retryCount++;
+      const delay = retryCount * 50; // 50ms, 100ms, 150ms, etc.
+
+      pendingRaf = requestAnimationFrame(() => {
+        if (cancelled) return;
         if (!attemptFit()) {
-          // Final retry after a delay
-          setTimeout(attemptFit, 150);
+          pendingTimeout = setTimeout(scheduleRetry, delay);
         }
       });
-      return () => cancelAnimationFrame(timer1);
+    };
+
+    // Try immediately
+    if (!attemptFit()) {
+      scheduleRetry();
     }
+
+    // Cleanup on unmount
+    return () => {
+      cancelled = true;
+      if (pendingTimeout) clearTimeout(pendingTimeout);
+      if (pendingRaf) cancelAnimationFrame(pendingRaf);
+    };
   }, [isMobile, dragResizeHook.canvasSize.width, dragResizeHook.canvasSize.height]);
 
   // Sticker hook
