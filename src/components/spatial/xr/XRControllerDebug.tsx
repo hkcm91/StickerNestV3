@@ -10,6 +10,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useXR, useXRInputSourceState } from '@react-three/xr';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
+import { vrLog } from './VRDebugPanel';
 
 interface XRControllerDebugProps {
   /** Show debug text overlay */
@@ -114,11 +115,13 @@ function FallbackControllerRay({
         // Dispatch pointerleave on old object
         const leaveEvent = createR3FEvent('pointerleave', null);
         (lastHitRef.current as any).__r3f?.handlers?.onPointerLeave?.(leaveEvent);
+        vrLog(`[XR] Pointer leave: ${lastHitRef.current.name || 'unnamed'}`);
       }
       if (hitObject) {
         // Dispatch pointerenter on new object
         const enterEvent = createR3FEvent('pointerenter', intersection);
         (hitObject as any).__r3f?.handlers?.onPointerEnter?.(enterEvent);
+        vrLog(`[XR] Pointer enter: ${hitObject.name || 'unnamed'}`);
       }
       lastHitRef.current = hitObject;
     }
@@ -128,6 +131,7 @@ function FallbackControllerRay({
       // Trigger just pressed - dispatch pointerdown
       const downEvent = createR3FEvent('pointerdown', intersection);
       (hitObject as any).__r3f?.handlers?.onPointerDown?.(downEvent);
+      vrLog(`[XR] Pointer down: ${hitObject.name || 'unnamed'}`);
     } else if (!isSelecting && wasSelectingRef.current && hitObject) {
       // Trigger just released - dispatch pointerup and click
       const upEvent = createR3FEvent('pointerup', intersection);
@@ -135,6 +139,7 @@ function FallbackControllerRay({
 
       const clickEvent = createR3FEvent('click', intersection);
       (hitObject as any).__r3f?.handlers?.onClick?.(clickEvent);
+      vrLog(`[XR] CLICK: ${hitObject.name || 'unnamed'}`);
     }
 
     wasSelectingRef.current = isSelecting;

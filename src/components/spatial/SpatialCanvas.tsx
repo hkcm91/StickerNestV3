@@ -926,11 +926,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               <XROrigin />
             </XRErrorBoundary>
 
-            {/* XR Controller Debug - shows controller state and fallback rays */}
-            {/* This provides visible rays even if DefaultXRController rays don't show */}
+            {/* XR Controller Debug - shows controller state and diagnostic info */}
+            {/* Fallback rays DISABLED: Let DefaultXRController handle ray rendering */}
+            {/* DefaultXRController (from controller: true in xrStore) provides: */}
+            {/*   - Controller model, Ray pointer, Grab pointer, Cursor */}
+            {/* Enable showFallbackRays only for debugging if default rays don't work */}
             <XRControllerDebug
               showDebugText={false}
-              showFallbackRays={true}
+              showFallbackRays={false}
               rayColor="#8b5cf6"
               rayLength={10}
             />

@@ -83,7 +83,8 @@
       "Bash(head:*)",
       "Skill(building-skills)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(timeout 120 npm run build:*)"
+      "Bash(timeout 120 npm run build:*)",
+      "WebFetch(domain:pmndrs.github.io)"
     ],
     "deny": [],
     "ask": []

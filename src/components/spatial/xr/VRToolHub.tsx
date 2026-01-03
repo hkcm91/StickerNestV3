@@ -306,6 +306,7 @@ function Button3D({
         onPointerUp={handlePointerUp}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
+        pointerEventsType="all"
       >
         <cylinderGeometry args={[size / 2, size / 2, depth, 24]} />
         <animated.meshStandardMaterial
@@ -449,6 +450,7 @@ function ActionButton3D({
           setHovered(false);
           setPressed(false);
         }}
+        pointerEventsType="all"
       >
         <RoundedBox args={[size, size, depth]} radius={0.005} smoothness={4}>
           <animated.meshStandardMaterial
@@ -538,6 +540,7 @@ function CurveSlider({ value, onChange, position, accentColor }: CurveSliderProp
         onPointerUp={handlePointerUp}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerUp}
+        pointerEventsType="all"
       >
         <RoundedBox args={[trackWidth, trackHeight, 0.006]} radius={0.003} smoothness={4}>
           <meshStandardMaterial color="#1a1a25" metalness={0.5} roughness={0.6} />
@@ -566,6 +569,7 @@ function CurveSlider({ value, onChange, position, accentColor }: CurveSliderProp
         position={[knobX, 0, 0.008]}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        pointerEventsType="all"
       >
         <sphereGeometry args={[knobSize / 2, 16, 16]} />
         <meshStandardMaterial

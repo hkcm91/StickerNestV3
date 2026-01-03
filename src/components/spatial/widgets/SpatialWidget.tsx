@@ -200,6 +200,7 @@ export function SpatialWidget({
   // Interaction handlers
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    console.log('[SpatialWidget] CLICK:', widget.id, widget.name);
     onClick?.(widget);
   }, [onClick, widget]);
 
@@ -246,13 +247,22 @@ export function SpatialWidget({
   return (
     <group ref={groupRef} position={position3D} rotation={rotation3D}>
       {/* Main widget panel */}
+      {/* CRITICAL: pointerEventsType="all" is required for @react-three/xr v6 */}
+      {/* Without it, ray pointer events from controllers won't reach this mesh */}
       <mesh
         ref={meshRef}
         onClick={handleClick}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
+        onPointerEnter={() => {
+          setHovered(true);
+          console.log('[SpatialWidget] Pointer ENTER:', widget.id, widget.name);
+        }}
+        onPointerLeave={() => {
+          setHovered(false);
+          console.log('[SpatialWidget] Pointer LEAVE:', widget.id);
+        }}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        pointerEventsType="all"
       >
         <planeGeometry args={[size3D.width, size3D.height]} />
         <meshStandardMaterial

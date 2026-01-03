@@ -293,7 +293,7 @@ export function FloatingPanel({
   return (
     <group ref={groupRef}>
       {/* Panel background mesh */}
-      <mesh>
+      <mesh pointerEventsType="all">
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial
           color={backgroundColor}
