@@ -34,6 +34,7 @@ import {
   RoomVisualizer,
   OcclusionLayer,
   RoomSetupGuide,
+  VRDebugPanel,
 } from './xr';
 import { SpatialStickerManager } from './stickers';
 import { SpatialWidgetContainer } from './widgets';
@@ -648,6 +649,9 @@ export function SpatialScene() {
           onSettings={handleSettings}
         />
       )}
+
+      {/* VR Debug Panel - shows console logs in VR */}
+      <VRDebugPanel enabled={true} position={[-1.5, 1.6, -1.5]} />
 
       {/* XR Widget Library (all 3D modes - VR, AR, and desktop preview) */}
       <XRWidgetLibrary

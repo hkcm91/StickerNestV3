@@ -497,6 +497,8 @@ export function VRWidgetTexture({
     if (captureAttempted) return;
     setCaptureAttempted(true);
 
+    console.log('[VRWidget] Creating texture for:', widgetDefIdRef.current);
+
     // Create a simple canvas with widget info instead of html2canvas
     // This is stable and won't cause re-render loops
     const canvas = document.createElement('canvas');

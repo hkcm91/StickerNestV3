@@ -50,3 +50,7 @@ export type { OcclusionLayerProps, ARSceneWithOcclusionProps } from './Occlusion
 
 export { RoomSetupGuide, RoomSetupHint } from './RoomSetupGuide';
 export type { RoomSetupGuideProps, RoomSetupHintProps } from './RoomSetupGuide';
+
+// Debug panel
+export { VRDebugPanel, vrLog, vrWarn, vrError } from './VRDebugPanel';
+export type { } from './VRDebugPanel';
