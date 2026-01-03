@@ -24,6 +24,26 @@ interface XRControllerDebugProps {
 }
 
 /**
+ * Find R3F handlers on an object or its ancestors
+ * R3F attaches handlers to __r3f.handlers on the mesh or parent groups
+ */
+function findR3FHandlers(object: THREE.Object3D | null): Record<string, Function> | null {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    const r3f = (current as any).__r3f;
+    if (r3f?.handlers && Object.keys(r3f.handlers).length > 0) {
+      return r3f.handlers;
+    }
+    // Also check for eventObject pattern used by some R3F versions
+    if (r3f?.eventCount > 0 && r3f?.handlers) {
+      return r3f.handlers;
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
+/**
  * Fallback ray visualization for a single controller
  * This also dispatches pointer events when the trigger is pressed
  */
@@ -42,6 +62,7 @@ function FallbackControllerRay({
   const hitPointRef = useRef<THREE.Mesh>(null);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const lastHitRef = useRef<THREE.Object3D | null>(null);
+  const lastHandlersRef = useRef<Record<string, Function> | null>(null);
   const wasSelectingRef = useRef(false);
 
   // Check if trigger is pressed
@@ -125,37 +146,49 @@ function FallbackControllerRay({
 
     const intersection = interactiveIntersect || null;
 
+    // Find handlers for the hit object (searches ancestors too)
+    const handlers = hitObject ? findR3FHandlers(hitObject) : null;
+
     // Handle pointer enter/leave
     if (hitObject !== lastHitRef.current) {
-      if (lastHitRef.current) {
-        // Dispatch pointerleave on old object
+      // Dispatch pointerleave on old object
+      if (lastHitRef.current && lastHandlersRef.current) {
         const leaveEvent = createR3FEvent('pointerleave', null);
-        (lastHitRef.current as any).__r3f?.handlers?.onPointerLeave?.(leaveEvent);
+        lastHandlersRef.current.onPointerLeave?.(leaveEvent);
         vrLog(`[XR] Pointer leave: ${lastHitRef.current.name || 'unnamed'}`);
       }
-      if (hitObject) {
-        // Dispatch pointerenter on new object
+      // Dispatch pointerenter on new object
+      if (hitObject && handlers) {
         const enterEvent = createR3FEvent('pointerenter', intersection);
-        (hitObject as any).__r3f?.handlers?.onPointerEnter?.(enterEvent);
-        vrLog(`[XR] Pointer enter: ${hitObject.name || 'unnamed'}`);
+        handlers.onPointerEnter?.(enterEvent);
+        vrLog(`[XR] Pointer enter: ${hitObject.name || 'unnamed'} (handlers: ${Object.keys(handlers).join(', ')})`);
+      } else if (hitObject) {
+        vrLog(`[XR] Pointer enter: ${hitObject.name || 'unnamed'} (NO HANDLERS FOUND)`);
       }
       lastHitRef.current = hitObject;
+      lastHandlersRef.current = handlers;
     }
 
     // Handle select (trigger press)
-    if (isSelecting && !wasSelectingRef.current && hitObject) {
+    if (isSelecting && !wasSelectingRef.current && hitObject && handlers) {
       // Trigger just pressed - dispatch pointerdown
       const downEvent = createR3FEvent('pointerdown', intersection);
-      (hitObject as any).__r3f?.handlers?.onPointerDown?.(downEvent);
+      handlers.onPointerDown?.(downEvent);
       vrLog(`[XR] Pointer down: ${hitObject.name || 'unnamed'}`);
-    } else if (!isSelecting && wasSelectingRef.current && hitObject) {
+    } else if (!isSelecting && wasSelectingRef.current && hitObject && handlers) {
       // Trigger just released - dispatch pointerup and click
       const upEvent = createR3FEvent('pointerup', intersection);
-      (hitObject as any).__r3f?.handlers?.onPointerUp?.(upEvent);
+      handlers.onPointerUp?.(upEvent);
 
       const clickEvent = createR3FEvent('click', intersection);
-      (hitObject as any).__r3f?.handlers?.onClick?.(clickEvent);
-      vrLog(`[XR] CLICK: ${hitObject.name || 'unnamed'}`);
+      if (handlers.onClick) {
+        handlers.onClick(clickEvent);
+        vrLog(`[XR] CLICK SUCCESS: ${hitObject.name || 'unnamed'}`);
+      } else {
+        vrLog(`[XR] CLICK (no onClick handler): ${hitObject.name || 'unnamed'}`);
+      }
+    } else if (!isSelecting && wasSelectingRef.current && hitObject && !handlers) {
+      vrLog(`[XR] CLICK FAILED - no handlers found for: ${hitObject.name || 'unnamed'}`);
     }
 
     wasSelectingRef.current = isSelecting;

@@ -301,6 +301,7 @@ function Button3D({
 
       {/* The actual button */}
       <animated.mesh
+        name={`vr-button-${label?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}`}
         position-z={pressZ}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
@@ -435,6 +436,7 @@ function ActionButton3D({
     <group position={curvedPosition} rotation={curvedRotation}>
       {/* Button body */}
       <animated.mesh
+        name={`vr-action-${tooltip?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}`}
         position-z={pressZ}
         onPointerDown={(e) => {
           e.stopPropagation();
