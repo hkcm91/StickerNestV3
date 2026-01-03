@@ -27,6 +27,7 @@ import * as THREE from 'three';
 import { initializeBVH, isBVHInitialized } from '../../utils/bvhSetup';
 import { AmbientEnvironment } from './AmbientEnvironment';
 import { VRBackground } from './VRBackground';
+import { XRControllerDebug } from './xr/XRControllerDebug';
 
 // ============================================================================
 // XR Error Boundary - Catches XR-related errors without crashing the app
@@ -924,6 +925,15 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
             <XRErrorBoundary>
               <XROrigin />
             </XRErrorBoundary>
+
+            {/* XR Controller Debug - shows controller state and fallback rays */}
+            {/* This provides visible rays even if DefaultXRController rays don't show */}
+            <XRControllerDebug
+              showDebugText={false}
+              showFallbackRays={true}
+              rayColor="#8b5cf6"
+              rayLength={10}
+            />
 
             {/* 360 Grid Environment - DISABLED: Too disorienting in VR/AR */}
             {/* Keeping only floor grid for spatial reference */}

@@ -17,65 +17,39 @@ import { createXRStore } from '@react-three/xr';
  *
  * Without proper reference space, the scene will be HEAD-LOCKED (moves with headset).
  *
- * NOTE: AR passthrough works automatically when:
- * 1. Session mode is 'immersive-ar' (handled by enterAR())
- * 2. WebGL context has alpha: true (set in SpatialCanvas)
- * 3. Scene has no opaque background (GridEnvironment360 hides in AR)
+ * CONTROLLER INTERACTION (@react-three/xr v6):
+ * - Setting controller/hand to `true` uses DefaultXRController/DefaultXRHand
+ * - DefaultXRController renders: model + grabPointer + rayPointer (with visible ray!)
+ * - DefaultXRHand renders: model + grabPointer + touchPointer + rayPointer
+ * - The ray pointer emits standard R3F pointer events (onClick, onPointerDown, etc.)
  *
  * QUEST 3 COMPATIBILITY:
  * - Quest 3 browser reports both VR and AR as supported
  * - VR mode works reliably with most features enabled
  * - AR passthrough can be unstable with too many features - keep it minimal
- * - Hand tracking + AR passthrough together can cause performance issues
  */
 export const xrStore = createXRStore({
   // CRITICAL: Reference space determines world-space vs head-locked rendering
-  // 'local-floor' places the origin at floor level and tracks position in world space
-  // This is what allows you to look around and have the scene stay stationary
   referenceSpace: 'local-floor',
 
-  // Controller configuration - enable both ray pointer for selection and grab pointer
-  // The ray pointer enables standard onPointer* events to fire from controller rays
-  controller: {
-    left: {
-      rayPointer: true,  // Enable ray casting for pointer events
-      grabPointer: true, // Enable squeeze/grab interactions
-      model: true,       // Show controller model
-    },
-    right: {
-      rayPointer: true,
-      grabPointer: true,
-      model: true,
-    },
-  },
-  // Hand tracking - enable touch and ray pointers
-  // Note: Can be resource-intensive with AR passthrough on Quest 3
-  hand: {
-    left: {
-      rayPointer: true,
-      touchPointer: true,  // Enable finger tip touch interactions
-      grabPointer: true,
-      model: true,
-    },
-    right: {
-      rayPointer: true,
-      touchPointer: true,
-      grabPointer: true,
-      model: true,
-    },
-  },
+  // Controller configuration - use `true` to get DefaultXRController with all features
+  // DefaultXRController includes: model + visible ray + grab pointer + cursor
+  controller: true,
+
+  // Hand tracking configuration - use `true` to get DefaultXRHand with all features
+  // DefaultXRHand includes: model + visible ray + touch pointer + grab pointer
+  hand: true,
+
   // Performance settings
-  // Use 'default' instead of 'high' for better AR stability on Quest 3
   frameRate: 'default',
   foveation: 1,
-  // Core features - be conservative for Quest 3 AR compatibility
-  // Hand tracking: Enable for VR, but AR sessions request this separately
+
+  // Core features
   handTracking: true,
-  // Hit test: Essential for AR placement, but can be unstable - request as optional
-  hitTest: false,  // Changed to false - request explicitly when needed
-  // Anchors: Useful but not required for basic AR
-  anchors: false,  // Changed to false - request explicitly when needed
-  // Optional features - keep disabled to avoid session request failures
+
+  // AR features - disabled by default for stability
+  hitTest: false,
+  anchors: false,
   planeDetection: false,
   meshDetection: false,
   depthSensing: false,
