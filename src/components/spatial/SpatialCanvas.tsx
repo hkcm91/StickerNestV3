@@ -417,6 +417,328 @@ function TeleportFloor({ onTeleport }: { onTeleport: (point: THREE.Vector3) => v
 }
 
 // ============================================================================
+// Grabbable Object System - Pick up, hold, and throw objects in VR
+// ============================================================================
+
+interface GrabbableObjectProps {
+  initialPosition: [number, number, number];
+  color: string;
+  size?: number;
+  shape?: 'box' | 'sphere';
+  label?: string;
+  mass?: number; // Affects throw distance
+}
+
+/**
+ * Grabbable object that can be picked up with grip, held, and thrown.
+ * Supports both near grab (touching) and far grab (pointing + grip).
+ * Velocity is tracked for realistic throwing.
+ */
+function GrabbableObject({
+  initialPosition,
+  color,
+  size = 0.15,
+  shape = 'box',
+  label,
+  mass = 1,
+}: GrabbableObjectProps) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
+
+  // Object state
+  const [position, setPosition] = useState<THREE.Vector3>(() => new THREE.Vector3(...initialPosition));
+  const [isGrabbed, setIsGrabbed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [grabbingController, setGrabbingController] = useState<'left' | 'right' | null>(null);
+
+  // Velocity tracking for throwing
+  const velocityRef = useRef(new THREE.Vector3());
+  const lastPositionRef = useRef(new THREE.Vector3(...initialPosition));
+  const positionHistoryRef = useRef<THREE.Vector3[]>([]);
+
+  // Physics state for thrown objects
+  const [isFlying, setIsFlying] = useState(false);
+  const flyingVelocityRef = useRef(new THREE.Vector3());
+
+  // Grab offset (where on the object the controller grabbed it)
+  const grabOffsetRef = useRef(new THREE.Vector3());
+
+  // Get controller states from XR
+  const session = useXR((state) => state.session);
+
+  // Handle pointer down (start grab) - works for both near and far
+  const handlePointerDown = useCallback((e: any) => {
+    e.stopPropagation();
+
+    // Determine which controller is grabbing based on the event
+    const inputSource = e.nativeEvent?.inputSource;
+    const handedness = inputSource?.handedness || 'right';
+
+    console.log(`[GrabbableObject] ${label} GRABBED by ${handedness} controller`);
+
+    setIsGrabbed(true);
+    setGrabbingController(handedness as 'left' | 'right');
+    setIsFlying(false);
+
+    // Calculate grab offset (difference between controller and object position)
+    if (meshRef.current && e.point) {
+      grabOffsetRef.current.copy(position).sub(e.point);
+    }
+
+    // Reset velocity tracking
+    positionHistoryRef.current = [];
+    velocityRef.current.set(0, 0, 0);
+  }, [position, label]);
+
+  // Handle pointer up (release and potentially throw)
+  const handlePointerUp = useCallback((e: any) => {
+    if (!isGrabbed) return;
+    e.stopPropagation();
+
+    console.log(`[GrabbableObject] ${label} RELEASED with velocity:`, velocityRef.current.toArray());
+
+    setIsGrabbed(false);
+    setGrabbingController(null);
+
+    // Apply throw velocity if significant
+    const speed = velocityRef.current.length();
+    if (speed > 0.5) {
+      console.log(`[GrabbableObject] ${label} THROWN with speed:`, speed);
+      flyingVelocityRef.current.copy(velocityRef.current);
+      setIsFlying(true);
+    }
+  }, [isGrabbed, label]);
+
+  // Update position while grabbed and handle flying physics
+  useFrame((state, delta) => {
+    if (!meshRef.current) return;
+
+    if (isGrabbed) {
+      // Get the controller that's grabbing
+      const controllers = state.gl.xr.getSession()?.inputSources;
+      if (controllers) {
+        for (const controller of controllers) {
+          if (controller.handedness === grabbingController && controller.gripSpace) {
+            // Get controller world position
+            const referenceSpace = state.gl.xr.getReferenceSpace();
+            if (referenceSpace) {
+              const frame = state.gl.xr.getFrame();
+              const pose = frame?.getPose(controller.gripSpace, referenceSpace);
+              if (pose) {
+                const newPos = new THREE.Vector3(
+                  pose.transform.position.x,
+                  pose.transform.position.y,
+                  pose.transform.position.z
+                );
+
+                // Add grab offset for more natural holding
+                newPos.add(grabOffsetRef.current);
+
+                // Track position history for velocity calculation
+                positionHistoryRef.current.push(newPos.clone());
+                if (positionHistoryRef.current.length > 5) {
+                  positionHistoryRef.current.shift();
+                }
+
+                // Calculate velocity from position history
+                if (positionHistoryRef.current.length >= 2) {
+                  const oldest = positionHistoryRef.current[0];
+                  const newest = positionHistoryRef.current[positionHistoryRef.current.length - 1];
+                  const timeSpan = (positionHistoryRef.current.length - 1) * delta;
+                  if (timeSpan > 0) {
+                    velocityRef.current.subVectors(newest, oldest).divideScalar(timeSpan);
+                    // Amplify velocity for more satisfying throws
+                    velocityRef.current.multiplyScalar(2.5 / mass);
+                  }
+                }
+
+                setPosition(newPos.clone());
+              }
+            }
+          }
+        }
+      }
+    } else if (isFlying) {
+      // Apply physics while flying
+      const gravity = -9.8 * delta;
+      flyingVelocityRef.current.y += gravity;
+
+      // Apply drag
+      flyingVelocityRef.current.multiplyScalar(0.99);
+
+      // Update position
+      const newPos = position.clone().add(
+        flyingVelocityRef.current.clone().multiplyScalar(delta)
+      );
+
+      // Floor collision
+      if (newPos.y < size / 2) {
+        newPos.y = size / 2;
+        flyingVelocityRef.current.y *= -0.5; // Bounce with energy loss
+
+        // Stop if moving slowly
+        if (Math.abs(flyingVelocityRef.current.y) < 0.2) {
+          flyingVelocityRef.current.y = 0;
+        }
+
+        // Friction on ground
+        flyingVelocityRef.current.x *= 0.9;
+        flyingVelocityRef.current.z *= 0.9;
+      }
+
+      // Stop flying if very slow
+      if (flyingVelocityRef.current.length() < 0.05 && newPos.y <= size / 2 + 0.01) {
+        setIsFlying(false);
+        flyingVelocityRef.current.set(0, 0, 0);
+      }
+
+      setPosition(newPos);
+    }
+  });
+
+  // Visual feedback colors
+  const currentColor = isGrabbed ? '#22c55e' : isHovered ? '#fbbf24' : color;
+  const emissiveColor = isGrabbed ? '#166534' : isHovered ? '#92400e' : '#000000';
+  const scale = isGrabbed ? 1.15 : isHovered ? 1.08 : 1;
+
+  return (
+    <group ref={groupRef} position={position.toArray()}>
+      <mesh
+        ref={meshRef}
+        scale={scale}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerEnter={() => setIsHovered(true)}
+        onPointerLeave={() => setIsHovered(false)}
+      >
+        {shape === 'box' ? (
+          <boxGeometry args={[size, size, size]} />
+        ) : (
+          <sphereGeometry args={[size / 2, 32, 32]} />
+        )}
+        <meshStandardMaterial
+          color={currentColor}
+          emissive={emissiveColor}
+          emissiveIntensity={isGrabbed ? 0.5 : isHovered ? 0.3 : 0}
+          metalness={0.3}
+          roughness={0.4}
+        />
+      </mesh>
+      {label && (
+        <Text
+          position={[0, size + 0.08, 0]}
+          fontSize={0.04}
+          color={isGrabbed ? '#22c55e' : '#ffffff'}
+          anchorX="center"
+          anchorY="bottom"
+        >
+          {isGrabbed ? `${label} (Holding)` : label}
+        </Text>
+      )}
+    </group>
+  );
+}
+
+/**
+ * Area with grabbable test objects in various positions
+ */
+function GrabbableTestArea() {
+  return (
+    <group>
+      {/* Table-height grabbables (easy to reach) */}
+      <GrabbableObject
+        initialPosition={[-0.8, 1.0, -1.2]}
+        color="#ef4444"
+        size={0.12}
+        shape="box"
+        label="Red Box"
+        mass={1}
+      />
+      <GrabbableObject
+        initialPosition={[-0.4, 1.0, -1.2]}
+        color="#3b82f6"
+        size={0.14}
+        shape="sphere"
+        label="Blue Ball"
+        mass={0.8}
+      />
+      <GrabbableObject
+        initialPosition={[0, 1.0, -1.2]}
+        color="#22c55e"
+        size={0.1}
+        shape="box"
+        label="Green Cube"
+        mass={0.5}
+      />
+      <GrabbableObject
+        initialPosition={[0.4, 1.0, -1.2]}
+        color="#f59e0b"
+        size={0.13}
+        shape="sphere"
+        label="Gold Orb"
+        mass={1.2}
+      />
+      <GrabbableObject
+        initialPosition={[0.8, 1.0, -1.2]}
+        color="#8b5cf6"
+        size={0.11}
+        shape="box"
+        label="Purple Box"
+        mass={0.7}
+      />
+
+      {/* Floating grabbables (need to reach or far-grab) */}
+      <GrabbableObject
+        initialPosition={[-0.5, 1.8, -2]}
+        color="#ec4899"
+        size={0.15}
+        shape="sphere"
+        label="Pink Float"
+        mass={0.6}
+      />
+      <GrabbableObject
+        initialPosition={[0.5, 1.8, -2]}
+        color="#06b6d4"
+        size={0.15}
+        shape="sphere"
+        label="Cyan Float"
+        mass={0.6}
+      />
+
+      {/* Side grabbables */}
+      <GrabbableObject
+        initialPosition={[-1.5, 1.2, -0.8]}
+        color="#84cc16"
+        size={0.18}
+        shape="box"
+        label="Left Heavy"
+        mass={2}
+      />
+      <GrabbableObject
+        initialPosition={[1.5, 1.2, -0.8]}
+        color="#f43f5e"
+        size={0.08}
+        shape="box"
+        label="Right Light"
+        mass={0.3}
+      />
+
+      {/* Visual platform/table for grabbables */}
+      <mesh position={[0, 0.9, -1.2]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[2, 0.6]} />
+        <meshStandardMaterial
+          color="#2d2d3d"
+          transparent
+          opacity={0.5}
+          metalness={0.5}
+          roughness={0.3}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// ============================================================================
 // XR Debug Logger (inside XR context)
 // ============================================================================
 
@@ -1291,6 +1613,9 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
             {/* Interactive test area with multiple clickable objects */}
             <InteractiveTestArea />
 
+            {/* Grabbable objects - pick up, hold, and throw */}
+            <GrabbableTestArea />
+
             {/* Keep the original test cube for reference */}
             <XRTestCube />
 
@@ -1300,24 +1625,29 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
             {/* Ground reference grid (on top of teleport floor) */}
             <GroundPlane />
 
-            {/* DISABLED FOR DEBUGGING - Enable one by one to find the error source */}
-            {/*
+            {/* 360 Grid Environment - immersive space with stars */}
+            <GridEnvironment360
+              gridColor="#4f46e5"
+              gridColorAccent="#8b5cf6"
+              backgroundColor="#0a0a0f"
+              majorGridSpacing={2.0}
+              minorGridSpacing={0.5}
+              gridOpacity={0.6}
+              glow={true}
+              radius={50}
+              forceShow={true}
+            />
+
+            {/* Ambient environment - particles, nebulae, structures */}
             <AmbientEnvironment
               particles={true}
-              particleCount={200}
+              particleCount={150}
               nebulae={true}
               structures={true}
               aurora={true}
               rings={true}
-              intensity={1.0}
+              intensity={0.8}
             />
-
-            <XRErrorBoundary>
-              <Suspense fallback={<LoadingFallback />}>
-                <SpatialScene />
-              </Suspense>
-            </XRErrorBoundary>
-            */}
 
             {/* Desktop controls */}
             {spatialMode === 'desktop' && shouldShowCanvas && (
