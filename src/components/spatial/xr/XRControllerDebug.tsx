@@ -77,9 +77,25 @@ function FallbackControllerRay({
     let hitObject: THREE.Object3D | null = null;
     let hitPoint: THREE.Vector3 | null = null;
 
-    if (intersects.length > 0) {
-      hitObject = intersects[0].object;
-      hitPoint = intersects[0].point;
+    // Filter intersections to find objects with actual R3F event handlers
+    // This prevents hitting texture overlays or non-interactive meshes
+    const interactiveIntersect = intersects.find((intersection) => {
+      const obj = intersection.object as any;
+      const handlers = obj.__r3f?.handlers;
+      // Check if object has any actual event handlers
+      if (handlers && Object.keys(handlers).length > 0) {
+        return true;
+      }
+      // Also accept objects with widget-interactive name pattern
+      if (obj.name?.startsWith('widget-interactive-')) {
+        return true;
+      }
+      return false;
+    });
+
+    if (interactiveIntersect) {
+      hitObject = interactiveIntersect.object;
+      hitPoint = interactiveIntersect.point;
     }
 
     // Update hit point visualization
@@ -107,7 +123,7 @@ function FallbackControllerRay({
       delta: 0,
     });
 
-    const intersection = intersects.length > 0 ? intersects[0] : null;
+    const intersection = interactiveIntersect || null;
 
     // Handle pointer enter/leave
     if (hitObject !== lastHitRef.current) {

@@ -251,6 +251,7 @@ export function SpatialWidget({
       {/* Without it, ray pointer events from controllers won't reach this mesh */}
       <mesh
         ref={meshRef}
+        name={`widget-interactive-${widget.id}`}
         onClick={handleClick}
         onPointerEnter={() => {
           setHovered(true);
