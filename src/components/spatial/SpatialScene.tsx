@@ -21,6 +21,7 @@ import {
   useDetectedQRCodes,
 } from '../../state/useSpatialStickerStore';
 import { useCanvasStore } from '../../state/useCanvasStore';
+import { useUndoRedoStore } from '../../state/useUndoRedoStore';
 import { DEFAULT_WIDGET_Z, DEFAULT_EYE_HEIGHT } from '../../utils/spatialCoordinates';
 import { ARHitTest, ARPlacedObject } from './ARHitTest';
 import { VRTeleport } from './VRTeleport';
@@ -541,15 +542,31 @@ export function SpatialScene() {
     setShowWidgetLibrary((prev) => !prev);
   }, []);
 
+  // Get undo/redo actions from the unified store
+  const undoAction = useUndoRedoStore((state) => state.undo);
+  const redoAction = useUndoRedoStore((state) => state.redo);
+  const canUndo = useUndoRedoStore((state) => state.canUndo);
+  const canRedo = useUndoRedoStore((state) => state.canRedo);
+
   const handleUndo = useCallback(() => {
     console.log('Undo requested from XR toolbar');
-    // TODO: Connect to undo system
-  }, []);
+    const success = undoAction();
+    if (success) {
+      console.log('Undo successful');
+    } else {
+      console.log('Nothing to undo');
+    }
+  }, [undoAction]);
 
   const handleRedo = useCallback(() => {
     console.log('Redo requested from XR toolbar');
-    // TODO: Connect to redo system
-  }, []);
+    const success = redoAction();
+    if (success) {
+      console.log('Redo successful');
+    } else {
+      console.log('Nothing to redo');
+    }
+  }, [redoAction]);
 
   const handleSettings = useCallback(() => {
     console.log('Settings requested from XR toolbar');
