@@ -22,7 +22,6 @@ import { AmbientEnvironment } from './AmbientEnvironment';
 import { XRControllerDebug } from './xr/XRControllerDebug';
 
 // Extracted components
-import { GrabbableTestArea } from './xr/GrabbableObjects';
 import { LocomotionController, TeleportFloor } from './xr/XRLocomotion';
 import { SpaceEnvironment, VRFloor } from './xr/XREnvironment';
 import {
@@ -206,9 +205,6 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               rayColor="#8b5cf6"
               rayLength={10}
             />
-
-            {/* Grabbable objects */}
-            <GrabbableTestArea />
 
             {/* Teleportable floor */}
             <TeleportFloor onTeleport={handleTeleport} showGrid={false} />
