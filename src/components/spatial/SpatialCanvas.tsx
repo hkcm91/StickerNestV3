@@ -26,6 +26,7 @@ import { xrStore } from './xrStore';
 import * as THREE from 'three';
 import { initializeBVH, isBVHInitialized } from '../../utils/bvhSetup';
 import { AmbientEnvironment } from './AmbientEnvironment';
+import { VRBackground } from './VRBackground';
 
 // ============================================================================
 // XR Error Boundary - Catches XR-related errors without crashing the app
@@ -892,6 +893,11 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
 
             {/* XR Session State Tracker - syncs XR state to our store */}
             <XRSessionStateTracker />
+
+            {/* VR Background - provides opaque environment for VR mode */}
+            {/* This is ESSENTIAL: VR headsets need actual geometry to display */}
+            {/* as background. Without this, VR appears transparent/broken. */}
+            <VRBackground forceShow={active} />
 
             {/*
               CRITICAL: Scene content must ALWAYS be rendered, not conditional!
