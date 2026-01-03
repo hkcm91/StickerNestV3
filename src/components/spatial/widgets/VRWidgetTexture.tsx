@@ -60,15 +60,17 @@ class OffscreenWidgetManager {
     if (!this.hostElement) {
       this.hostElement = document.createElement('div');
       this.hostElement.id = 'vr-widget-offscreen-host';
+      // html2canvas requires elements to be visible (not visibility:hidden)
+      // Position off-screen but keep visible for proper rendering
       this.hostElement.style.cssText = `
         position: fixed;
         left: -9999px;
-        top: -9999px;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
+        top: 0;
+        width: auto;
+        height: auto;
+        overflow: visible;
         pointer-events: none;
-        visibility: hidden;
+        z-index: -1000;
       `;
       document.body.appendChild(this.hostElement);
     }
@@ -265,7 +267,43 @@ function useWidgetTexture(
       container.appendChild(styleEl);
     }
 
-    // Create content wrapper
+    // Make container visible for proper rendering
+    container.style.visibility = 'visible';
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+
+    // CRITICAL: Inject mock WidgetAPI BEFORE adding content with scripts
+    const state = { ...widget.state };
+    const apiScript = document.createElement('script');
+    apiScript.textContent = `
+      window.WidgetAPI = {
+        widgetId: '${widget.id}',
+        widgetDefId: '${widget.widgetDefId}',
+        emit: function() { console.log('[VR WidgetAPI] emit:', arguments); },
+        emitEvent: function() { console.log('[VR WidgetAPI] emitEvent:', arguments); },
+        emitOutput: function() { console.log('[VR WidgetAPI] emitOutput:', arguments); },
+        onEvent: function() { return function() {}; },
+        onInput: function() { return function() {}; },
+        getState: function() { return ${JSON.stringify(state)}; },
+        setState: function(patch) { console.log('[VR WidgetAPI] setState:', patch); },
+        getAssetUrl: function(path) { return path; },
+        log: function() { console.log('[VR Widget ${widget.widgetDefId}]', ...arguments); },
+        onMount: function(cb) {
+          console.log('[VR WidgetAPI] onMount registered');
+          setTimeout(function() {
+            console.log('[VR WidgetAPI] calling onMount callback');
+            cb({ state: ${JSON.stringify(state)} });
+          }, 50);
+        },
+        onStateChange: function() { return function() {}; },
+        onDestroy: function() {},
+      };
+      console.log('[VR WidgetAPI] Injected for ${widget.widgetDefId}');
+    `;
+    container.appendChild(apiScript);
+
+    // Create content wrapper - don't use flex centering as it can break widget layouts
     const wrapper = document.createElement('div');
     wrapper.className = 'widget-content';
     wrapper.style.cssText = `
@@ -275,46 +313,26 @@ function useWidgetTexture(
       background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
       color: white;
       font-family: system-ui, -apple-system, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      box-sizing: border-box;
     `;
-    wrapper.innerHTML = bodyContent;
     container.appendChild(wrapper);
 
-    // Inject mock WidgetAPI into container's script context
-    const state = { ...widget.state };
-    const script = document.createElement('script');
-    script.textContent = `
-      window.WidgetAPI = {
-        widgetId: '${widget.id}',
-        widgetDefId: '${widget.widgetDefId}',
-        emit: function() {},
-        emitEvent: function() {},
-        emitOutput: function() {},
-        onEvent: function() { return function() {}; },
-        onInput: function() { return function() {}; },
-        getState: function() { return ${JSON.stringify(state)}; },
-        setState: function() {},
-        getAssetUrl: function(path) { return path; },
-        log: function() {},
-        onMount: function(cb) { setTimeout(function() { cb({ state: ${JSON.stringify(state)} }); }, 0); },
-        onStateChange: function() { return function() {}; },
-        onDestroy: function() {},
-      };
-    `;
-    container.appendChild(script);
+    // Strip script tags from content first, we'll execute them separately
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    const scriptContents: string[] = [];
+    let match;
+    while ((match = scriptRegex.exec(bodyContent)) !== null) {
+      scriptContents.push(match[1]);
+    }
+    const htmlWithoutScripts = bodyContent.replace(scriptRegex, '');
+    wrapper.innerHTML = htmlWithoutScripts;
 
-    // Execute any inline scripts in the content
-    const scripts = wrapper.querySelectorAll('script');
-    scripts.forEach((oldScript) => {
+    // Execute widget scripts after DOM content is added
+    scriptContents.forEach((scriptContent, idx) => {
       const newScript = document.createElement('script');
-      if (oldScript.src) {
-        newScript.src = oldScript.src;
-      } else {
-        newScript.textContent = oldScript.textContent;
-      }
-      oldScript.parentNode?.replaceChild(newScript, oldScript);
+      newScript.textContent = scriptContent;
+      container.appendChild(newScript);
+      console.log('[VRWidgetTexture] Executed script', idx + 1, 'of', scriptContents.length);
     });
 
     // Capture function defined inline to avoid dependency issues
@@ -362,13 +380,14 @@ function useWidgetTexture(
       }
     };
 
-    // Give content time to render, then capture
+    // Give content time to render and scripts to execute, then capture
+    // Use longer timeout for more complex widgets
     const captureTimeout = setTimeout(() => {
       if (isMountedRef.current) {
-        console.log('[VRWidgetTexture] Capturing texture for:', widget.widgetDefId);
+        console.log('[VRWidgetTexture] Capturing texture for:', widget.widgetDefId, 'container:', containerRef.current?.innerHTML?.substring(0, 200));
         doCapture();
       }
-    }, 800);
+    }, 1200);
 
     return () => {
       clearTimeout(captureTimeout);
@@ -603,10 +622,11 @@ function useReactWidgetTexture(
     );
     containerRef.current = container;
 
-    // Add Tailwind-compatible base styles
+    // Add Tailwind-compatible base styles and ensure visibility for html2canvas
     container.style.cssText += `
       color: white;
       font-family: system-ui, -apple-system, sans-serif;
+      visibility: visible;
     `;
 
     // Create a wrapper div for the React component
@@ -615,12 +635,15 @@ function useReactWidgetTexture(
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
     `;
     container.appendChild(wrapper);
 
     // Create React root and render component
     const Component = builtin.component as React.ComponentType<{ api?: any }>;
     const api = createSpatial3DAPI(widgetRef.current);
+
+    console.log('[VRReactWidgetTexture] Rendering React component:', widgetDefId);
 
     rootRef.current = createRoot(wrapper);
     rootRef.current.render(
@@ -629,12 +652,13 @@ function useReactWidgetTexture(
 
     stateJsonRef.current = currentStateJson;
 
-    // Give component time to render, then capture
+    // Give component time to render, then capture (longer for React components)
     const captureTimeout = setTimeout(() => {
       if (isMountedRef.current) {
+        console.log('[VRReactWidgetTexture] Capturing:', widgetDefId);
         captureToTexture();
       }
-    }, 800);
+    }, 1500);
 
     return () => {
       clearTimeout(captureTimeout);
