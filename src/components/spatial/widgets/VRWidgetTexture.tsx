@@ -137,6 +137,10 @@ function useWidgetTexture(
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
   const lastUpdateRef = useRef(0);
   const isMountedRef = useRef(true);
+  const pixelDimensionsRef = useRef({ width: pixelWidth, height: pixelHeight });
+
+  // Update ref when dimensions change
+  pixelDimensionsRef.current = { width: pixelWidth, height: pixelHeight };
 
   // Create widget HTML content
   const widgetHtml = useMemo(() => {
@@ -200,48 +204,158 @@ function useWidgetTexture(
     `;
   }, [widget, pixelWidth, pixelHeight]);
 
-  // Setup offscreen container with iframe
+  // Setup offscreen container with direct HTML (not iframe - html2canvas can't capture iframes)
   useEffect(() => {
     if (!widgetHtml) {
+      console.log('[VRWidgetTexture] No widget HTML for:', widget.widgetDefId);
       setIsLoading(false);
       return;
     }
 
+    console.log('[VRWidgetTexture] Setting up container for:', widget.widgetDefId);
+
     const container = offscreenManager.createContainer(widget.id, pixelWidth, pixelHeight);
     containerRef.current = container;
 
-    // Create iframe for widget content
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = `
+    // Extract just the body content and styles from the HTML
+    // We render directly to a div instead of iframe for html2canvas compatibility
+    let bodyContent = '';
+    let styles = '';
+
+    // Extract body content
+    const bodyMatch = widgetHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch) {
+      bodyContent = bodyMatch[1];
+    } else {
+      bodyContent = widgetHtml;
+    }
+
+    // Extract style content
+    const styleMatches = widgetHtml.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+    for (const match of styleMatches) {
+      styles += match[1];
+    }
+
+    // Create style element
+    if (styles) {
+      const styleEl = document.createElement('style');
+      styleEl.textContent = styles;
+      container.appendChild(styleEl);
+    }
+
+    // Create content wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'widget-content';
+    wrapper.style.cssText = `
       width: 100%;
       height: 100%;
-      border: none;
-      background: transparent;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
-    iframe.sandbox.add('allow-scripts', 'allow-same-origin');
-    container.appendChild(iframe);
+    wrapper.innerHTML = bodyContent;
+    container.appendChild(wrapper);
 
-    // Write content to iframe
-    iframe.srcdoc = widgetHtml;
+    // Inject mock WidgetAPI into container's script context
+    const state = { ...widget.state };
+    const script = document.createElement('script');
+    script.textContent = `
+      window.WidgetAPI = {
+        widgetId: '${widget.id}',
+        widgetDefId: '${widget.widgetDefId}',
+        emit: function() {},
+        emitEvent: function() {},
+        emitOutput: function() {},
+        onEvent: function() { return function() {}; },
+        onInput: function() { return function() {}; },
+        getState: function() { return ${JSON.stringify(state)}; },
+        setState: function() {},
+        getAssetUrl: function(path) { return path; },
+        log: function() {},
+        onMount: function(cb) { setTimeout(function() { cb({ state: ${JSON.stringify(state)} }); }, 0); },
+        onStateChange: function() { return function() {}; },
+        onDestroy: function() {},
+      };
+    `;
+    container.appendChild(script);
 
-    // Wait for iframe to load then capture
-    iframe.onload = () => {
-      if (!isMountedRef.current) return;
+    // Execute any inline scripts in the content
+    const scripts = wrapper.querySelectorAll('script');
+    scripts.forEach((oldScript) => {
+      const newScript = document.createElement('script');
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
+      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
 
-      // Give content time to render
-      setTimeout(() => {
+    // Capture function defined inline to avoid dependency issues
+    const doCapture = async () => {
+      const cont = containerRef.current;
+      if (!cont || !isMountedRef.current) return;
+
+      try {
+        console.log('[VRWidgetTexture] Starting html2canvas capture');
+        const canvas = await html2canvas(cont, {
+          backgroundColor: '#1e1b4b',
+          scale: 1,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          width: pixelDimensionsRef.current.width,
+          height: pixelDimensionsRef.current.height,
+        });
+
         if (!isMountedRef.current) return;
-        captureToTexture();
-      }, 500);
+
+        console.log('[VRWidgetTexture] Capture successful, creating texture');
+
+        // Create or update texture
+        if (textureRef.current) {
+          textureRef.current.image = canvas;
+          textureRef.current.needsUpdate = true;
+        } else {
+          const newTexture = new THREE.CanvasTexture(canvas);
+          newTexture.minFilter = THREE.LinearFilter;
+          newTexture.magFilter = THREE.LinearFilter;
+          newTexture.colorSpace = THREE.SRGBColorSpace;
+          textureRef.current = newTexture;
+          setTexture(newTexture);
+        }
+
+        setIsLoading(false);
+        setError(null);
+        lastUpdateRef.current = Date.now();
+      } catch (err) {
+        if (!isMountedRef.current) return;
+        console.error('[VRWidgetTexture] Capture failed:', err);
+        setError(err instanceof Error ? err : new Error('Capture failed'));
+        setIsLoading(false);
+      }
     };
 
+    // Give content time to render, then capture
+    const captureTimeout = setTimeout(() => {
+      if (isMountedRef.current) {
+        console.log('[VRWidgetTexture] Capturing texture for:', widget.widgetDefId);
+        doCapture();
+      }
+    }, 800);
+
     return () => {
+      clearTimeout(captureTimeout);
       offscreenManager.removeContainer(widget.id);
       containerRef.current = null;
     };
   }, [widget.id, widgetHtml, pixelWidth, pixelHeight]);
 
-  // Capture container to texture
+  // Capture container to texture (for external calls and periodic refresh)
   const captureToTexture = useCallback(async () => {
     const container = containerRef.current;
     if (!container || !isMountedRef.current) return;
@@ -253,8 +367,8 @@ function useWidgetTexture(
         logging: false,
         useCORS: true,
         allowTaint: true,
-        width: pixelWidth,
-        height: pixelHeight,
+        width: pixelDimensionsRef.current.width,
+        height: pixelDimensionsRef.current.height,
       });
 
       if (!isMountedRef.current) return;
@@ -281,7 +395,7 @@ function useWidgetTexture(
       setError(err instanceof Error ? err : new Error('Capture failed'));
       setIsLoading(false);
     }
-  }, [pixelWidth, pixelHeight]);
+  }, []);
 
   // Periodic refresh
   useEffect(() => {

@@ -143,7 +143,10 @@ export function hasHtmlContent(widget: WidgetInstance): boolean {
  */
 export function getWidgetHtml(widget: WidgetInstance): string | null {
   const builtin = getBuiltinWidget(widget.widgetDefId);
-  if (builtin?.html) return builtin.html;
+  if (builtin?.html) {
+    // html can be a string or a lazy getter function
+    return typeof builtin.html === 'function' ? builtin.html() : builtin.html;
+  }
 
   if (widget.metadata?.source === 'generated' && widget.metadata?.generatedContent?.html) {
     return widget.metadata.generatedContent.html;
