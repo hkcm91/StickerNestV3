@@ -386,89 +386,23 @@ function useReactWidgetTexture(
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
   const lastUpdateRef = useRef(0);
   const isMountedRef = useRef(true);
+  const hasInitializedRef = useRef(false);
 
-  const builtin = getBuiltinWidget(widget.widgetDefId);
+  // Memoize builtin lookup to prevent recalculation
+  const builtin = useMemo(() => getBuiltinWidget(widget.widgetDefId), [widget.widgetDefId]);
   const hasComponent = !!builtin?.component;
 
-  // Setup offscreen container with React component
-  useEffect(() => {
-    if (!hasComponent || !builtin?.component) {
-      setIsLoading(false);
-      return;
+  // Stable reference to widget state for comparison
+  const stateJsonRef = useRef<string>('');
+  const currentStateJson = useMemo(() => {
+    try {
+      return JSON.stringify(widget.state || {});
+    } catch {
+      return '{}';
     }
-
-    // Create offscreen container
-    const container = offscreenManager.createContainer(
-      `react-${widget.id}`,
-      pixelWidth,
-      pixelHeight
-    );
-    containerRef.current = container;
-
-    // Add Tailwind-compatible base styles
-    container.style.cssText += `
-      color: white;
-      font-family: system-ui, -apple-system, sans-serif;
-    `;
-
-    // Create a wrapper div for the React component
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = `
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    `;
-    container.appendChild(wrapper);
-
-    // Create React root and render component
-    const Component = builtin.component as React.ComponentType<{ api?: any }>;
-    const api = createSpatial3DAPI(widget);
-
-    rootRef.current = createRoot(wrapper);
-    rootRef.current.render(
-      React.createElement(Component, { api })
-    );
-
-    // Give component time to render, then capture
-    const captureTimeout = setTimeout(() => {
-      if (isMountedRef.current) {
-        captureToTexture();
-      }
-    }, 800);
-
-    return () => {
-      clearTimeout(captureTimeout);
-      if (rootRef.current) {
-        rootRef.current.unmount();
-        rootRef.current = null;
-      }
-      offscreenManager.removeContainer(`react-${widget.id}`);
-      containerRef.current = null;
-    };
-  }, [widget.id, widget.widgetDefId, hasComponent, pixelWidth, pixelHeight]);
-
-  // Re-render when widget state changes
-  useEffect(() => {
-    if (!hasComponent || !builtin?.component || !rootRef.current) return;
-
-    const Component = builtin.component as React.ComponentType<{ api?: any }>;
-    const api = createSpatial3DAPI(widget);
-
-    rootRef.current.render(
-      React.createElement(Component, { api })
-    );
-
-    // Recapture after state update
-    const timeout = setTimeout(() => {
-      if (isMountedRef.current) {
-        captureToTexture();
-      }
-    }, 300);
-
-    return () => clearTimeout(timeout);
   }, [widget.state]);
 
-  // Capture container to texture
+  // Capture container to texture - defined first so it can be used in effects
   const captureToTexture = useCallback(async () => {
     const container = containerRef.current;
     if (!container || !isMountedRef.current) return;
@@ -510,9 +444,96 @@ function useReactWidgetTexture(
     }
   }, [pixelWidth, pixelHeight]);
 
-  // Periodic refresh
+  // Setup offscreen container with React component - runs once
   useEffect(() => {
-    if (refreshInterval <= 0 || !containerRef.current || !hasComponent) return;
+    if (!hasComponent || !builtin?.component || hasInitializedRef.current) {
+      if (!hasComponent) setIsLoading(false);
+      return;
+    }
+
+    hasInitializedRef.current = true;
+
+    // Create offscreen container
+    const container = offscreenManager.createContainer(
+      `react-${widget.id}`,
+      pixelWidth,
+      pixelHeight
+    );
+    containerRef.current = container;
+
+    // Add Tailwind-compatible base styles
+    container.style.cssText += `
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+    `;
+
+    // Create a wrapper div for the React component
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    `;
+    container.appendChild(wrapper);
+
+    // Create React root and render component
+    const Component = builtin.component as React.ComponentType<{ api?: any }>;
+    const api = createSpatial3DAPI(widget);
+
+    rootRef.current = createRoot(wrapper);
+    rootRef.current.render(
+      React.createElement(Component, { api })
+    );
+
+    stateJsonRef.current = currentStateJson;
+
+    // Give component time to render, then capture
+    const captureTimeout = setTimeout(() => {
+      if (isMountedRef.current) {
+        captureToTexture();
+      }
+    }, 800);
+
+    return () => {
+      clearTimeout(captureTimeout);
+      if (rootRef.current) {
+        rootRef.current.unmount();
+        rootRef.current = null;
+      }
+      offscreenManager.removeContainer(`react-${widget.id}`);
+      containerRef.current = null;
+      hasInitializedRef.current = false;
+    };
+  }, [widget.id, widget.widgetDefId, hasComponent, pixelWidth, pixelHeight, builtin, captureToTexture, currentStateJson]);
+
+  // Re-render when widget state actually changes (deep comparison)
+  useEffect(() => {
+    // Skip if not initialized or state hasn't changed
+    if (!hasComponent || !builtin?.component || !rootRef.current) return;
+    if (stateJsonRef.current === currentStateJson) return;
+
+    stateJsonRef.current = currentStateJson;
+
+    const Component = builtin.component as React.ComponentType<{ api?: any }>;
+    const api = createSpatial3DAPI(widget);
+
+    rootRef.current.render(
+      React.createElement(Component, { api })
+    );
+
+    // Recapture after state update
+    const timeout = setTimeout(() => {
+      if (isMountedRef.current) {
+        captureToTexture();
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [currentStateJson, hasComponent, builtin, widget, captureToTexture]);
+
+  // Periodic refresh - only after initial render
+  useEffect(() => {
+    if (refreshInterval <= 0 || !hasComponent || isLoading) return;
 
     const interval = setInterval(() => {
       const now = Date.now();
@@ -522,7 +543,7 @@ function useReactWidgetTexture(
     }, Math.max(refreshInterval, MIN_REFRESH_INTERVAL));
 
     return () => clearInterval(interval);
-  }, [refreshInterval, captureToTexture, hasComponent]);
+  }, [refreshInterval, captureToTexture, hasComponent, isLoading]);
 
   // Cleanup on unmount
   useEffect(() => {
