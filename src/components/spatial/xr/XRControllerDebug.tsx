@@ -91,19 +91,33 @@ function FallbackControllerRay({
       }
     }
 
-    // Dispatch pointer events
-    const domElement = gl.domElement;
+    // Create R3F-compatible event object with required properties
+    const createR3FEvent = (type: string, intersection: THREE.Intersection | null) => ({
+      stopPropagation: () => {},
+      point: intersection?.point || hitPoint || new THREE.Vector3(),
+      distance: intersection?.distance || 0,
+      object: hitObject,
+      eventObject: hitObject,
+      nativeEvent: new PointerEvent(type, { bubbles: true }),
+      intersections: intersects,
+      unprojectedPoint: new THREE.Vector3(),
+      ray: raycaster.ray,
+      camera: state.camera,
+      delta: 0,
+    });
+
+    const intersection = intersects.length > 0 ? intersects[0] : null;
 
     // Handle pointer enter/leave
     if (hitObject !== lastHitRef.current) {
       if (lastHitRef.current) {
         // Dispatch pointerleave on old object
-        const leaveEvent = new PointerEvent('pointerleave', { bubbles: true });
+        const leaveEvent = createR3FEvent('pointerleave', null);
         (lastHitRef.current as any).__r3f?.handlers?.onPointerLeave?.(leaveEvent);
       }
       if (hitObject) {
         // Dispatch pointerenter on new object
-        const enterEvent = new PointerEvent('pointerenter', { bubbles: true });
+        const enterEvent = createR3FEvent('pointerenter', intersection);
         (hitObject as any).__r3f?.handlers?.onPointerEnter?.(enterEvent);
       }
       lastHitRef.current = hitObject;
@@ -111,15 +125,15 @@ function FallbackControllerRay({
 
     // Handle select (trigger press)
     if (isSelecting && !wasSelectingRef.current && hitObject) {
-      // Trigger just pressed - dispatch pointerdown and click
-      const downEvent = new PointerEvent('pointerdown', { bubbles: true });
+      // Trigger just pressed - dispatch pointerdown
+      const downEvent = createR3FEvent('pointerdown', intersection);
       (hitObject as any).__r3f?.handlers?.onPointerDown?.(downEvent);
     } else if (!isSelecting && wasSelectingRef.current && hitObject) {
       // Trigger just released - dispatch pointerup and click
-      const upEvent = new PointerEvent('pointerup', { bubbles: true });
+      const upEvent = createR3FEvent('pointerup', intersection);
       (hitObject as any).__r3f?.handlers?.onPointerUp?.(upEvent);
 
-      const clickEvent = new MouseEvent('click', { bubbles: true });
+      const clickEvent = createR3FEvent('click', intersection);
       (hitObject as any).__r3f?.handlers?.onClick?.(clickEvent);
     }
 

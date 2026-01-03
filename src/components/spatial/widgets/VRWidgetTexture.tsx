@@ -260,10 +260,17 @@ function useWidgetTexture(
       styles += match[1];
     }
 
-    // Create style element
+    // Create style element - rewrite selectors to work in div context
     if (styles) {
+      // Transform html/body selectors to target our container class
+      // Widgets use html, body {} which won't match in a div context
+      let transformedStyles = styles
+        .replace(/\bhtml\s*,\s*body\b/gi, '.widget-content')
+        .replace(/\bbody\s*\{/gi, '.widget-content {')
+        .replace(/\bhtml\s*\{/gi, '.widget-content {');
+
       const styleEl = document.createElement('style');
-      styleEl.textContent = styles;
+      styleEl.textContent = transformedStyles;
       container.appendChild(styleEl);
     }
 
@@ -303,14 +310,13 @@ function useWidgetTexture(
     `;
     container.appendChild(apiScript);
 
-    // Create content wrapper - don't use flex centering as it can break widget layouts
+    // Create content wrapper - let widget define its own background
     const wrapper = document.createElement('div');
     wrapper.className = 'widget-content';
     wrapper.style.cssText = `
-      width: 100%;
-      height: 100%;
+      width: ${pixelWidth}px;
+      height: ${pixelHeight}px;
       overflow: hidden;
-      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
       color: white;
       font-family: system-ui, -apple-system, sans-serif;
       box-sizing: border-box;
@@ -506,16 +512,16 @@ export function VRWidgetTexture({
   // Loading state
   if (isLoading || !texture) {
     return (
-      <mesh position={[0, 0, 0.01]}>
+      <mesh position={[0, 0, 0.01]} raycast={() => null}>
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial color="#2d2a4a" transparent opacity={0.9} />
       </mesh>
     );
   }
 
-  // Render textured plane
+  // Render textured plane - raycast disabled so parent widget mesh receives events
   return (
-    <mesh position={[0, 0, 0.01]}>
+    <mesh position={[0, 0, 0.01]} raycast={() => null}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} transparent />
     </mesh>
@@ -770,16 +776,16 @@ export function VRReactWidgetTexture({
   // Loading state
   if (isLoading || !texture) {
     return (
-      <mesh position={[0, 0, 0.01]}>
+      <mesh position={[0, 0, 0.01]} raycast={() => null}>
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial color="#2d2a4a" transparent opacity={0.9} />
       </mesh>
     );
   }
 
-  // Render textured plane
+  // Render textured plane - raycast disabled so parent widget mesh receives events
   return (
-    <mesh position={[0, 0, 0.01]}>
+    <mesh position={[0, 0, 0.01]} raycast={() => null}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} transparent />
     </mesh>

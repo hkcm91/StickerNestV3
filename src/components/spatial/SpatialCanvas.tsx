@@ -684,7 +684,7 @@ function GroundPlane() {
         sectionColor="#6366f1"
         fadeDistance={30}
         fadeStrength={1}
-        followCamera={false}
+        followCamera={true}
         infiniteGrid
       />
     </>
