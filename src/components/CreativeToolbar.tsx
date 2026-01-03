@@ -298,8 +298,15 @@ export const CreativeToolbar: React.FC = () => {
 
   // Handle VR toggle - actually enters/exits the XR session
   const handleVRToggle = useCallback(async () => {
+    console.log('[CreativeToolbar] handleVRToggle called', {
+      isVRMode,
+      vrSupported: capabilities.vrSupported,
+      webXRAvailable: capabilities.webXRAvailable,
+    });
+
     if (isVRMode) {
       // Exit VR
+      console.log('[CreativeToolbar] Exiting VR mode...');
       const session = xrStore.getState().session;
       if (session) {
         session.end();
@@ -307,36 +314,39 @@ export const CreativeToolbar: React.FC = () => {
       setSessionState('none');
       setActiveMode('desktop');
     } else {
-      // Enter VR - but use preview mode on touch devices (phones/tablets)
-      // Real WebXR VR requires a headset, not a phone
-      const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      // Enter VR - ALWAYS try real VR first if WebXR is available
+      // Don't let touch detection block VR - many VR-capable PCs have touch screens
+      const userAgentMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      if (hasTouchSupport || userAgentMobile) {
-        console.log('[CreativeToolbar] Touch device detected, using VR preview mode', {
-          hasTouchSupport,
-          maxTouchPoints: navigator.maxTouchPoints,
-          userAgentMobile,
-        });
+      // Only use preview mode for iOS devices (no WebXR support)
+      // Android devices might be Quest browser which DOES support WebXR
+      if (userAgentMobile) {
+        console.log('[CreativeToolbar] iOS device detected, using VR preview mode');
         useSpatialModeStore.getState().enterPreviewMode('vr');
         return;
       }
 
-      if (!capabilities.vrSupported) {
-        console.warn('[CreativeToolbar] VR not supported on this device, using preview mode');
+      // Check if WebXR is available at all
+      if (!navigator.xr) {
+        console.warn('[CreativeToolbar] WebXR API not available, using preview mode');
         useSpatialModeStore.getState().enterPreviewMode('vr');
         return;
       }
+
+      // Try to enter real VR - let it fail naturally if not supported
+      console.log('[CreativeToolbar] Attempting to enter VR via xrStore.enterVR()...');
       try {
         setSessionState('requesting');
         await xrStore.enterVR();
+        console.log('[CreativeToolbar] xrStore.enterVR() completed successfully!');
       } catch (err) {
         console.error('[CreativeToolbar] Failed to enter VR:', err);
+        console.log('[CreativeToolbar] Falling back to preview mode');
         // Fall back to preview mode instead of returning to desktop
         useSpatialModeStore.getState().enterPreviewMode('vr');
       }
     }
-  }, [isVRMode, capabilities.vrSupported, setSessionState, setActiveMode]);
+  }, [isVRMode, capabilities.vrSupported, capabilities.webXRAvailable, setSessionState, setActiveMode]);
 
   // Shape submenu items
   const shapeItems: Array<{ icon: LucideIcon; label: string; value: VectorShapeType }> = [

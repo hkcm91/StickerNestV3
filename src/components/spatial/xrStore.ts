@@ -41,7 +41,6 @@ export const xrStore = createXRStore({
   hand: true,
 
   // Performance settings
-  frameRate: 'default',
   foveation: 1,
 
   // Core features

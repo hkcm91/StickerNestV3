@@ -45,20 +45,82 @@ class XRErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactN
   }
 
   static getDerivedStateFromError(error: Error): XRErrorBoundaryState {
-    console.warn('[XRErrorBoundary] Caught XR error:', error.message);
+    console.error('[XRErrorBoundary] Caught XR error:', error.message);
+    console.error('[XRErrorBoundary] Full error:', error);
+    console.error('[XRErrorBoundary] Stack:', error.stack);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn('[XRErrorBoundary] XR component error (non-fatal):', error.message);
+    console.error('[XRErrorBoundary] XR component error:', error.message);
+    console.error('[XRErrorBoundary] Component stack:', errorInfo.componentStack);
   }
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback ?? null;
+      // Show the actual error in the fallback
+      return this.props.fallback ?? <XRErrorFallbackWithError error={this.state.error} />;
     }
     return this.props.children;
   }
+}
+
+/**
+ * Error fallback that shows the actual error message
+ * Uses simple mesh geometry to avoid any font loading issues
+ */
+function XRErrorFallbackWithError({ error }: { error: Error | null }) {
+  const errorMsg = error?.message || 'Unknown error';
+  console.error('[XRErrorFallbackWithError] Displaying error:', errorMsg);
+
+  // Log the error to console for easy debugging
+  useEffect(() => {
+    console.error('===========================================');
+    console.error('XR ERROR - Check the message below:');
+    console.error(errorMsg);
+    console.error('===========================================');
+  }, [errorMsg]);
+
+  return (
+    <group>
+      {/* Simple visual indicator - a red X made of cubes */}
+      <mesh position={[0, 1.6, -2]}>
+        <boxGeometry args={[0.5, 0.1, 0.1]} />
+        <meshBasicMaterial color="#ef4444" />
+      </mesh>
+      <mesh position={[0, 1.6, -2]} rotation={[0, 0, Math.PI / 4]}>
+        <boxGeometry args={[0.5, 0.1, 0.1]} />
+        <meshBasicMaterial color="#ef4444" />
+      </mesh>
+      <mesh position={[0, 1.6, -2]} rotation={[0, 0, -Math.PI / 4]}>
+        <boxGeometry args={[0.5, 0.1, 0.1]} />
+        <meshBasicMaterial color="#ef4444" />
+      </mesh>
+
+      {/* Text showing error - using simple Text from drei */}
+      {/* If this fails to render, at least the X will show */}
+      <Text
+        position={[0, 1.3, -2]}
+        fontSize={0.05}
+        color="#ef4444"
+        anchorX="center"
+        anchorY="middle"
+      >
+        XR Error - See Console
+      </Text>
+      <Text
+        position={[0, 1.15, -2]}
+        fontSize={0.035}
+        color="#f59e0b"
+        anchorX="center"
+        anchorY="middle"
+        maxWidth={2}
+        textAlign="center"
+      >
+        {errorMsg}
+      </Text>
+    </group>
+  );
 }
 
 /**
@@ -88,6 +150,48 @@ function XRErrorFallback() {
         3D preview available. VR/AR features may need updated dependencies.
       </Text>
     </group>
+  );
+}
+
+/**
+ * Simple test cube to verify XR pointer events work
+ * Click it to see if onClick fires - will turn green and log
+ */
+function XRTestCube() {
+  const [clicked, setClicked] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <mesh
+      position={[0, 1.5, -1.5]}
+      scale={clicked ? 1.3 : 1}
+      onClick={(e) => {
+        e.stopPropagation();
+        console.log('[XRTestCube] CLICKED! Event:', e);
+        setClicked(!clicked);
+      }}
+      onPointerEnter={(e) => {
+        console.log('[XRTestCube] Pointer ENTER');
+        setHovered(true);
+      }}
+      onPointerLeave={(e) => {
+        console.log('[XRTestCube] Pointer LEAVE');
+        setHovered(false);
+      }}
+      onPointerDown={(e) => {
+        console.log('[XRTestCube] Pointer DOWN');
+      }}
+      onPointerUp={(e) => {
+        console.log('[XRTestCube] Pointer UP');
+      }}
+    >
+      <boxGeometry args={[0.2, 0.2, 0.2]} />
+      <meshStandardMaterial
+        color={clicked ? '#22c55e' : hovered ? '#a78bfa' : '#8b5cf6'}
+        emissive={hovered ? '#4c1d95' : '#000000'}
+        emissiveIntensity={0.5}
+      />
+    </mesh>
   );
 }
 
@@ -882,57 +986,67 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
           }
         }}
       >
+        {/* DEBUG: Ambient light OUTSIDE XR to verify Canvas is rendering */}
+        <ambientLight intensity={0.5} />
+
+        {/* DEBUG: Cube OUTSIDE XR tree - should always be visible */}
+        {/* If you see this yellow cube, Canvas works but XR is failing */}
+        <mesh position={[2, 1.5, -3]}>
+          <boxGeometry args={[0.3, 0.3, 0.3]} />
+          <meshBasicMaterial color="#fbbf24" />
+        </mesh>
+
         {/* We use our own SpatialModeToggle in the toolbar for XR entry */}
-        {/* Wrap entire XR tree in error boundary to prevent crashes */}
-        <XRErrorBoundary fallback={<XRErrorFallback />}>
+        {/* STRIPPED DOWN XR - Only bare minimum to diagnose black screen issue */}
+        {/* The XRErrorBoundary now always shows actual error messages */}
+        <XRErrorBoundary>
           <XR store={xrStore}>
-            {/* Background controller - sets opaque for VR, transparent for AR */}
+            {/* ABSOLUTE MINIMUM TEST - Just a light and visible cube */}
+            {/* If this doesn't render, the issue is with XR itself */}
+            <ambientLight intensity={1.5} />
+
+            {/* Bright green cube at eye level - should be unmissable */}
+            <mesh position={[0, 1.5, -2]}>
+              <boxGeometry args={[0.5, 0.5, 0.5]} />
+              <meshBasicMaterial color="#22c55e" />
+            </mesh>
+
+            {/* Gray floor plane */}
+            <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[10, 10]} />
+              <meshBasicMaterial color="#555555" />
+            </mesh>
+
+            {/* Red reference cube to the left */}
+            <mesh position={[-1, 1.5, -2]}>
+              <boxGeometry args={[0.3, 0.3, 0.3]} />
+              <meshBasicMaterial color="#ef4444" />
+            </mesh>
+
+            {/* Blue reference cube to the right */}
+            <mesh position={[1, 1.5, -2]}>
+              <boxGeometry args={[0.3, 0.3, 0.3]} />
+              <meshBasicMaterial color="#3b82f6" />
+            </mesh>
+
+            {/* XROrigin is required for proper positioning */}
+            <XROrigin />
+
+            {/* Background controller - sets clear color */}
             <XRBackgroundController />
 
-            {/* Debug logger for XR session state */}
-            <XRDebugLogger />
+            {/* Only show the rest of the scene if the basic test works */}
+            {/* Uncomment these one by one to find which component causes the error */}
 
-            {/* XR Session State Tracker - syncs XR state to our store */}
-            <XRSessionStateTracker />
+            {/* <XRDebugLogger /> */}
+            {/* <XRSessionStateTracker /> */}
+            {/* <VRBackground forceShow={active} /> */}
 
-            {/* VR Background - provides opaque environment for VR mode */}
-            {/* This is ESSENTIAL: VR headsets need actual geometry to display */}
-            {/* as background. Without this, VR appears transparent/broken. */}
-            <VRBackground forceShow={active} />
-
-            {/*
-              CRITICAL: Scene content must ALWAYS be rendered, not conditional!
-              XR sessions require the 3D scene graph to exist BEFORE the session starts.
-              If we conditionally render based on shouldShowCanvas, the XR session
-              starts but finds an empty scene, resulting in a blank view.
-
-              The visibility of the canvas container (z-index, opacity) controls
-              what the user sees on the 2D screen. The 3D content inside XR
-              must always exist so XR can render it.
-            */}
-
-            {/* Lighting - essential for seeing anything! */}
-            <ambientLight intensity={0.6} />
-            <directionalLight
-              position={[5, 10, 5]}
-              intensity={1.0}
-              castShadow
-              shadow-mapSize={[2048, 2048]}
-            />
+            {/* Additional lighting */}
+            <directionalLight position={[5, 10, 5]} intensity={1.0} />
             <hemisphereLight args={['#87CEEB', '#362D59', 0.3]} />
 
-            {/* User origin (feet position) - wrap in error boundary */}
-            <XRErrorBoundary>
-              <XROrigin />
-            </XRErrorBoundary>
-
-            {/* XR Controller Debug - provides fallback rays and interaction */}
-            {/* DefaultXRController rays from @react-three/xr v6 aren't rendering visibly */}
-            {/* Using our custom FallbackControllerRay which provides: */}
-            {/*   - Visible purple rays from controllers */}
-            {/*   - Raycasting and pointer event dispatch */}
-            {/*   - Hit point indicators */}
-            {/*   - VR debug logging */}
+            {/* Controller debug with rays */}
             <XRControllerDebug
               showDebugText={false}
               showFallbackRays={true}
@@ -940,15 +1054,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               rayLength={10}
             />
 
-            {/* 360 Grid Environment - DISABLED: Too disorienting in VR/AR */}
-            {/* Keeping only floor grid for spatial reference */}
-            {/* <GridEnvironment360
-              forceShow={active}
-              isXRSession={isXRActive}
-            /> */}
+            {/* Interactive test cube */}
+            <XRTestCube />
 
-            {/* Ambient environment elements - particles, nebulae, structures */}
-            {/* Makes VR space feel alive and less empty */}
+            {/* Ground reference grid */}
+            <GroundPlane />
+
+            {/* DISABLED FOR DEBUGGING - Enable one by one to find the error source */}
+            {/*
             <AmbientEnvironment
               particles={true}
               particleCount={200}
@@ -959,18 +1072,14 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               intensity={1.0}
             />
 
-            {/* Ground reference */}
-            <GroundPlane />
-
-            {/* Main scene content - wrap in error boundary for XR-related errors */}
             <XRErrorBoundary>
               <Suspense fallback={<LoadingFallback />}>
                 <SpatialScene />
               </Suspense>
             </XRErrorBoundary>
+            */}
 
-            {/* Desktop controls - ONLY when canvas is visible AND in desktop spatial mode */}
-            {/* This prevents OrbitControls from capturing mouse events when hidden */}
+            {/* Desktop controls */}
             {spatialMode === 'desktop' && shouldShowCanvas && (
               <OrbitControls
                 enablePan
@@ -981,8 +1090,7 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               />
             )}
 
-            {/* Mobile VR/AR Preview controls - uses device gyroscope for 360 look-around */}
-            {/* Active when in VR/AR mode WITHOUT an actual XR session (preview mode) */}
+            {/* Mobile preview controls */}
             {(spatialMode === 'vr' || spatialMode === 'ar') && sessionState !== 'active' && shouldShowCanvas && (
               <DeviceOrientationControls enabled={true} />
             )}
