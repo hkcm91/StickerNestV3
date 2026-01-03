@@ -103,8 +103,6 @@ interface SpatialModeToggleProps {
   disabled?: boolean;
   /** Optional className for container */
   className?: string;
-  /** Show only available modes (hide unsupported) */
-  hideUnsupported?: boolean;
 }
 
 // ============================================================================
@@ -139,11 +137,6 @@ const styles = {
     background: 'transparent',
     color: 'rgba(255, 255, 255, 0.6)',
   },
-  buttonDisabled: {
-    background: 'transparent',
-    color: 'rgba(255, 255, 255, 0.3)',
-    cursor: 'not-allowed',
-  },
   buttonCompact: {
     padding: '6px 10px',
   },
@@ -170,7 +163,6 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
   compact = false,
   disabled = false,
   className,
-  hideUnsupported = false,
 }: SpatialModeToggleProps) {
   const {
     activeMode,
@@ -219,64 +211,19 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       if (disabled) return;
       if (mode === activeMode) return;
 
-      // Desktop mode is always supported
-      // VR/AR preview modes don't require actual XR hardware
-
       haptic('medium');
 
-      // For VR/AR modes, try to start a real WebXR session
-      // If that fails, fall back to "preview mode" (3D view without XR session)
+      // For VR/AR modes, start a real WebXR session
+      // These buttons only appear on devices that support XR (headsets)
       if (mode === 'vr' || mode === 'ar') {
-        // IMPORTANT: Detect mobile BEFORE calling requestMode()
-        // requestMode() sets sessionState to 'requesting' which can trigger
-        // WebXR initialization elsewhere in the app
-        //
-        // For VR mode on touch devices without VR hardware, ALWAYS use preview mode
-        // Real WebXR VR requires a headset (Quest, Vive, etc.)
-        // Phones/tablets should use preview mode to see the 3D scene in browser
-        //
-        // For AR mode on touch devices, TRY WebXR AR first for camera passthrough
-        // Many phones support WebXR AR (ARCore/ARKit) - only fallback to preview if it fails
-        const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const userAgentMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-        // VR on touch devices: Use preview mode (no VR headset available)
-        // AR on touch devices: Let it try WebXR AR for camera passthrough
-        if (mode === 'vr' && (hasTouchSupport || userAgentMobile)) {
-          console.log('[SpatialModeToggle] Touch device detected, using VR preview mode (no WebXR)', {
-            hasTouchSupport,
-            maxTouchPoints: navigator.maxTouchPoints,
-            userAgentMobile,
-            screenSize: `${window.innerWidth}x${window.innerHeight}`,
-          });
-          // Go directly to preview mode - don't call requestMode() first
-          useSpatialModeStore.getState().enterPreviewMode('vr');
-          return;
-        }
-
-        // Now it's safe to call requestMode - we're on a device that might have real VR/AR
         requestMode(mode);
-
-        // If XR isn't supported at all, go directly to preview mode
-        if (!capabilities.vrSupported && mode === 'vr') {
-          console.log('[SpatialModeToggle] VR not supported, entering VR preview mode');
-          // Use enterPreviewMode to show 3D canvas without XR session
-          useSpatialModeStore.getState().enterPreviewMode('vr');
-          return;
-        }
-
-        if (!capabilities.arSupported && mode === 'ar') {
-          console.log('[SpatialModeToggle] AR not supported, entering AR preview mode');
-          useSpatialModeStore.getState().enterPreviewMode('ar');
-          return;
-        }
 
         // Wait for the SpatialCanvas to be ready
         const canvasReady = await waitForCanvasReady(3000);
         if (!canvasReady) {
-          console.error('[SpatialModeToggle] Canvas not ready, entering preview mode');
-          // Fall back to preview mode
-          useSpatialModeStore.getState().enterPreviewMode(mode);
+          console.error('[SpatialModeToggle] Canvas not ready, cannot enter XR');
+          useSpatialModeStore.getState().setSessionState('none');
+          useSpatialModeStore.getState().setActiveMode('desktop');
           return;
         }
 
@@ -284,7 +231,6 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
         if (store) {
           try {
             // Use retry logic in case XR context needs more time
-            // Add timeout to prevent infinite requesting state
             const timeoutPromise = new Promise((_, reject) => {
               setTimeout(() => reject(new Error('XR entry timed out')), 10000);
             });
@@ -293,17 +239,17 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
               timeoutPromise,
             ]);
           } catch (e) {
-            console.error(`[SpatialModeToggle] Failed to enter ${mode}, using preview mode:`, e);
-            // Fall back to preview mode instead of resetting to desktop
-            // This allows users to see the VR/3D view in their browser
-            useSpatialModeStore.getState().enterPreviewMode(mode);
+            console.error(`[SpatialModeToggle] Failed to enter ${mode}:`, e);
+            useSpatialModeStore.getState().setSessionState('none');
+            useSpatialModeStore.getState().setActiveMode('desktop');
           }
         } else {
-          console.warn('[SpatialModeToggle] XR store not available, entering preview mode');
-          useSpatialModeStore.getState().enterPreviewMode(mode);
+          console.warn('[SpatialModeToggle] XR store not available');
+          useSpatialModeStore.getState().setSessionState('none');
+          useSpatialModeStore.getState().setActiveMode('desktop');
         }
       } else {
-        // Desktop mode - just update state, exit any active session
+        // Desktop mode - exit any active session
         const store = await getXRStore();
         if (store) {
           const session = store.getState().session;
@@ -315,35 +261,21 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
             }
           }
         }
-        // Force reset session state to ensure we exit properly
         useSpatialModeStore.getState().setSessionState('none');
         requestMode(mode);
       }
     },
-    [activeMode, capabilities, requestMode, disabled]
+    [activeMode, requestMode, disabled]
   );
 
   const getButtonStyle = (mode: SpatialMode) => {
     const isActive = activeMode === mode;
-    // VR always has preview mode available, AR requires hardware
-    const isSupported =
-      mode === 'desktop' ||
-      mode === 'vr' || // VR preview always available
-      (mode === 'ar' && capabilities.arSupported);
     const isRequesting = sessionState === 'requesting';
-    const isPreviewMode = mode === 'vr' && !capabilities.vrSupported;
 
     const baseStyle = {
       ...styles.button,
       ...(compact ? styles.buttonCompact : {}),
     };
-
-    if (!isSupported) {
-      return {
-        ...baseStyle,
-        ...styles.buttonDisabled,
-      };
-    }
 
     if (isActive) {
       return {
@@ -355,20 +287,15 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       };
     }
 
-    // Preview mode available but not full XR - show with slight opacity
-    if (isPreviewMode) {
-      return {
-        ...baseStyle,
-        ...styles.buttonInactive,
-        opacity: 0.8,
-      };
-    }
-
     return {
       ...baseStyle,
       ...styles.buttonInactive,
     };
   };
+
+  // Only show XR modes on devices that actually support them (headsets)
+  // Non-headset devices (phones, tablets, desktops without VR) won't see VR/AR buttons
+  const hasAnyXRSupport = capabilities.vrSupported || capabilities.arSupported;
 
   const modes: { mode: SpatialMode; icon: typeof Monitor; label: string; title: string }[] = [
     {
@@ -377,37 +304,25 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       label: '2D',
       title: 'Desktop view - traditional 2D canvas editing',
     },
-    {
-      mode: 'vr',
+    // Only include VR if device supports it (is a headset)
+    ...(capabilities.vrSupported ? [{
+      mode: 'vr' as SpatialMode,
       icon: Glasses,
       label: 'VR',
-      title: capabilities.vrSupported
-        ? 'VR mode - immersive virtual reality editing'
-        : 'VR Preview - view 3D scene in browser (no headset)',
-    },
-    {
-      mode: 'ar',
+      title: 'VR mode - immersive virtual reality editing',
+    }] : []),
+    // Only include AR if device supports it
+    ...(capabilities.arSupported ? [{
+      mode: 'ar' as SpatialMode,
       icon: Smartphone,
       label: 'AR',
-      title: capabilities.arSupported
-        ? 'AR mode - augmented reality with camera passthrough'
-        : 'AR not supported on this device',
-    },
+      title: 'AR mode - augmented reality with camera passthrough',
+    }] : []),
   ];
 
-  // Filter modes if hideUnsupported is true
-  // Note: VR always shows because it has a preview mode available
-  const visibleModes = hideUnsupported
-    ? modes.filter(
-        (m) =>
-          m.mode === 'desktop' ||
-          m.mode === 'vr' || // VR preview always available
-          (m.mode === 'ar' && capabilities.arSupported)
-      )
-    : modes;
-
-  // Don't render if only desktop is available and hideUnsupported is true
-  if (hideUnsupported && visibleModes.length === 1) {
+  // Don't render the toggle at all if only desktop is available
+  // (no point showing a single-option toggle)
+  if (!hasAnyXRSupport && capabilities.lastChecked > 0) {
     return null;
   }
 
@@ -422,38 +337,29 @@ export const SpatialModeToggle = memo(function SpatialModeToggle({
       role="radiogroup"
       aria-label="Spatial mode"
     >
-      {visibleModes.map(({ mode, icon: Icon, label, title }) => {
-        const isSupported =
-          mode === 'desktop' ||
-          (mode === 'vr' && capabilities.vrSupported) ||
-          (mode === 'ar' && capabilities.arSupported);
-
-        return (
-          <button
-            key={mode}
-            onClick={() => handleModeChange(mode)}
-            style={getButtonStyle(mode)}
-            role="radio"
-            aria-checked={activeMode === mode}
-            aria-disabled={!isSupported}
-            title={title}
-            disabled={!isSupported}
-          >
-            <Icon size={14} style={styles.icon} />
-            {!compact && <span>{label}</span>}
-            {/* Show indicator for active XR session */}
-            {activeMode === mode && mode !== 'desktop' && sessionState === 'active' && (
-              <span
-                style={{
-                  ...styles.badge,
-                  background: '#22c55e',
-                }}
-                title="XR session active"
-              />
-            )}
-          </button>
-        );
-      })}
+      {modes.map(({ mode, icon: Icon, label, title }) => (
+        <button
+          key={mode}
+          onClick={() => handleModeChange(mode)}
+          style={getButtonStyle(mode)}
+          role="radio"
+          aria-checked={activeMode === mode}
+          title={title}
+        >
+          <Icon size={14} style={styles.icon} />
+          {!compact && <span>{label}</span>}
+          {/* Show indicator for active XR session */}
+          {activeMode === mode && mode !== 'desktop' && sessionState === 'active' && (
+            <span
+              style={{
+                ...styles.badge,
+                background: '#22c55e',
+              }}
+              title="XR session active"
+            />
+          )}
+        </button>
+      ))}
     </div>
   );
 });

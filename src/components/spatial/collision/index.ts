@@ -33,9 +33,7 @@
  *
  *   return (
  *     <group>
- *       {/* Visual snap feedback during drag */}
  *       <ActiveSnapFeedback />
- *       {/* Debug visualization (enable via store) */}
  *       <CollisionDebugView />
  *     </group>
  *   );
