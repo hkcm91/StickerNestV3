@@ -481,36 +481,75 @@ export function VRWidgetTexture({
   widget,
   width,
   height,
-  refreshInterval = 1000, // Update every second by default
+  refreshInterval = 1000,
   onError,
 }: VRWidgetTextureProps) {
-  // Calculate pixel dimensions (higher res for VR readability)
-  const resolutionScale = getWidgetResolutionScale(widget.width, widget.height);
-  const pixelWidth = Math.round(widget.width * resolutionScale);
-  const pixelHeight = Math.round(widget.height * resolutionScale);
+  // Use refs to avoid re-render loops - only extract values once
+  const widgetIdRef = useRef(widget.id);
+  const widgetDefIdRef = useRef(widget.widgetDefId);
 
-  const { texture, isLoading, error, hasHtml } = useWidgetTexture(
-    widget,
-    pixelWidth,
-    pixelHeight,
-    refreshInterval
-  );
+  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
+  const [captureAttempted, setCaptureAttempted] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Report errors
+  // One-time texture creation on mount only
   useEffect(() => {
-    if (error && onError) {
-      onError(error);
-    }
-  }, [error, onError]);
+    if (captureAttempted) return;
+    setCaptureAttempted(true);
 
-  // If no HTML content (React component widget), return null
-  // The parent should handle this case
-  if (!hasHtml) {
-    return null;
-  }
+    // Create a simple canvas with widget info instead of html2canvas
+    // This is stable and won't cause re-render loops
+    const canvas = document.createElement('canvas');
+    const pixelWidth = Math.round(widget.width * 2);
+    const pixelHeight = Math.round(widget.height * 2);
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    canvasRef.current = canvas;
 
-  // Loading state
-  if (isLoading || !texture) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Draw widget background
+    const gradient = ctx.createLinearGradient(0, 0, pixelWidth, pixelHeight);
+    gradient.addColorStop(0, '#1e1e2e');
+    gradient.addColorStop(1, '#2d2d44');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, pixelWidth, pixelHeight);
+
+    // Draw border
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, pixelWidth - 4, pixelHeight - 4);
+
+    // Draw widget type name
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${Math.max(16, pixelHeight / 8)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const displayName = widgetDefIdRef.current
+      .replace('stickernest.', '')
+      .replace(/[-_]/g, ' ')
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
+    ctx.fillText(displayName, pixelWidth / 2, pixelHeight / 2);
+
+    // Create texture
+    const newTexture = new THREE.CanvasTexture(canvas);
+    newTexture.minFilter = THREE.LinearFilter;
+    newTexture.magFilter = THREE.LinearFilter;
+    newTexture.colorSpace = THREE.SRGBColorSpace;
+    setTexture(newTexture);
+
+    return () => {
+      newTexture.dispose();
+    };
+  }, []); // Empty deps - run only once on mount
+
+  // Show placeholder while loading
+  if (!texture) {
     return (
       <mesh position={[0, 0, 0.01]} raycast={() => null}>
         <planeGeometry args={[width, height]} />
@@ -519,7 +558,6 @@ export function VRWidgetTexture({
     );
   }
 
-  // Render textured plane - raycast disabled so parent widget mesh receives events
   return (
     <mesh position={[0, 0, 0.01]} raycast={() => null}>
       <planeGeometry args={[width, height]} />
@@ -751,30 +789,79 @@ export function VRReactWidgetTexture({
   refreshInterval = 2000,
   onError,
 }: VRReactWidgetTextureProps) {
-  const resolutionScale = getWidgetResolutionScale(widget.width, widget.height);
-  const pixelWidth = Math.round(widget.width * resolutionScale);
-  const pixelHeight = Math.round(widget.height * resolutionScale);
+  // Use refs to avoid re-render loops
+  const widgetDefIdRef = useRef(widget.widgetDefId);
+  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  const { texture, isLoading, error, hasComponent } = useReactWidgetTexture(
-    widget,
-    pixelWidth,
-    pixelHeight,
-    refreshInterval
-  );
+  // Check if widget has a React component
+  const builtin = useMemo(() => getBuiltinWidget(widgetDefIdRef.current), []);
+  const hasComponent = !!builtin?.component;
 
-  // Report errors
+  // One-time texture creation
   useEffect(() => {
-    if (error && onError) {
-      onError(error);
-    }
-  }, [error, onError]);
+    if (initialized || !hasComponent) return;
+    setInitialized(true);
+
+    // Create a simple canvas with widget info
+    const canvas = document.createElement('canvas');
+    const pixelWidth = Math.round(widget.width * 2);
+    const pixelHeight = Math.round(widget.height * 2);
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Draw widget background
+    const gradient = ctx.createLinearGradient(0, 0, pixelWidth, pixelHeight);
+    gradient.addColorStop(0, '#1e1e2e');
+    gradient.addColorStop(1, '#2d2d44');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, pixelWidth, pixelHeight);
+
+    // Draw border
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, pixelWidth - 4, pixelHeight - 4);
+
+    // Draw widget type name
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${Math.max(16, pixelHeight / 8)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const displayName = widgetDefIdRef.current
+      .replace('stickernest.', '')
+      .replace(/[-_]/g, ' ')
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
+    ctx.fillText(displayName, pixelWidth / 2, pixelHeight / 2);
+
+    // Small "React" label
+    ctx.font = `${Math.max(10, pixelHeight / 16)}px system-ui, sans-serif`;
+    ctx.fillStyle = '#8b5cf6';
+    ctx.fillText('(React)', pixelWidth / 2, pixelHeight / 2 + pixelHeight / 6);
+
+    // Create texture
+    const newTexture = new THREE.CanvasTexture(canvas);
+    newTexture.minFilter = THREE.LinearFilter;
+    newTexture.magFilter = THREE.LinearFilter;
+    newTexture.colorSpace = THREE.SRGBColorSpace;
+    setTexture(newTexture);
+
+    return () => {
+      newTexture.dispose();
+    };
+  }, [hasComponent]); // Only depends on hasComponent
 
   if (!hasComponent) {
     return null;
   }
 
-  // Loading state
-  if (isLoading || !texture) {
+  if (!texture) {
     return (
       <mesh position={[0, 0, 0.01]} raycast={() => null}>
         <planeGeometry args={[width, height]} />
@@ -783,7 +870,6 @@ export function VRReactWidgetTexture({
     );
   }
 
-  // Render textured plane - raycast disabled so parent widget mesh receives events
   return (
     <mesh position={[0, 0, 0.01]} raycast={() => null}>
       <planeGeometry args={[width, height]} />
