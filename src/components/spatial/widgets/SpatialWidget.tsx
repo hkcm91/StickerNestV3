@@ -20,14 +20,14 @@ import {
 } from '../../../utils/spatialCoordinates';
 import { useActiveSpatialMode } from '../../../state/useSpatialModeStore';
 import { Widget3DHandles, type HandleType } from '../xr/Widget3DHandles';
-import { canRenderWidget } from './spatialWidgetUtils';
+import { canRenderWidget, isReactWidget } from './spatialWidgetUtils';
 import {
   getCachedWidgetHtml,
   getWidgetFetchStatus,
   fetchAndCacheWidgetHtml,
 } from './vrWidgetHtmlCache';
 import { WidgetPlaceholder, WidgetHtmlContent } from './SpatialWidgetContent';
-import { VRWidgetTexture } from './VRWidgetTexture';
+import { VRWidgetTexture, VRReactWidgetTexture } from './VRWidgetTexture';
 
 // ============================================================================
 // Types
@@ -291,12 +291,22 @@ export function SpatialWidget({
       {canRender ? (
         isPresenting ? (
           // VR mode: render widget content to a texture
-          <VRWidgetTexture
-            widget={widget}
-            width={size3D.width}
-            height={size3D.height}
-            refreshInterval={2000}
-          />
+          // Use VRReactWidgetTexture for React components, VRWidgetTexture for HTML
+          isReactWidget(widget.widgetDefId) ? (
+            <VRReactWidgetTexture
+              widget={widget}
+              width={size3D.width}
+              height={size3D.height}
+              refreshInterval={2000}
+            />
+          ) : (
+            <VRWidgetTexture
+              widget={widget}
+              width={size3D.width}
+              height={size3D.height}
+              refreshInterval={2000}
+            />
+          )
         ) : (
           // Desktop mode: use Html overlay
           <WidgetHtmlContent widget={widget} htmlLoadState={htmlLoadState} />

@@ -3,10 +3,14 @@
  *
  * Renders widget HTML content to a canvas texture for display in VR/AR.
  * Uses html2canvas to capture widget content and displays it on a 3D plane.
+ *
+ * Supports both:
+ * - HTML-based widgets (rendered via iframe)
+ * - React component widgets (rendered via ReactDOM portal)
  */
 
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { createRoot, Root } from 'react-dom/client';
 import * as THREE from 'three';
 import html2canvas from 'html2canvas';
 import type { WidgetInstance } from '../../../types/domain';
@@ -15,6 +19,7 @@ import {
   getWidgetHtml,
   createSpatial3DAPI,
   getWidgetResolutionScale,
+  isReactWidget,
 } from './spatialWidgetUtils';
 
 // ============================================================================
@@ -363,36 +368,234 @@ export function VRWidgetTexture({
 }
 
 // ============================================================================
-// React Component Widget Renderer (for widgets with React components)
+// Hook: useReactWidgetTexture
+// Renders React component widgets to a texture
 // ============================================================================
 
-interface ReactWidgetRendererProps {
+function useReactWidgetTexture(
+  widget: WidgetInstance,
+  pixelWidth: number,
+  pixelHeight: number,
+  refreshInterval: number
+) {
+  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<Root | null>(null);
+  const textureRef = useRef<THREE.CanvasTexture | null>(null);
+  const lastUpdateRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  const builtin = getBuiltinWidget(widget.widgetDefId);
+  const hasComponent = !!builtin?.component;
+
+  // Setup offscreen container with React component
+  useEffect(() => {
+    if (!hasComponent || !builtin?.component) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Create offscreen container
+    const container = offscreenManager.createContainer(
+      `react-${widget.id}`,
+      pixelWidth,
+      pixelHeight
+    );
+    containerRef.current = container;
+
+    // Add Tailwind-compatible base styles
+    container.style.cssText += `
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+    `;
+
+    // Create a wrapper div for the React component
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    `;
+    container.appendChild(wrapper);
+
+    // Create React root and render component
+    const Component = builtin.component as React.ComponentType<{ api?: any }>;
+    const api = createSpatial3DAPI(widget);
+
+    rootRef.current = createRoot(wrapper);
+    rootRef.current.render(
+      React.createElement(Component, { api })
+    );
+
+    // Give component time to render, then capture
+    const captureTimeout = setTimeout(() => {
+      if (isMountedRef.current) {
+        captureToTexture();
+      }
+    }, 800);
+
+    return () => {
+      clearTimeout(captureTimeout);
+      if (rootRef.current) {
+        rootRef.current.unmount();
+        rootRef.current = null;
+      }
+      offscreenManager.removeContainer(`react-${widget.id}`);
+      containerRef.current = null;
+    };
+  }, [widget.id, widget.widgetDefId, hasComponent, pixelWidth, pixelHeight]);
+
+  // Re-render when widget state changes
+  useEffect(() => {
+    if (!hasComponent || !builtin?.component || !rootRef.current) return;
+
+    const Component = builtin.component as React.ComponentType<{ api?: any }>;
+    const api = createSpatial3DAPI(widget);
+
+    rootRef.current.render(
+      React.createElement(Component, { api })
+    );
+
+    // Recapture after state update
+    const timeout = setTimeout(() => {
+      if (isMountedRef.current) {
+        captureToTexture();
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [widget.state]);
+
+  // Capture container to texture
+  const captureToTexture = useCallback(async () => {
+    const container = containerRef.current;
+    if (!container || !isMountedRef.current) return;
+
+    try {
+      const canvas = await html2canvas(container, {
+        backgroundColor: '#1e1b4b',
+        scale: 1,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        width: pixelWidth,
+        height: pixelHeight,
+      });
+
+      if (!isMountedRef.current) return;
+
+      // Create or update texture
+      if (textureRef.current) {
+        textureRef.current.image = canvas;
+        textureRef.current.needsUpdate = true;
+      } else {
+        const newTexture = new THREE.CanvasTexture(canvas);
+        newTexture.minFilter = THREE.LinearFilter;
+        newTexture.magFilter = THREE.LinearFilter;
+        newTexture.colorSpace = THREE.SRGBColorSpace;
+        textureRef.current = newTexture;
+        setTexture(newTexture);
+      }
+
+      setIsLoading(false);
+      setError(null);
+      lastUpdateRef.current = Date.now();
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      console.error('[VRWidgetTexture] React component capture failed:', err);
+      setError(err instanceof Error ? err : new Error('Capture failed'));
+      setIsLoading(false);
+    }
+  }, [pixelWidth, pixelHeight]);
+
+  // Periodic refresh
+  useEffect(() => {
+    if (refreshInterval <= 0 || !containerRef.current || !hasComponent) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastUpdateRef.current >= Math.max(refreshInterval, MIN_REFRESH_INTERVAL)) {
+        captureToTexture();
+      }
+    }, Math.max(refreshInterval, MIN_REFRESH_INTERVAL));
+
+    return () => clearInterval(interval);
+  }, [refreshInterval, captureToTexture, hasComponent]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (textureRef.current) {
+        textureRef.current.dispose();
+        textureRef.current = null;
+      }
+    };
+  }, []);
+
+  return { texture, isLoading, error, refresh: captureToTexture, hasComponent };
+}
+
+// ============================================================================
+// React Component Widget Texture (for widgets with React components)
+// ============================================================================
+
+interface VRReactWidgetTextureProps {
   widget: WidgetInstance;
   width: number;
   height: number;
+  refreshInterval?: number;
+  onError?: (error: Error) => void;
 }
 
-export function ReactWidgetRenderer({ widget, width, height }: ReactWidgetRendererProps) {
-  const builtin = getBuiltinWidget(widget.widgetDefId);
+export function VRReactWidgetTexture({
+  widget,
+  width,
+  height,
+  refreshInterval = 2000,
+  onError,
+}: VRReactWidgetTextureProps) {
+  const resolutionScale = getWidgetResolutionScale(widget.width, widget.height);
+  const pixelWidth = Math.round(widget.width * resolutionScale);
+  const pixelHeight = Math.round(widget.height * resolutionScale);
 
-  if (!builtin?.component) {
+  const { texture, isLoading, error, hasComponent } = useReactWidgetTexture(
+    widget,
+    pixelWidth,
+    pixelHeight,
+    refreshInterval
+  );
+
+  // Report errors
+  useEffect(() => {
+    if (error && onError) {
+      onError(error);
+    }
+  }, [error, onError]);
+
+  if (!hasComponent) {
     return null;
   }
 
-  const Component = builtin.component as React.ComponentType<{ api: any }>;
-  const api = createSpatial3DAPI(widget);
-
-  // For now, render a placeholder for React components in VR
-  // Full 3D UI rendering would require react-three-flex or similar
-  return (
-    <group position={[0, 0, 0.01]}>
-      {/* Render the component in a limited way */}
-      {/* TODO: Implement full React-to-3D rendering */}
-      <mesh>
-        <planeGeometry args={[width * 0.9, height * 0.9]} />
-        <meshBasicMaterial color="#1a1625" transparent opacity={0.95} />
+  // Loading state
+  if (isLoading || !texture) {
+    return (
+      <mesh position={[0, 0, 0.01]}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial color="#2d2a4a" transparent opacity={0.9} />
       </mesh>
-    </group>
+    );
+  }
+
+  // Render textured plane
+  return (
+    <mesh position={[0, 0, 0.01]}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial map={texture} transparent />
+    </mesh>
   );
 }
 
