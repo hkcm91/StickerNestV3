@@ -82,7 +82,8 @@
       "Skill(implementing-spatial-xr)",
       "Bash(head:*)",
       "Skill(building-skills)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(timeout 120 npm run build:*)"
     ],
     "deny": [],
     "ask": []

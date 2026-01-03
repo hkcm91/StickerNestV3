@@ -636,6 +636,41 @@ export function VRToolHub({
 
   const menuGesture = useMenuGesture('left');
 
+  // Auto-show toolbar in VR mode - user can dismiss via pin toggle
+  const [autoShow, setAutoShow] = useState(true);
+
+  // Check for controller button press to toggle toolbar visibility
+  const [showFromController, setShowFromController] = useState(false);
+
+  // Detect controller input for toggling toolbar
+  useEffect(() => {
+    const session = gl.xr?.getSession?.();
+    if (!session) return;
+
+    let lastButtonState = false;
+
+    const checkControllers = () => {
+      for (const source of session.inputSources) {
+        if (source.gamepad) {
+          // Check for B/Y button (typically button 2 or 4) to toggle toolbar
+          const buttons = source.gamepad.buttons;
+          if (buttons.length > 2) {
+            const menuPressed = buttons[2]?.pressed || buttons[4]?.pressed;
+            // Toggle on button release (to avoid rapid toggling)
+            if (!menuPressed && lastButtonState) {
+              setShowFromController((prev) => !prev);
+              setAutoShow(false); // User has interacted, disable auto-show
+            }
+            lastButtonState = menuPressed;
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(checkControllers, 50);
+    return () => clearInterval(interval);
+  }, [gl.xr]);
+
   // Haptic feedback helper
   const triggerHaptic = useCallback((intensity: number = 0.5, duration: number = 50) => {
     const session = gl.xr?.getSession?.();
@@ -696,8 +731,17 @@ export function VRToolHub({
     [0.09, -0.045, HUB_DEPTH / 2 + 0.008],
   ];
 
-  // Show/hide logic
-  const shouldShow = visible && (isPinned || menuGesture.isMenuGesture);
+  // Show/hide logic - show when:
+  // 1. Pinned by user
+  // 2. Hand gesture detected (palm up)
+  // 3. Toggled via controller button
+  // 4. Auto-show on VR entry (until user interacts)
+  const shouldShow = visible && (
+    isPinned ||
+    menuGesture.isMenuGesture ||
+    showFromController ||
+    autoShow  // Show by default on VR entry
+  );
 
   // Animate visibility
   const { opacity, scale } = useSpring({
@@ -720,11 +764,13 @@ export function VRToolHub({
     return [0, 1.4, -0.5] as [number, number, number];
   }, [fixedPosition, isPinned, menuGesture]);
 
-  // Update position when following hand
-  useFrame(() => {
-    if (!groupRef.current || isPinned || fixedPosition) return;
+  // Combined useFrame for position following and camera facing
+  // IMPORTANT: This must be BEFORE any conditional returns (React hooks rule)
+  useFrame((state) => {
+    if (!groupRef.current) return;
 
-    if (menuGesture.isMenuGesture) {
+    // Update position when following hand gesture
+    if (!isPinned && !fixedPosition && menuGesture.isMenuGesture) {
       groupRef.current.position.lerp(
         new THREE.Vector3(
           menuGesture.palmPosition.x,
@@ -734,18 +780,8 @@ export function VRToolHub({
         0.15
       );
     }
-  });
 
-  if (!shouldShow && opacity.get() < 0.01) {
-    return null;
-  }
-
-  // Make the toolbar face the camera each frame
-  useFrame((state) => {
-    if (!groupRef.current) return;
-
-    // Always face the camera (billboard behavior)
-    // Get camera position and make the toolbar look at it
+    // Make the toolbar face the camera (billboard behavior)
     const cameraPos = state.camera.position;
     const groupPos = groupRef.current.position;
 
@@ -760,6 +796,11 @@ export function VRToolHub({
     const angle = Math.atan2(direction.x, direction.z);
     groupRef.current.rotation.y = angle;
   });
+
+  // Early return if not visible (AFTER all hooks)
+  if (!shouldShow && opacity.get() < 0.01) {
+    return null;
+  }
 
   return (
     <animated.group
