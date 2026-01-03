@@ -18,8 +18,9 @@
 
 import React, { Suspense, useEffect, useState, useMemo, useRef, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { XR, XROrigin, useXR } from '@react-three/xr';
+import { XR, XROrigin, useXR, useXRControllerLocomotion, TeleportTarget } from '@react-three/xr';
 import { OrbitControls, Grid, Text } from '@react-three/drei';
+import type { Group } from 'three';
 import { useSpatialModeStore, useActiveSpatialMode } from '../../state/useSpatialModeStore';
 import { SpatialScene } from './SpatialScene';
 import { xrStore } from './xrStore';
@@ -154,6 +155,179 @@ function XRErrorFallback() {
 }
 
 /**
+ * Interactive test cube - click to toggle color, shows hover state
+ */
+interface InteractiveCubeProps {
+  position: [number, number, number];
+  color: string;
+  hoverColor: string;
+  activeColor: string;
+  size?: number;
+  label?: string;
+}
+
+function InteractiveCube({ position, color, hoverColor, activeColor, size = 0.2, label }: InteractiveCubeProps) {
+  const [clicked, setClicked] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <group position={position}>
+      <mesh
+        scale={clicked ? 1.2 : hovered ? 1.1 : 1}
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log(`[InteractiveCube] ${label || 'Cube'} CLICKED!`);
+          setClicked(!clicked);
+        }}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <boxGeometry args={[size, size, size]} />
+        <meshStandardMaterial
+          color={clicked ? activeColor : hovered ? hoverColor : color}
+          emissive={hovered ? color : '#000000'}
+          emissiveIntensity={hovered ? 0.3 : 0}
+        />
+      </mesh>
+      {label && (
+        <Text
+          position={[0, size + 0.1, 0]}
+          fontSize={0.05}
+          color="#ffffff"
+          anchorX="center"
+          anchorY="bottom"
+        >
+          {label}
+        </Text>
+      )}
+    </group>
+  );
+}
+
+/**
+ * Interactive sphere for variety
+ */
+function InteractiveSphere({ position, color, size = 0.15, label }: { position: [number, number, number]; color: string; size?: number; label?: string }) {
+  const [clicked, setClicked] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <group position={position}>
+      <mesh
+        scale={clicked ? 1.3 : hovered ? 1.15 : 1}
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log(`[InteractiveSphere] ${label || 'Sphere'} CLICKED!`);
+          setClicked(!clicked);
+        }}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <sphereGeometry args={[size, 32, 32]} />
+        <meshStandardMaterial
+          color={clicked ? '#22c55e' : hovered ? '#fbbf24' : color}
+          emissive={hovered ? color : '#000000'}
+          emissiveIntensity={hovered ? 0.4 : 0}
+          metalness={0.3}
+          roughness={0.4}
+        />
+      </mesh>
+      {label && (
+        <Text
+          position={[0, size + 0.12, 0]}
+          fontSize={0.04}
+          color="#ffffff"
+          anchorX="center"
+          anchorY="bottom"
+        >
+          {label}
+        </Text>
+      )}
+    </group>
+  );
+}
+
+/**
+ * Interactive test area with multiple objects to click
+ * Arranged in a semicircle around the user
+ */
+function InteractiveTestArea() {
+  return (
+    <group>
+      {/* Front row - easy to reach */}
+      <InteractiveCube
+        position={[0, 1.2, -1.5]}
+        color="#8b5cf6"
+        hoverColor="#a78bfa"
+        activeColor="#22c55e"
+        size={0.2}
+        label="Purple"
+      />
+      <InteractiveCube
+        position={[-0.5, 1.2, -1.5]}
+        color="#ef4444"
+        hoverColor="#f87171"
+        activeColor="#22c55e"
+        size={0.2}
+        label="Red"
+      />
+      <InteractiveCube
+        position={[0.5, 1.2, -1.5]}
+        color="#3b82f6"
+        hoverColor="#60a5fa"
+        activeColor="#22c55e"
+        size={0.2}
+        label="Blue"
+      />
+
+      {/* Higher row */}
+      <InteractiveSphere position={[-0.3, 1.8, -1.8]} color="#f59e0b" label="Gold" />
+      <InteractiveSphere position={[0.3, 1.8, -1.8]} color="#ec4899" label="Pink" />
+
+      {/* Side objects - test peripheral interaction */}
+      <InteractiveCube
+        position={[-1.2, 1.4, -1.0]}
+        color="#10b981"
+        hoverColor="#34d399"
+        activeColor="#fbbf24"
+        size={0.25}
+        label="Left"
+      />
+      <InteractiveCube
+        position={[1.2, 1.4, -1.0]}
+        color="#06b6d4"
+        hoverColor="#22d3ee"
+        activeColor="#fbbf24"
+        size={0.25}
+        label="Right"
+      />
+
+      {/* Far objects - test distance interaction */}
+      <InteractiveCube
+        position={[0, 1.5, -3]}
+        color="#6366f1"
+        hoverColor="#818cf8"
+        activeColor="#22c55e"
+        size={0.4}
+        label="Far"
+      />
+      <InteractiveSphere position={[-1, 1.5, -3]} color="#f43f5e" size={0.2} label="Far Left" />
+      <InteractiveSphere position={[1, 1.5, -3]} color="#14b8a6" size={0.2} label="Far Right" />
+
+      {/* Low objects - test looking down */}
+      <InteractiveCube
+        position={[0, 0.5, -1.2]}
+        color="#84cc16"
+        hoverColor="#a3e635"
+        activeColor="#22c55e"
+        size={0.15}
+        label="Low"
+      />
+    </group>
+  );
+}
+
+/**
  * Simple test cube to verify XR pointer events work
  * Click it to see if onClick fires - will turn green and log
  */
@@ -192,6 +366,53 @@ function XRTestCube() {
         emissiveIntensity={0.5}
       />
     </mesh>
+  );
+}
+
+/**
+ * Locomotion controller - enables thumbstick movement and teleportation
+ */
+function LocomotionController({ originRef }: { originRef: React.RefObject<Group> }) {
+  // Enable thumbstick locomotion
+  // Left stick = movement, Right stick = rotation
+  useXRControllerLocomotion(originRef, {
+    speed: 2.5, // meters per second
+  });
+
+  return null;
+}
+
+/**
+ * Teleportable floor - click to teleport
+ */
+function TeleportFloor({ onTeleport }: { onTeleport: (point: THREE.Vector3) => void }) {
+  return (
+    <TeleportTarget onTeleport={onTeleport}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <circleGeometry args={[15, 64]} />
+        <meshStandardMaterial
+          color="#1a1a2e"
+          transparent
+          opacity={0.8}
+          metalness={0.2}
+          roughness={0.8}
+        />
+      </mesh>
+      {/* Visual grid on floor */}
+      <Grid
+        position={[0, 0.02, 0]}
+        args={[30, 30]}
+        cellSize={1}
+        cellThickness={0.5}
+        cellColor="#3b3b5c"
+        sectionSize={5}
+        sectionThickness={1}
+        sectionColor="#6366f1"
+        fadeDistance={20}
+        fadeStrength={1}
+        followCamera={false}
+      />
+    </TeleportTarget>
   );
 }
 
@@ -819,6 +1040,16 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
   // Track if we've mounted the Canvas (for XR readiness)
   const [canvasReady, setCanvasReady] = useState(false);
 
+  // XROrigin ref and position for locomotion
+  const originRef = useRef<Group>(null);
+  const [originPosition, setOriginPosition] = useState<[number, number, number]>([0, 0, 0]);
+
+  // Handle teleportation
+  const handleTeleport = useCallback((point: THREE.Vector3) => {
+    console.log('[SpatialCanvas] Teleporting to:', point);
+    setOriginPosition([point.x, 0, point.z]);
+  }, []);
+
   // Reset any stuck session state on mount (e.g., from browser close during XR request)
   // This prevents the SpatialCanvas from blocking interaction on app restart
   useEffect(() => {
@@ -1029,8 +1260,11 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               <meshBasicMaterial color="#3b82f6" />
             </mesh>
 
-            {/* XROrigin is required for proper positioning */}
-            <XROrigin />
+            {/* XROrigin with ref for locomotion - position updates on teleport */}
+            <XROrigin ref={originRef} position={originPosition}>
+              {/* Locomotion controller - thumbstick movement */}
+              <LocomotionController originRef={originRef} />
+            </XROrigin>
 
             {/* Background controller - sets clear color */}
             <XRBackgroundController />
@@ -1054,10 +1288,16 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               rayLength={10}
             />
 
-            {/* Interactive test cube */}
+            {/* Interactive test area with multiple clickable objects */}
+            <InteractiveTestArea />
+
+            {/* Keep the original test cube for reference */}
             <XRTestCube />
 
-            {/* Ground reference grid */}
+            {/* Teleportable floor - click to teleport */}
+            <TeleportFloor onTeleport={handleTeleport} />
+
+            {/* Ground reference grid (on top of teleport floor) */}
             <GroundPlane />
 
             {/* DISABLED FOR DEBUGGING - Enable one by one to find the error source */}
