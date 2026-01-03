@@ -16,3 +16,21 @@ export {
   EnvironmentControlWidgetManifest,
   EnvironmentControlWidgetHTML,
 } from './EnvironmentControlWidget';
+
+export {
+  ARPortalWidget,
+  ARPortalWidgetManifest,
+  ARPortal3D,
+} from './ARPortalWidget';
+
+export {
+  TeleportSpotsWidget,
+  TeleportSpotsWidgetManifest,
+  TeleportSpots3D,
+} from './TeleportSpotsWidget';
+
+export {
+  BubbleWandWidget,
+  BubbleWandWidgetManifest,
+  BubbleWand3D,
+} from './BubbleWandWidget';

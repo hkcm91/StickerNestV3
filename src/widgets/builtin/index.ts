@@ -90,6 +90,9 @@ import { GreenScreenPlaneWidget } from './GreenScreenPlaneWidget';
 import { PanoramicOverlayWidget } from './PanoramicOverlayWidget';
 import { SpatialMediaControllerWidget } from './spatial/SpatialMediaControllerWidget';
 import { EnvironmentControlWidget } from './spatial/EnvironmentControlWidget';
+import { ARPortalWidget } from './spatial/ARPortalWidget';
+import { TeleportSpotsWidget } from './spatial/TeleportSpotsWidget';
+import { BubbleWandWidget } from './spatial/BubbleWandWidget';
 
 // Collaboration Widgets
 import { ViewSwitcherWidget } from './ViewSwitcherWidget';
@@ -287,6 +290,9 @@ export const BUILTIN_WIDGETS: Record<string, BuiltinWidget> = {
   'stickernest.panoramic-overlay': PanoramicOverlayWidget,
   'stickernest.spatial-media-controller': SpatialMediaControllerWidget,
   'stickernest.environment-control': EnvironmentControlWidget,
+  'stickernest.ar-portal': ARPortalWidget,
+  'stickernest.teleport-spots': TeleportSpotsWidget,
+  'stickernest.bubble-wand': BubbleWandWidget,
   'stickernest.entity-panel-3d': {
     manifest: entityPanel3DManifest as unknown as WidgetManifest,
     component: EntityPanel3DWidget
@@ -444,6 +450,9 @@ export {
   GreenScreenPlaneWidget,
   PanoramicOverlayWidget,
   SpatialMediaControllerWidget,
+  ARPortalWidget,
+  TeleportSpotsWidget,
+  BubbleWandWidget,
   EntityPanel3DWidget,
   // Collaboration Widgets
   ViewSwitcherWidget,

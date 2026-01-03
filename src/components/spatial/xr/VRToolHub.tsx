@@ -740,17 +740,32 @@ export function VRToolHub({
     return null;
   }
 
+  // Make the toolbar face the camera each frame
+  useFrame((state) => {
+    if (!groupRef.current) return;
+
+    // Always face the camera (billboard behavior)
+    // Get camera position and make the toolbar look at it
+    const cameraPos = state.camera.position;
+    const groupPos = groupRef.current.position;
+
+    // Calculate direction from toolbar to camera (only Y rotation to keep upright)
+    const direction = new THREE.Vector3(
+      cameraPos.x - groupPos.x,
+      0, // Keep Y level
+      cameraPos.z - groupPos.z
+    ).normalize();
+
+    // Calculate the angle to face the camera
+    const angle = Math.atan2(direction.x, direction.z);
+    groupRef.current.rotation.y = angle;
+  });
+
   return (
     <animated.group
       ref={groupRef}
       position={hubPosition}
       scale={scale}
-      // Face the user
-      onUpdate={(self) => {
-        if (!isPinned) {
-          self.lookAt(0, self.position.y, 0);
-        }
-      }}
     >
       {/* Main backplate */}
       <CurvedBackplate

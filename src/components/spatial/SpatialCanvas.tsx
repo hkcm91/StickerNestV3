@@ -113,6 +113,42 @@ function XRDebugLogger() {
 }
 
 // ============================================================================
+// XR Background Controller - Manages canvas transparency for VR/AR
+// ============================================================================
+
+/**
+ * Controls the WebGL clear color based on spatial mode:
+ * - VR mode: Fully OPAQUE background (dark space environment)
+ * - AR mode: Fully TRANSPARENT (real-world passthrough)
+ * - Desktop 3D: Opaque for preview
+ */
+function XRBackgroundController() {
+  const { gl } = useThree();
+  const spatialMode = useActiveSpatialMode();
+  const sessionState = useSpatialModeStore((s) => s.sessionState);
+  const targetMode = useSpatialModeStore((s) => s.targetMode);
+
+  useEffect(() => {
+    // Determine if we're in AR mode (or transitioning to AR)
+    const isARMode = spatialMode === 'ar' ||
+      (sessionState === 'requesting' && targetMode === 'ar') ||
+      (sessionState === 'active' && targetMode === 'ar');
+
+    if (isARMode) {
+      // AR: Fully transparent - only widgets visible, real world shows through
+      gl.setClearColor(0x000000, 0);
+      console.log('[XRBackgroundController] AR mode: transparent background (alpha=0)');
+    } else {
+      // VR/Desktop: Fully opaque dark background
+      gl.setClearColor(0x0a0a0f, 1);
+      console.log('[XRBackgroundController] VR/Desktop mode: opaque background (alpha=1)');
+    }
+  }, [gl, spatialMode, sessionState, targetMode]);
+
+  return null;
+}
+
+// ============================================================================
 // XR Session State Tracker
 // ============================================================================
 
@@ -848,6 +884,9 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
         {/* Wrap entire XR tree in error boundary to prevent crashes */}
         <XRErrorBoundary fallback={<XRErrorFallback />}>
           <XR store={xrStore}>
+            {/* Background controller - sets opaque for VR, transparent for AR */}
+            <XRBackgroundController />
+
             {/* Debug logger for XR session state */}
             <XRDebugLogger />
 

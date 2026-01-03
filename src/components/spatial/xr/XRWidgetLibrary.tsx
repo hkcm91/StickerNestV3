@@ -311,7 +311,7 @@ export function XRWidgetLibrary({
       height={0.55}
       backgroundColor="rgba(15, 15, 25, 0.95)"
       accentColor={accentColor}
-      billboard={false}
+      billboard={true}
     >
       <div
         style={{
