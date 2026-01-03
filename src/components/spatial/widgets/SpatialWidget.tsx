@@ -27,6 +27,7 @@ import {
   fetchAndCacheWidgetHtml,
 } from './vrWidgetHtmlCache';
 import { WidgetPlaceholder, WidgetHtmlContent } from './SpatialWidgetContent';
+import { VRWidgetTexture } from './VRWidgetTexture';
 
 // ============================================================================
 // Types
@@ -286,10 +287,22 @@ export function SpatialWidget({
         onRotateEnd={handleRotateEnd}
       />
 
-      {/* Widget content - placeholder in XR, Html in desktop preview */}
-      {canRender && !isPresenting ? (
-        <WidgetHtmlContent widget={widget} htmlLoadState={htmlLoadState} />
+      {/* Widget content - texture in VR, Html in desktop preview */}
+      {canRender ? (
+        isPresenting ? (
+          // VR mode: render widget content to a texture
+          <VRWidgetTexture
+            widget={widget}
+            width={size3D.width}
+            height={size3D.height}
+            refreshInterval={2000}
+          />
+        ) : (
+          // Desktop mode: use Html overlay
+          <WidgetHtmlContent widget={widget} htmlLoadState={htmlLoadState} />
+        )
       ) : (
+        // Fallback placeholder for widgets that can't render
         <WidgetPlaceholder widget={widget} size3D={size3D} debug={debug} />
       )}
 
