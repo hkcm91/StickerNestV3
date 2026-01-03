@@ -34,17 +34,35 @@ export const xrStore = createXRStore({
   // This is what allows you to look around and have the scene stay stationary
   referenceSpace: 'local-floor',
 
-  // Controller configuration
+  // Controller configuration - enable both ray pointer for selection and grab pointer
+  // The ray pointer enables standard onPointer* events to fire from controller rays
   controller: {
-    left: true,
-    right: true,
-    teleportPointer: true,
+    left: {
+      rayPointer: true,  // Enable ray casting for pointer events
+      grabPointer: true, // Enable squeeze/grab interactions
+      model: true,       // Show controller model
+    },
+    right: {
+      rayPointer: true,
+      grabPointer: true,
+      model: true,
+    },
   },
-  // Hand tracking - Note: Can be resource-intensive with AR passthrough on Quest 3
+  // Hand tracking - enable touch and ray pointers
+  // Note: Can be resource-intensive with AR passthrough on Quest 3
   hand: {
-    left: true,
-    right: true,
-    teleportPointer: true,
+    left: {
+      rayPointer: true,
+      touchPointer: true,  // Enable finger tip touch interactions
+      grabPointer: true,
+      model: true,
+    },
+    right: {
+      rayPointer: true,
+      touchPointer: true,
+      grabPointer: true,
+      model: true,
+    },
   },
   // Performance settings
   // Use 'default' instead of 'high' for better AR stability on Quest 3

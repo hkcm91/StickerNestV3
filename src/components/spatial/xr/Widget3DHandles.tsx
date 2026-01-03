@@ -248,7 +248,7 @@ function useTwoHandedManipulation(
 // Snapping Utilities
 // ============================================================================
 
-function snapToGrid(value: number, gridSize: number, threshold: number): number {
+function snapValueToGrid(value: number, gridSize: number, threshold: number): number {
   const snapped = Math.round(value / gridSize) * gridSize;
   if (Math.abs(value - snapped) < threshold) {
     return snapped;
@@ -994,8 +994,8 @@ export function Widget3DHandles({
     // Apply grid snapping
     let snapped = false;
     if (snapToGrid) {
-      const snappedWidth = snapToGrid ? snapToGrid(newWidth, gridSize, SNAP_THRESHOLD) : newWidth;
-      const snappedHeight = snapToGrid ? snapToGrid(newHeight, gridSize, SNAP_THRESHOLD) : newHeight;
+      const snappedWidth = snapValueToGrid(newWidth, gridSize, SNAP_THRESHOLD);
+      const snappedHeight = snapValueToGrid(newHeight, gridSize, SNAP_THRESHOLD);
 
       if (snappedWidth !== newWidth || snappedHeight !== newHeight) {
         snapped = true;

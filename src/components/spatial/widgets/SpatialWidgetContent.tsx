@@ -29,62 +29,119 @@ interface WidgetPlaceholderProps {
 }
 
 export function WidgetPlaceholder({ widget, size3D, debug }: WidgetPlaceholderProps) {
+  // Scale text sizes based on widget dimensions for better VR readability
+  const baseScale = Math.min(size3D.width, size3D.height, 0.6);
+  const titleSize = Math.max(0.04, baseScale * 0.12);
+  const iconSize = Math.max(0.06, baseScale * 0.2);
+  const subtitleSize = Math.max(0.03, baseScale * 0.08);
+  const detailSize = Math.max(0.025, baseScale * 0.06);
+
   return (
-    <>
+    <group position={[0, 0, 0.015]}>
+      {/* Inner content background for better contrast in VR */}
+      <mesh position={[0, 0, -0.005]}>
+        <planeGeometry args={[size3D.width * 0.9, size3D.height * 0.85]} />
+        <meshBasicMaterial color="#1a1625" transparent opacity={0.95} />
+      </mesh>
+
+      {/* Decorative border */}
+      <mesh position={[0, 0, -0.003]}>
+        <planeGeometry args={[size3D.width * 0.92, size3D.height * 0.87]} />
+        <meshBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
+      </mesh>
+
+      {/* Widget name title - above the icon */}
       <Text
-        position={[0, size3D.height / 2 + 0.05, 0.01]}
-        fontSize={0.05}
+        position={[0, size3D.height * 0.28, 0.005]}
+        fontSize={titleSize}
         color="white"
         anchorX="center"
-        anchorY="bottom"
-        maxWidth={size3D.width}
+        anchorY="middle"
+        maxWidth={size3D.width * 0.85}
+        outlineWidth={titleSize * 0.08}
+        outlineColor="#000000"
       >
-        {widget.name || widget.widgetDefId || 'Widget'}
+        {widget.name || formatWidgetType(widget.widgetDefId)}
       </Text>
 
-      <group position={[0, 0.05, 0.01]}>
-        <mesh position={[0, 0, -0.002]}>
-          <circleGeometry args={[0.08, 32]} />
-          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.8} />
+      {/* Central icon with background */}
+      <group position={[0, size3D.height * 0.02, 0.005]}>
+        <mesh position={[0, 0, -0.003]}>
+          <circleGeometry args={[iconSize * 0.7, 32]} />
+          <meshBasicMaterial color="#8b5cf6" transparent opacity={0.9} />
         </mesh>
-        <Text position={[0, 0, 0]} fontSize={0.08} color="white" anchorX="center" anchorY="middle">
+        <mesh position={[0, 0, -0.005]}>
+          <circleGeometry args={[iconSize * 0.8, 32]} />
+          <meshBasicMaterial color="#6d28d9" transparent opacity={0.6} />
+        </mesh>
+        <Text
+          position={[0, 0, 0]}
+          fontSize={iconSize}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+        >
           {getWidgetTypeEmoji(widget.widgetDefId)}
         </Text>
       </group>
 
+      {/* Widget type subtitle */}
       <Text
-        position={[0, -0.08, 0.01]}
-        fontSize={0.05}
-        color="#a5b4fc"
+        position={[0, -size3D.height * 0.18, 0.005]}
+        fontSize={subtitleSize}
+        color="#c4b5fd"
         anchorX="center"
         anchorY="middle"
-        maxWidth={size3D.width * 0.9}
+        maxWidth={size3D.width * 0.8}
+        outlineWidth={subtitleSize * 0.05}
+        outlineColor="#0a0a0f"
       >
-        {formatWidgetType(widget.widgetDefId)}
+        {widget.widgetDefId}
       </Text>
 
+      {/* Dimensions */}
       <Text
-        position={[0, -0.18, 0.01]}
-        fontSize={0.035}
-        color="#6b7280"
+        position={[0, -size3D.height * 0.3, 0.005]}
+        fontSize={detailSize}
+        color="#9ca3af"
         anchorX="center"
         anchorY="middle"
+        outlineWidth={detailSize * 0.05}
+        outlineColor="#0a0a0f"
       >
         {Math.round(widget.width)} × {Math.round(widget.height)} px
       </Text>
 
+      {/* Debug info */}
       {debug && (
         <Text
-          position={[0, -0.26, 0.01]}
-          fontSize={0.025}
-          color="#4b5563"
+          position={[0, -size3D.height * 0.38, 0.005]}
+          fontSize={detailSize * 0.8}
+          color="#6b7280"
           anchorX="center"
           anchorY="middle"
         >
           ID: {widget.id.slice(0, 8)}...
         </Text>
       )}
-    </>
+
+      {/* "VR Mode" indicator */}
+      <group position={[size3D.width * 0.35, size3D.height * 0.35, 0.005]}>
+        <mesh position={[0, 0, -0.002]}>
+          <planeGeometry args={[0.08, 0.025]} />
+          <meshBasicMaterial color="#8b5cf6" />
+        </mesh>
+        <Text
+          position={[0, 0, 0]}
+          fontSize={0.015}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+        >
+          VR
+        </Text>
+      </group>
+    </group>
   );
 }
 
