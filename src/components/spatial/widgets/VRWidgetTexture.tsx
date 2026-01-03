@@ -142,9 +142,22 @@ function useWidgetTexture(
   // Update ref when dimensions change
   pixelDimensionsRef.current = { width: pixelWidth, height: pixelHeight };
 
-  // Create widget HTML content
+  // Stable references to widget properties to prevent infinite loops
+  const widgetId = widget.id;
+  const widgetDefId = widget.widgetDefId;
+  const widgetMetadataSource = widget.metadata?.source;
+  const widgetGeneratedHtml = widget.metadata?.generatedContent?.html;
+  const widgetStateJson = useMemo(() => {
+    try {
+      return JSON.stringify(widget.state || {});
+    } catch {
+      return '{}';
+    }
+  }, [widget.state]);
+
+  // Create widget HTML content - use stable dependencies only
   const widgetHtml = useMemo(() => {
-    const builtin = getBuiltinWidget(widget.widgetDefId);
+    const builtin = getBuiltinWidget(widgetDefId);
 
     // For React components, we can't easily render to texture
     // Return null to signal we need a different approach
@@ -152,26 +165,35 @@ function useWidgetTexture(
       return null;
     }
 
-    const html = getWidgetHtml(widget);
+    // Inline HTML retrieval to avoid passing full widget object
+    let html: string | null = null;
+    if (builtin?.html) {
+      html = typeof builtin.html === 'function' ? builtin.html() : builtin.html;
+    } else if (widgetMetadataSource === 'generated' && widgetGeneratedHtml) {
+      html = widgetGeneratedHtml;
+    } else if (widgetMetadataSource === 'local') {
+      const { getCachedWidgetHtml } = require('./vrWidgetHtmlCache');
+      html = getCachedWidgetHtml(widgetDefId);
+    }
+
     if (!html) return null;
 
     // Inject widget API mock
-    const state = { ...widget.state };
     const apiScript = `
       <script>
         window.WidgetAPI = {
-          widgetId: '${widget.id}',
-          widgetDefId: '${widget.widgetDefId}',
+          widgetId: '${widgetId}',
+          widgetDefId: '${widgetDefId}',
           emit: function() {},
           emitEvent: function() {},
           emitOutput: function() {},
           onEvent: function() { return function() {}; },
           onInput: function() { return function() {}; },
-          getState: function() { return ${JSON.stringify(state)}; },
+          getState: function() { return ${widgetStateJson}; },
           setState: function() {},
           getAssetUrl: function(path) { return path; },
           log: function() {},
-          onMount: function(cb) { setTimeout(function() { cb({ state: ${JSON.stringify(state)} }); }, 0); },
+          onMount: function(cb) { setTimeout(function() { cb({ state: ${widgetStateJson} }); }, 0); },
         };
       </script>
     `;
@@ -202,7 +224,7 @@ function useWidgetTexture(
         <body>${html}</body>
       </html>
     `;
-  }, [widget, pixelWidth, pixelHeight]);
+  }, [widgetId, widgetDefId, widgetMetadataSource, widgetGeneratedHtml, widgetStateJson, pixelWidth, pixelHeight]);
 
   // Setup offscreen container with direct HTML (not iframe - html2canvas can't capture iframes)
   useEffect(() => {
@@ -502,8 +524,14 @@ function useReactWidgetTexture(
   const isMountedRef = useRef(true);
   const hasInitializedRef = useRef(false);
 
+  // Stable references to widget properties to prevent infinite loops
+  const widgetId = widget.id;
+  const widgetDefId = widget.widgetDefId;
+  const widgetRef = useRef(widget);
+  widgetRef.current = widget; // Keep ref updated without triggering re-renders
+
   // Memoize builtin lookup to prevent recalculation
-  const builtin = useMemo(() => getBuiltinWidget(widget.widgetDefId), [widget.widgetDefId]);
+  const builtin = useMemo(() => getBuiltinWidget(widgetDefId), [widgetDefId]);
   const hasComponent = !!builtin?.component;
 
   // Stable reference to widget state for comparison
@@ -569,7 +597,7 @@ function useReactWidgetTexture(
 
     // Create offscreen container
     const container = offscreenManager.createContainer(
-      `react-${widget.id}`,
+      `react-${widgetId}`,
       pixelWidth,
       pixelHeight
     );
@@ -592,7 +620,7 @@ function useReactWidgetTexture(
 
     // Create React root and render component
     const Component = builtin.component as React.ComponentType<{ api?: any }>;
-    const api = createSpatial3DAPI(widget);
+    const api = createSpatial3DAPI(widgetRef.current);
 
     rootRef.current = createRoot(wrapper);
     rootRef.current.render(
@@ -614,11 +642,11 @@ function useReactWidgetTexture(
         rootRef.current.unmount();
         rootRef.current = null;
       }
-      offscreenManager.removeContainer(`react-${widget.id}`);
+      offscreenManager.removeContainer(`react-${widgetId}`);
       containerRef.current = null;
       hasInitializedRef.current = false;
     };
-  }, [widget.id, widget.widgetDefId, hasComponent, pixelWidth, pixelHeight, builtin, captureToTexture, currentStateJson]);
+  }, [widgetId, widgetDefId, hasComponent, pixelWidth, pixelHeight, builtin, captureToTexture, currentStateJson]);
 
   // Re-render when widget state actually changes (deep comparison)
   useEffect(() => {
@@ -629,7 +657,7 @@ function useReactWidgetTexture(
     stateJsonRef.current = currentStateJson;
 
     const Component = builtin.component as React.ComponentType<{ api?: any }>;
-    const api = createSpatial3DAPI(widget);
+    const api = createSpatial3DAPI(widgetRef.current);
 
     rootRef.current.render(
       React.createElement(Component, { api })
@@ -643,7 +671,7 @@ function useReactWidgetTexture(
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [currentStateJson, hasComponent, builtin, widget, captureToTexture]);
+  }, [currentStateJson, hasComponent, builtin, captureToTexture]);
 
   // Periodic refresh - only after initial render
   useEffect(() => {
