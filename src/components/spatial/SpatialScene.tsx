@@ -35,7 +35,7 @@ import {
   RoomSetupGuide,
 } from './xr';
 import { SpatialStickerManager } from './stickers';
-import { SpatialWidgetContainer } from './SpatialWidgetContainer';
+import { SpatialWidgetContainer } from './widgets';
 import { SpatialSticker } from '../../types/spatialEntity';
 
 // ============================================================================
