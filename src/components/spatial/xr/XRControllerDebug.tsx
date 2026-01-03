@@ -64,16 +64,23 @@ function FallbackControllerRay({
   const lastHitRef = useRef<THREE.Object3D | null>(null);
   const lastHandlersRef = useRef<Record<string, Function> | null>(null);
   const wasSelectingRef = useRef(false);
-
-  // Check if trigger is pressed
-  const isSelecting = useMemo(() => {
-    if (!controllerState?.inputSource?.gamepad) return false;
-    // Trigger is usually button 0
-    return controllerState.inputSource.gamepad.buttons[0]?.pressed ?? false;
-  }, [controllerState?.inputSource?.gamepad?.buttons]);
+  const lastTriggerLogRef = useRef(0);
 
   useFrame((state) => {
     if (!rayRef.current || !controllerState?.object) return;
+
+    // Check trigger state EVERY FRAME (not via useMemo which doesn't update)
+    const gamepad = controllerState.inputSource?.gamepad;
+    const isSelecting = gamepad?.buttons[0]?.pressed ?? false;
+
+    // Log trigger state periodically for debugging
+    const now = Date.now();
+    if (now - lastTriggerLogRef.current > 500) {
+      if (isSelecting) {
+        vrLog(`[XR] Trigger PRESSED (${handedness})`);
+      }
+      lastTriggerLogRef.current = now;
+    }
 
     // Get controller world position and direction
     const controllerMatrix = controllerState.object.matrixWorld;
@@ -169,33 +176,46 @@ function FallbackControllerRay({
       lastHandlersRef.current = handlers;
     }
 
-    // Handle select (trigger press)
+    // Handle select (trigger press/release)
+    // Log state transitions
+    if (isSelecting !== wasSelectingRef.current) {
+      vrLog(`[XR] Trigger ${isSelecting ? 'PRESSED' : 'RELEASED'} (${handedness})`);
+      vrLog(`[XR] At release: hitObject=${hitObject?.name || 'null'}, handlers=${handlers ? 'yes' : 'no'}`);
+    }
+
     if (isSelecting && !wasSelectingRef.current && hitObject && handlers) {
       // Trigger just pressed - dispatch pointerdown
       const downEvent = createR3FEvent('pointerdown', intersection);
       handlers.onPointerDown?.(downEvent);
-      vrLog(`[XR] Pointer down: ${hitObject.name || 'unnamed'}`);
-    } else if (!isSelecting && wasSelectingRef.current && hitObject && handlers) {
-      // Trigger just released - dispatch pointerup and click
-      const upEvent = createR3FEvent('pointerup', intersection);
-      handlers.onPointerUp?.(upEvent);
+      vrLog(`[XR] Pointer DOWN: ${hitObject.name || 'unnamed'}`);
+    } else if (!isSelecting && wasSelectingRef.current) {
+      // Trigger just released
+      vrLog(`[XR] Processing trigger release...`);
 
-      const clickEvent = createR3FEvent('click', intersection);
-      if (handlers.onClick) {
-        vrLog(`[XR] Invoking onClick for: ${hitObject.name || 'unnamed'}`);
-        try {
-          handlers.onClick(clickEvent);
-          vrLog(`[XR] CLICK SUCCESS: ${hitObject.name || 'unnamed'}`);
-        } catch (err) {
-          vrLog(`[XR] CLICK ERROR: ${err}`);
+      if (hitObject && handlers) {
+        // Dispatch pointerup and click
+        const upEvent = createR3FEvent('pointerup', intersection);
+        handlers.onPointerUp?.(upEvent);
+        vrLog(`[XR] Pointer UP: ${hitObject.name || 'unnamed'}`);
+
+        const clickEvent = createR3FEvent('click', intersection);
+        if (handlers.onClick) {
+          vrLog(`[XR] Invoking onClick for: ${hitObject.name || 'unnamed'}`);
+          try {
+            handlers.onClick(clickEvent);
+            vrLog(`[XR] CLICK SUCCESS: ${hitObject.name || 'unnamed'}`);
+          } catch (err) {
+            vrLog(`[XR] CLICK ERROR: ${err}`);
+          }
+        } else {
+          const handlerKeys = Object.keys(handlers);
+          vrLog(`[XR] No onClick handler. Available: ${handlerKeys.join(', ')}`);
         }
-      } else {
-        // Log all available handlers for debugging
-        const handlerKeys = Object.keys(handlers);
-        vrLog(`[XR] No onClick handler. Available: ${handlerKeys.join(', ')}`);
+      } else if (hitObject && !handlers) {
+        vrLog(`[XR] CLICK FAILED - hitObject exists but no handlers: ${hitObject.name || 'unnamed'}`);
+      } else if (!hitObject) {
+        vrLog(`[XR] CLICK FAILED - no hitObject at release (ray not on target)`);
       }
-    } else if (!isSelecting && wasSelectingRef.current && hitObject && !handlers) {
-      vrLog(`[XR] CLICK FAILED - no handlers found for: ${hitObject.name || 'unnamed'}`);
     }
 
     wasSelectingRef.current = isSelecting;
