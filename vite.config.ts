@@ -519,6 +519,19 @@ export default defineConfig(({ command, mode }) => ({
         alias: {
             '@': path.resolve(__dirname, './src')
         },
-        dedupe: ['react', 'react-dom']
+        dedupe: ['react', 'react-dom', 'three', '@react-three/fiber', '@react-three/drei', '@react-three/xr']
+    },
+    optimizeDeps: {
+        include: [
+            'three',
+            '@react-three/fiber',
+            '@react-three/drei',
+            '@react-three/xr',
+            'react-reconciler'
+        ],
+        esbuildOptions: {
+            // Ensure consistent handling of these packages
+            target: 'esnext'
+        }
     }
 }))
