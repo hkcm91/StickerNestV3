@@ -10,6 +10,7 @@ import type { WidgetInstance } from '../../../types/domain';
 import { useActiveSpatialMode } from '../../../state/useSpatialModeStore';
 import { toSpatialPosition, toSpatialSize, DEFAULT_WIDGET_Z } from '../../../utils/spatialCoordinates';
 import { SpatialWidget } from './SpatialWidget';
+import { vrLog } from '../xr/VRDebugPanel';
 
 // ============================================================================
 // Types
@@ -66,7 +67,13 @@ export function SpatialWidgetContainer({
   // Handle widget click
   const handleWidgetClick = useCallback(
     (widget: WidgetInstance) => {
-      onWidgetSelect?.(widget.id);
+      vrLog(`[Container] handleWidgetClick: ${widget.id}`);
+      if (onWidgetSelect) {
+        vrLog(`[Container] Calling onWidgetSelect`);
+        onWidgetSelect(widget.id);
+      } else {
+        vrLog(`[Container] NO onWidgetSelect callback!`);
+      }
     },
     [onWidgetSelect]
   );

@@ -182,10 +182,17 @@ function FallbackControllerRay({
 
       const clickEvent = createR3FEvent('click', intersection);
       if (handlers.onClick) {
-        handlers.onClick(clickEvent);
-        vrLog(`[XR] CLICK SUCCESS: ${hitObject.name || 'unnamed'}`);
+        vrLog(`[XR] Invoking onClick for: ${hitObject.name || 'unnamed'}`);
+        try {
+          handlers.onClick(clickEvent);
+          vrLog(`[XR] CLICK SUCCESS: ${hitObject.name || 'unnamed'}`);
+        } catch (err) {
+          vrLog(`[XR] CLICK ERROR: ${err}`);
+        }
       } else {
-        vrLog(`[XR] CLICK (no onClick handler): ${hitObject.name || 'unnamed'}`);
+        // Log all available handlers for debugging
+        const handlerKeys = Object.keys(handlers);
+        vrLog(`[XR] No onClick handler. Available: ${handlerKeys.join(', ')}`);
       }
     } else if (!isSelecting && wasSelectingRef.current && hitObject && !handlers) {
       vrLog(`[XR] CLICK FAILED - no handlers found for: ${hitObject.name || 'unnamed'}`);

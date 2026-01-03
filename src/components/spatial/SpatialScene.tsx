@@ -35,6 +35,7 @@ import {
   OcclusionLayer,
   RoomSetupGuide,
   VRDebugPanel,
+  vrLog,
 } from './xr';
 import { SpatialStickerManager } from './stickers';
 import { SpatialWidgetContainer } from './widgets';
@@ -607,7 +608,10 @@ export function SpatialScene() {
 
   // Handle widget selection in 3D space
   const handleWidgetSelect = useCallback((widgetId: string) => {
+    vrLog(`[Scene] handleWidgetSelect: ${widgetId}`);
+    vrLog(`[Scene] Calling selectWidget store action`);
     selectWidget(widgetId, false); // false = not additive (single select)
+    vrLog(`[Scene] selectWidget completed`);
     console.log('Widget selected in 3D:', widgetId);
   }, [selectWidget]);
 

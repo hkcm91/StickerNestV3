@@ -28,6 +28,7 @@ import {
 } from './vrWidgetHtmlCache';
 import { WidgetPlaceholder, WidgetHtmlContent } from './SpatialWidgetContent';
 import { VRWidgetTexture, VRReactWidgetTexture } from './VRWidgetTexture';
+import { vrLog } from '../xr/VRDebugPanel';
 
 // ============================================================================
 // Types
@@ -201,7 +202,14 @@ export function SpatialWidget({
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     console.log('[SpatialWidget] CLICK:', widget.id, widget.name);
-    onClick?.(widget);
+    vrLog(`[Widget] handleClick fired: ${widget.name || widget.id}`);
+    if (onClick) {
+      vrLog(`[Widget] Calling onClick callback`);
+      onClick(widget);
+      vrLog(`[Widget] onClick callback completed`);
+    } else {
+      vrLog(`[Widget] NO onClick callback provided!`);
+    }
   }, [onClick, widget]);
 
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
