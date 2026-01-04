@@ -245,12 +245,6 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
               sessionState !== 'active' &&
               shouldShowCanvas && <DeviceOrientationControls enabled={true} />}
 
-            {/* DEBUG: Test if anything renders besides XRControllerDebug */}
-            <mesh position={[-0.5, 1.6, -1.5]} name="canvas-level-debug-cube">
-              <boxGeometry args={[0.3, 0.3, 0.3]} />
-              <meshBasicMaterial color="#00ff00" />
-            </mesh>
-
             {/* Scene content: widgets, stickers, toolbars, etc. */}
             <SpatialScene />
           </XR>
