@@ -29,6 +29,9 @@ import {
   DeviceOrientationControls,
 } from './xr/XRSessionManager';
 
+// Scene content with widgets, stickers, and tools
+import { SpatialScene } from './SpatialScene';
+
 // ============================================================================
 // XR Error Boundary
 // ============================================================================
@@ -241,6 +244,15 @@ export function SpatialCanvas({ active, className, style }: SpatialCanvasProps) 
             {(spatialMode === 'vr' || spatialMode === 'ar') &&
               sessionState !== 'active' &&
               shouldShowCanvas && <DeviceOrientationControls enabled={true} />}
+
+            {/* DEBUG: Test if anything renders besides XRControllerDebug */}
+            <mesh position={[-0.5, 1.6, -1.5]} name="canvas-level-debug-cube">
+              <boxGeometry args={[0.3, 0.3, 0.3]} />
+              <meshBasicMaterial color="#00ff00" />
+            </mesh>
+
+            {/* Scene content: widgets, stickers, toolbars, etc. */}
+            <SpatialScene />
           </XR>
         </XRErrorBoundary>
       </Canvas>
