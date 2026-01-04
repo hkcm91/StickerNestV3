@@ -641,8 +641,35 @@ export function SpatialScene() {
     }
   }, [effectiveMode, sessionState]);
 
+  // Log when SpatialScene renders
+  useEffect(() => {
+    console.log('[SpatialScene] MOUNTED - effectiveMode:', effectiveMode, 'sessionState:', sessionState);
+    vrLog('[SpatialScene] MOUNTED');
+    return () => {
+      console.log('[SpatialScene] UNMOUNTED');
+      vrLog('[SpatialScene] UNMOUNTED');
+    };
+  }, []);
+
   return (
-    <group>
+    <group name="spatial-scene-root">
+      {/* ULTRA-VISIBLE DEBUG: Big red sphere that MUST be visible if scene renders */}
+      <mesh position={[0, 1.6, -1]} name="debug-sphere-must-see">
+        <sphereGeometry args={[0.2, 32, 32]} />
+        <meshBasicMaterial color="#ff0000" />
+      </mesh>
+      <Text
+        position={[0, 2.0, -1]}
+        fontSize={0.1}
+        color="#ffff00"
+        anchorX="center"
+        anchorY="middle"
+        outlineWidth={0.01}
+        outlineColor="#000000"
+      >
+        SPATIAL SCENE ACTIVE
+      </Text>
+
       {/* VR Tool Hub - 3D native toolbar (available in both VR and AR modes) */}
       {(effectiveMode === 'vr' || effectiveMode === 'ar') && (
         <VRToolHub
@@ -735,17 +762,41 @@ export function SpatialScene() {
       </group>
 
       {/* Canvas widgets rendered in 3D space */}
-      {/* These are the actual widgets from the user's canvas, converted to 3D panels */}
-      {/* Pass effectiveMode so widgets render during transition */}
       <SpatialWidgetContainer
         widgets={canvasWidgets}
         selectedWidgetId={primarySelectedWidgetId}
         onWidgetSelect={handleWidgetSelect}
         onWidgetTransformChange={handleWidgetTransformChange}
         interactive={activeTool === 'select' || activeTool === 'move'}
-        debug={showDebugInfo}
-        forceRender={effectiveMode !== 'desktop'}
+        forceRender={true}
       />
+
+      {/* DEBUG: Widget count panel - ALWAYS visible at eye level */}
+      <mesh position={[0, 1.6, -1.5]}>
+        <planeGeometry args={[0.8, 0.4]} />
+        <meshBasicMaterial color={canvasWidgets.length > 0 ? '#22c55e' : '#ef4444'} />
+      </mesh>
+      <Text
+        position={[0, 1.7, -1.49]}
+        fontSize={0.06}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+        fontWeight="bold"
+      >
+        {canvasWidgets.length > 0
+          ? `✓ ${canvasWidgets.length} Widget${canvasWidgets.length > 1 ? 's' : ''} in Store`
+          : '✗ No Widgets - Add from 2D Canvas'}
+      </Text>
+      <Text
+        position={[0, 1.55, -1.49]}
+        fontSize={0.035}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {`Mode: ${effectiveMode} | Session: ${sessionState}`}
+      </Text>
     </group>
   );
 }

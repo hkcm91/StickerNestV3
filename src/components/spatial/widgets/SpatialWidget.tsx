@@ -122,26 +122,33 @@ export function SpatialWidget({
   useCursor(hovered && interactive);
 
   // Calculate 3D position from 2D canvas position
+  // Maps canvas coordinates to a comfortable VR viewing area
   const position3D = useMemo((): [number, number, number] => {
-    const rawX = widget.position.x / PIXELS_PER_METER;
-    const rawY = widget.position.y / PIXELS_PER_METER;
-
-    const maxSpreadX = 3;
-    const maxSpreadY = 1.5;
-
-    const normalizedX = Math.min(1, rawX / 19.2);
-    const normalizedY = Math.min(1, rawY / 10.8);
-
-    const arcX = (normalizedX - 0.5) * 2 * maxSpreadX;
-    const arcY = DEFAULT_EYE_HEIGHT - (normalizedY - 0.5) * maxSpreadY;
-
-    const baseZ = DEFAULT_WIDGET_Z + zOffset;
-    const curveAmount = 0.5;
-    const curvedZ = baseZ - (Math.abs(arcX) / maxSpreadX) * curveAmount;
-
     const size3D = toSpatialSize({ width: widget.width, height: widget.height });
 
-    return [arcX + size3D.width / 2, arcY - size3D.height / 2, curvedZ];
+    // Assume standard canvas dimensions for normalization
+    // (In production, these should come from canvas store)
+    const canvasWidth = 1920;
+    const canvasHeight = 1080;
+
+    // Normalize position to 0-1 range
+    const normalizedX = widget.position.x / canvasWidth;
+    const normalizedY = widget.position.y / canvasHeight;
+
+    // Define VR viewing area dimensions
+    const viewingWidth = 4; // 4 meters wide (-2 to +2)
+    const viewingHeight = 1.5; // 1.5 meters tall (0.85m to 2.35m around eye level)
+
+    // X: Center at 0, spread across viewing width, offset by half widget size
+    const x = (normalizedX - 0.5) * viewingWidth + size3D.width / 2;
+
+    // Y: Center at eye height, spread vertically, offset by half widget size
+    const y = DEFAULT_EYE_HEIGHT - (normalizedY - 0.5) * viewingHeight - size3D.height / 2;
+
+    // Z: Fixed comfortable reading distance with optional offset for layering
+    const z = DEFAULT_WIDGET_Z + zOffset;
+
+    return [x, y, z];
   }, [widget.position, widget.width, widget.height, zOffset]);
 
   // Convert 2D size to 3D
